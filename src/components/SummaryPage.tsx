@@ -170,8 +170,9 @@ interface LeaderboardProps {
 function Leaderboard({ scores, title, onFacultyClick }: LeaderboardProps) {
   return (
     <div className="space-y-6">
-      {/* Glass Container */}
-      <div className="glass-leaderboard-container rounded-2xl shadow-2xl overflow-hidden border border-white/20 backdrop-blur-xl">
+      {/* Glass Container with horizontal scroll on small screens */}
+      <div className="overflow-x-auto -mx-2 sm:mx-0">
+      <div className="glass-leaderboard-container rounded-2xl shadow-2xl overflow-hidden border border-white/20 backdrop-blur-xl min-w-[720px] sm:min-w-0">
         {/* Table Header */}
         <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-gradient-to-r from-gray-900/90 to-gray-800/90 backdrop-blur-md border-b border-white/10">
           <div className="col-span-1 text-center">
@@ -279,6 +280,7 @@ function Leaderboard({ scores, title, onFacultyClick }: LeaderboardProps) {
             </div>
           ))}
         </div>
+      </div>
       </div>
 
       {/* End Leaderboard */}

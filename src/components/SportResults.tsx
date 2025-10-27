@@ -258,10 +258,10 @@ export function SportResults() {
 
       {/* Sports Grid with Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-6 gap-1 mb-8 h-auto p-1 bg-white shadow-md rounded-xl">
+        <TabsList className="flex w-full max-w-3xl mx-auto items-center gap-1 mb-8 h-auto p-1 bg-white shadow-md rounded-xl overflow-x-auto">
           <TabsTrigger 
             value="all" 
-            className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
+            className="shrink-0 flex items-center gap-2 py-3 px-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
           >
             <Trophy className="w-4 h-4" />
             <span className="hidden sm:inline">All Sports</span>
@@ -270,7 +270,7 @@ export function SportResults() {
           
           <TabsTrigger 
             value="mens" 
-            className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
+            className="shrink-0 flex items-center gap-2 py-3 px-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
           >
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">Men's</span>
@@ -279,7 +279,7 @@ export function SportResults() {
 
           <TabsTrigger 
             value="womens" 
-            className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
+            className="shrink-0 flex items-center gap-2 py-3 px-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
           >
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">Women's</span>
@@ -288,7 +288,7 @@ export function SportResults() {
 
           <TabsTrigger 
             value="mixed" 
-            className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
+            className="shrink-0 flex items-center gap-2 py-3 px-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
           >
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">Mixed</span>
@@ -297,7 +297,7 @@ export function SportResults() {
 
           <TabsTrigger 
             value="swimming" 
-            className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
+            className="shrink-0 flex items-center gap-2 py-3 px-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
           >
             <Waves className="w-4 h-4" />
             <span className="hidden sm:inline">Swimming</span>
@@ -306,7 +306,7 @@ export function SportResults() {
 
           <TabsTrigger 
             value="athletics" 
-            className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
+            className="shrink-0 flex items-center gap-2 py-3 px-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
           >
             <Zap className="w-4 h-4" />
             <span className="hidden sm:inline">Athletics</span>

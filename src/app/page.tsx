@@ -1,12 +1,14 @@
 "use client";
 import { useState } from "react";
+import { Tabs, TabsContent } from "../components/ui/tabs";
+import { Trophy, Calendar, Target, Home, Menu } from "lucide-react";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../components/ui/tabs";
-import { Trophy, Calendar, Target, Home } from "lucide-react";
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetClose,
+} from "../components/ui/sheet";
+import { SheetTitle } from "../components/ui/sheet";
 import { HomePage } from "../components/HomePage";
 import { AddSportsPage } from "../components/AddSportsPage";
 import { SummaryPage } from "../components/SummaryPage";
@@ -148,29 +150,137 @@ export default function App() {
       <header className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white shadow-2xl sticky top-0 z-50 border-b border-blue-700/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            {/* Left: Logos */}
-            <div className="flex items-center gap-4">
-              <img
-                src={pahasaraLogo}
-                alt="Pahasara Logo"
-                className="h-12 w-12 object-contain"
-              />
-              <img
-                src={uocLogo}
-                alt="University of Colombo Logo"
-                className="h-14 w-14 object-contain"
-              />
-              <img
-                src={physicalEdLogo}
-                alt="Department of Physical Education Logo"
-                className="h-14 object-contain"
-              />
+            {/* Left: Mobile menu trigger + desktop nav */}
+            <div className="flex items-center gap-2">
+              {/* Mobile menu button */}
+              <Sheet>
+                <SheetTrigger asChild>
+                  <button
+                    className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-blue-100 hover:bg-blue-700/40 transition"
+                    aria-label="Open menu"
+                  >
+                    <Menu className="w-5 h-5" />
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-72 sm:w-80" aria-label="Main menu">
+                  <SheetTitle className="sr-only">Main menu</SheetTitle>
+                  <nav className="p-3 pt-12 space-y-2">
+                    <SheetClose asChild>
+                      <button
+                        onClick={() => setActiveTab("home")}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
+                          activeTab === "home"
+                            ? "bg-blue-900 text-white"
+                            : "bg-white/70 hover:bg-white text-blue-900"
+                        }`}
+                      >
+                        <Home className="w-4 h-4" />
+                        <span>Home</span>
+                      </button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <button
+                        onClick={() => setActiveTab("lineup")}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
+                          activeTab === "lineup"
+                            ? "bg-blue-900 text-white"
+                            : "bg-white/70 hover:bg-white text-blue-900"
+                        }`}
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>Lineup</span>
+                      </button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <button
+                        onClick={() => setActiveTab("summary")}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
+                          activeTab === "summary"
+                            ? "bg-blue-900 text-white"
+                            : "bg-white/70 hover:bg-white text-blue-900"
+                        }`}
+                      >
+                        <Trophy className="w-4 h-4" />
+                        <span>Leaderboard</span>
+                      </button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <button
+                        onClick={() => setActiveTab("results")}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
+                          activeTab === "results"
+                            ? "bg-blue-900 text-white"
+                            : "bg-white/70 hover:bg-white text-blue-900"
+                        }`}
+                      >
+                        <Target className="w-4 h-4" />
+                        <span>Results</span>
+                      </button>
+                    </SheetClose>
+                  </nav>
+                </SheetContent>
+              </Sheet>
+
+              {/* Desktop nav */}
+              <nav className="hidden md:flex items-center gap-2 overflow-x-auto">
+              <button
+                onClick={() => setActiveTab("home")}
+                className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-blue-700/40 ${
+                  activeTab === "home"
+                    ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white shadow"
+                    : "text-blue-100"
+                }`}
+                aria-pressed={activeTab === "home"}
+              >
+                <Home className="w-4 h-4" />
+                <span className="hidden sm:inline">Home</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("lineup")}
+                className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-blue-700/40 ${
+                  activeTab === "lineup"
+                    ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white shadow"
+                    : "text-blue-100"
+                }`}
+                aria-pressed={activeTab === "lineup"}
+              >
+                <Calendar className="w-4 h-4" />
+                <span className="hidden sm:inline">Lineup</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("summary")}
+                className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-blue-700/40 ${
+                  activeTab === "summary"
+                    ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white shadow"
+                    : "text-blue-100"
+                }`}
+                aria-pressed={activeTab === "summary"}
+              >
+                <Trophy className="w-4 h-4" />
+                <span className="hidden sm:inline">Leaderboard</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("results")}
+                className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-blue-700/40 ${
+                  activeTab === "results"
+                    ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white shadow"
+                    : "text-blue-100"
+                }`}
+                aria-pressed={activeTab === "results"}
+              >
+                <Target className="w-4 h-4" />
+                <span className="hidden sm:inline">Results</span>
+              </button>
+              </nav>
             </div>
 
             {/* Center spacer */}
             <div className="flex-1" />
 
-            {/* Right: Title with pulsing logo moved here */}
+            {/* Right: Title with pulsing logo */}
             <div className="flex items-center gap-3 animate-slide-in-right">
               <div className="relative w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-green-400/30 ring-offset-2 ring-offset-blue-900">
                 <Trophy className="w-6 h-6 text-white" />
@@ -192,47 +302,7 @@ export default function App() {
           onValueChange={(value: string) => setActiveTab(value)}
           className="w-full"
         >
-          <TabsList
-            className={`grid w-full max-w-7xl mx-auto grid-cols-4 mb-8 h-auto p-2 glass-effect shadow-xl rounded-2xl border border-white/30`}
-          >
-            <TabsTrigger
-              value="home"
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-900 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl transition-all duration-300"
-            >
-              <Home className="w-4 h-4" />
-              <span className="hidden lg:inline">Home</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="lineup"
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-900 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl transition-all duration-300"
-            >
-              <Calendar className="w-4 h-4" />
-              <span className="hidden lg:inline">Lineup</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="summary"
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-900 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl transition-all duration-300"
-            >
-              <Trophy className="w-4 h-4" />
-              <span className="hidden lg:inline">
-                Leaderboard
-              </span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="results"
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-900 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl transition-all duration-300"
-            >
-              <Target className="w-4 h-4" />
-              <span className="hidden lg:inline">Results</span>
-            </TabsTrigger>
-
-            
-
-            {/* Admin tab removed; access admin at /admin */}
-          </TabsList>
+          {/* Slider removed; navigation now in header */}
 
           <TabsContent value="home" className="mt-0">
             <HomePage />
@@ -252,7 +322,8 @@ export default function App() {
 
           
 
-          {/* Admin content removed from home */}
+          {/* Admin content removed from home */
+          }
         </Tabs>
       </main>
 

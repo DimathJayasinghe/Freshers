@@ -331,9 +331,7 @@ export function HomePage() {
           </div>
         </div>
 
-        <p className="text-center text-sm text-gray-600 mt-4 animate-fade-in">
-          💡 Click on any match to view the tournament draw and details
-        </p>
+        {/* Tip removed as requested */}
       </div>
     </div>
   );
