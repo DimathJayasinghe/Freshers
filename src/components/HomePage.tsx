@@ -221,31 +221,31 @@ export function HomePage() {
                 <div className="space-y-4">
                   {/* Team 1 */}
                   <div className="flex items-center justify-between">
-                    <p className="text-gray-900">
-                      {match.team1}
-                    </p>
-                    <div className="text-gray-900 font-mono px-3 py-1 bg-gray-100 rounded-lg">
-                      {match.status === "live"
-                        ? match.score1
-                        : "-"}
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="font-mono px-3 py-1 bg-gray-100 rounded-lg flex items-center justify-center">
+                        {match.status === "live" ? match.score1 : "-"}
+                      </div>
+                      <p className="text-[#f5f5f7] text-left">
+                        {match.team1}
+                      </p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-center">
-                    <div className="text-gray-400 text-xs">
+                    <div className="text-[#e6e6e6] text-xs">
                       VS
                     </div>
                   </div>
 
                   {/* Team 2 */}
                   <div className="flex items-center justify-between">
-                    <p className="text-gray-900">
-                      {match.team2}
-                    </p>
-                    <div className="text-gray-900 font-mono px-3 py-1 bg-gray-100 rounded-lg">
-                      {match.status === "live"
-                        ? match.score2
-                        : "-"}
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="font-mono px-3 py-1 bg-gray-100 rounded-lg flex items-center justify-center">
+                        {match.status === "live" ? match.score2 : "-"}
+                      </div>
+                      <p className="text-[#f5f5f7] text-left">
+                        {match.team2}
+                      </p>
                     </div>
                   </div>
 
@@ -266,7 +266,7 @@ export function HomePage() {
           ))}
         </div>
 
-        <p className="text-center text-sm text-gray-600 mt-4 animate-fade-in">
+        <p className="text-center text-sm text-[#e6e6e6] mt-4 animate-fade-in">
           💡 Click on any live match to view the tournament draw and bracket
         </p>
       </div>
@@ -297,29 +297,29 @@ export function HomePage() {
                       <Badge className="bg-yellow-100 text-[var(--brand-primary)] mb-2">
                         {match.sport}
                       </Badge>
-                      <p className="text-xs text-gray-600">{match.round}</p>
+                      <p className="text-xs text-[#f5f5f7]">{match.round}</p>
                     </div>
                   </div>
 
                   {/* Teams */}
                   <div className="flex-1 flex items-center justify-center gap-4">
-                    <p className="text-gray-900 text-sm md:text-base text-right">
+                    <p className="text-[#f5f5f7] text-sm md:text-base text-right">
                       {match.team1}
                     </p>
                     <div className="text-gray-400 text-xs px-3 py-1 bg-gray-100 rounded-full">
                       VS
                     </div>
-                    <p className="text-gray-900 text-sm md:text-base text-left">
+                    <p className="text-[#f5f5f7] text-sm md:text-base text-left">
                       {match.team2}
                     </p>
                   </div>
 
                   {/* Venue & View Draw Button */}
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-gray-600 text-sm">
-                      <MapPin className="w-4 h-4" />
-                      <span className="hidden md:inline">{match.venue}</span>
-                    </div>
+                    <div className="flex items-center gap-2 text-[#f5f5f7] text-sm">
+                        <MapPin className="w-4 h-4 text-[#f5f5f7]" />
+                        <span className="hidden md:inline">{match.venue}</span>
+                      </div>
                     <div className="flex items-center gap-2 text-blue-600 text-sm opacity-0 group-hover:opacity-100 transition-opacity">
                       <Eye className="w-4 h-4" />
                       <span className="hidden sm:inline">View Draw</span>

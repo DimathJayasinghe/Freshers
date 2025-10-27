@@ -292,8 +292,8 @@ export function LineupPageEnhanced() {
       {/* Header */}
       <div className="glass-effect rounded-3xl p-8 border border-white/30 shadow-2xl">
         <div className="text-center mb-6">
-          <h1 className="text-gray-900 mb-2">Sports Event Schedule</h1>
-          <p className="text-gray-600">
+          <h1 className="text-white mb-2">Sports Event Schedule</h1>
+          <p className="text-white">
             Complete lineup of all sports events at UOC Freshers' Sports Meet 2025
           </p>
         </div>
@@ -301,18 +301,18 @@ export function LineupPageEnhanced() {
         {/* Filters */}
         <div className="flex flex-wrap gap-4 items-center justify-center">
           <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white" />
             <Input
               placeholder="Search sports or venue..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-white/80"
+              className="pl-10 bg-black/80 text-white placeholder:text-gray-400"
             />
           </div>
 
           <Select value={selectedVenue} onValueChange={setSelectedVenue}>
-            <SelectTrigger className="w-[220px] bg-white/80">
-              <MapPin className="w-4 h-4 mr-2" />
+            <SelectTrigger className="w-[220px] bg-black/80 text-white">
+              <MapPin className="w-4 h-4 mr-2 text-white" />
               <SelectValue placeholder="All Venues" />
             </SelectTrigger>
             <SelectContent>
@@ -326,8 +326,8 @@ export function LineupPageEnhanced() {
           </Select>
 
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-[180px] bg-white/80">
-              <Filter className="w-4 h-4 mr-2" />
+            <SelectTrigger className="w-[180px] bg-black/80 text-white">
+              <Filter className="w-4 h-4 mr-2 text-white" />
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
@@ -340,7 +340,7 @@ export function LineupPageEnhanced() {
         </div>
 
         <div className="mt-4 flex items-center justify-center gap-4 text-sm">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
             {filteredSchedule.length} Events
           </Badge>
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
@@ -379,35 +379,35 @@ export function LineupPageEnhanced() {
               <TableBody>
                 {filteredSchedule.map((event, index) => (
                   <TableRow
-                    key={index}
-                    className="hover:bg-blue-50/50 transition-colors"
-                  >
+                      key={index}
+                      className="hover:bg-blue-50/50 transition-colors border-b border-[#62150e]/60"
+                    >
                     <TableCell className="text-center text-2xl">
                       {getSportIcon(event.sport)}
                     </TableCell>
                     <TableCell>
-                      <p className="text-gray-900">{event.sport}</p>
+                      <p className="text-white">{event.sport}</p>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-700">
+                        <Calendar className="w-4 h-4 text-white" />
+                        <span className="text-sm text-white">
                           {event.date}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-700">
+                        <Clock className="w-4 h-4 text-white" />
+                        <span className="text-sm text-white">
                           {event.time}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-700">
+                        <MapPin className="w-4 h-4 text-white" />
+                        <span className="text-sm text-white">
                           {event.venue}
                         </span>
                       </div>
@@ -434,7 +434,7 @@ export function LineupPageEnhanced() {
 
           {filteredSchedule.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-500">
+              <p className="text-white">
                 No events found matching your filters
               </p>
             </div>
