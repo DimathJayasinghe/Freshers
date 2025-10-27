@@ -115,20 +115,20 @@ export function TournamentBracket({ rounds, sportKey }: TournamentBracketProps) 
     
     return (
       <div
-        className={`relative glass-card rounded-lg border-2 shadow-md hover:shadow-lg transition-all duration-300 ${
+        className={`relative glass-card rounded-lg border shadow-md hover:shadow-lg transition-all duration-300 ${
           match.winner
-            ? 'border-green-500 bg-gradient-to-br from-green-50 to-white'
+            ? 'border-[var(--brand-accent)] bg-gradient-to-br from-[var(--brand-primary)]/55 to-[var(--brand-dark)]/55 text-white'
             : isTBD
-            ? 'border-dashed border-gray-300 bg-gray-50/50'
-            : 'border-blue-300 hover:border-blue-400'
-        } ${isFinal ? 'ring-2 ring-yellow-400 ring-offset-2' : ''}`}
+            ? 'border-dashed border-white/20 bg-white/5'
+            : 'border-white/15 hover:border-white/30'
+        } ${isFinal ? 'ring-2 ring-[var(--brand-accent)] ring-offset-2 ring-offset-[var(--brand-dark)]' : ''}`}
         style={{ width: '280px', minHeight: '120px' }}
       >
         <div className="p-4">
           {/* Match header */}
           <div className="flex items-center justify-between mb-3">
             {match.time && (
-              <Badge variant="outline" className="text-xs flex items-center gap-1">
+              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-[var(--brand-accent)]/20 text-[var(--brand-accent)] border border-[var(--brand-accent)]/30">
                 <Clock className="w-3 h-3" />
                 {match.time}
               </Badge>
@@ -153,8 +153,8 @@ export function TournamentBracket({ rounds, sportKey }: TournamentBracketProps) 
               <div
                 className={`group relative p-3 rounded-lg transition-all duration-300 ${
                   match.winner === match.team1
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md transform scale-105'
-                    : 'bg-gray-50 hover:bg-gray-100'
+                    ? 'bg-gradient-to-r from-[var(--brand-primary)] to-[#7a251d] text-white shadow-md transform scale-105'
+                    : 'bg-white/5 hover:bg-white/10'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -162,13 +162,13 @@ export function TournamentBracket({ rounds, sportKey }: TournamentBracketProps) 
                     {match.winner === match.team1 && (
                       <Trophy className="w-4 h-4 text-yellow-300 flex-shrink-0 animate-pulse" />
                     )}
-                    <span className={`truncate ${match.winner === match.team1 ? 'font-semibold' : 'text-gray-700'}`}>
+                    <span className={`truncate ${match.winner === match.team1 ? 'font-semibold' : 'text-white/90'}`}>
                       {match.team1}
                     </span>
                   </div>
                   {match.score1 !== undefined && (
                     <span className={`ml-2 px-2 py-1 rounded text-sm font-semibold ${
-                      match.winner === match.team1 ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-900'
+                      match.winner === match.team1 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/90'
                     }`}>
                       {match.score1}
                     </span>
@@ -178,7 +178,7 @@ export function TournamentBracket({ rounds, sportKey }: TournamentBracketProps) 
               
               {/* VS Divider */}
               <div className="flex items-center justify-center">
-                <div className="text-xs text-gray-400 px-2 py-0.5 rounded-full bg-gray-100">
+                <div className="text-xs text-white/60 px-2 py-0.5 rounded-full bg-white/10">
                   VS
                 </div>
               </div>
@@ -187,8 +187,8 @@ export function TournamentBracket({ rounds, sportKey }: TournamentBracketProps) 
               <div
                 className={`group relative p-3 rounded-lg transition-all duration-300 ${
                   match.winner === match.team2
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md transform scale-105'
-                    : 'bg-gray-50 hover:bg-gray-100'
+                    ? 'bg-gradient-to-r from-[var(--brand-primary)] to-[#7a251d] text-white shadow-md transform scale-105'
+                    : 'bg-white/5 hover:bg-white/10'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -196,13 +196,13 @@ export function TournamentBracket({ rounds, sportKey }: TournamentBracketProps) 
                     {match.winner === match.team2 && (
                       <Trophy className="w-4 h-4 text-yellow-300 flex-shrink-0 animate-pulse" />
                     )}
-                    <span className={`truncate ${match.winner === match.team2 ? 'font-semibold' : 'text-gray-700'}`}>
+                    <span className={`truncate ${match.winner === match.team2 ? 'font-semibold' : 'text-white/90'}`}>
                       {match.team2}
                     </span>
                   </div>
                   {match.score2 !== undefined && (
                     <span className={`ml-2 px-2 py-1 rounded-full text-sm font-semibold ${
-                      match.winner === match.team2 ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-900'
+                      match.winner === match.team2 ? 'bg-white/20 text-white' : 'bg-white/10 text-white/90'
                     }`}>
                       {match.score2}
                     </span>
@@ -247,11 +247,11 @@ export function TournamentBracket({ rounds, sportKey }: TournamentBracketProps) 
             return (
               <div key={roundIndex} className="relative flex flex-col">
                 {/* Round Header */}
-                <div className="text-center mb-6 sticky top-0 z-10 bg-white py-2 rounded-lg shadow-sm">
-                  <Badge className="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-6 py-2 text-sm shadow-md">
+                <div className="text-center mb-6 sticky top-0 z-10 bg-[var(--brand-dark)]/80 backdrop-blur border border-white/10 py-2 rounded-lg shadow-sm">
+                  <Badge className="bg-gradient-to-r from-[var(--brand-primary)] to-[#7a251d] text-white px-6 py-2 text-sm shadow-md">
                     {round.name}
                   </Badge>
-                  <p className="text-xs text-gray-500 mt-1">{round.matches.length} {round.matches.length === 1 ? 'Match' : 'Matches'}</p>
+                  <p className="text-xs text-white/60 mt-1">{round.matches.length} {round.matches.length === 1 ? 'Match' : 'Matches'}</p>
                 </div>
                 
                 {/* Matches */}
@@ -281,7 +281,7 @@ export function TournamentBracket({ rounds, sportKey }: TournamentBracketProps) 
                             y1={matchIndex % 2 === 0 ? "0" : matchSpacing}
                             x2="32"
                             y2={matchIndex % 2 === 0 ? "0" : matchSpacing}
-                            stroke={match.winner ? "#22c55e" : "#cbd5e1"}
+                            stroke={match.winner ? "#c99908" : "rgba(255,255,255,0.3)"}
                             strokeWidth="3"
                             strokeLinecap="round"
                           />
@@ -292,7 +292,7 @@ export function TournamentBracket({ rounds, sportKey }: TournamentBracketProps) 
                             y1={matchIndex % 2 === 0 ? "0" : matchSpacing}
                             x2="32"
                             y2={matchSpacing / 2}
-                            stroke={match.winner ? "#22c55e" : "#cbd5e1"}
+                            stroke={match.winner ? "#c99908" : "rgba(255,255,255,0.3)"}
                             strokeWidth="3"
                             strokeLinecap="round"
                           />
@@ -304,7 +304,7 @@ export function TournamentBracket({ rounds, sportKey }: TournamentBracketProps) 
                               y1={matchSpacing / 2}
                               x2="64"
                               y2={matchSpacing / 2}
-                              stroke={match.winner ? "#22c55e" : "#cbd5e1"}
+                              stroke={match.winner ? "#c99908" : "rgba(255,255,255,0.3)"}
                               strokeWidth="3"
                               strokeLinecap="round"
                             />

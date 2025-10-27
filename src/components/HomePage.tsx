@@ -251,7 +251,7 @@ export function HomePage() {
 
                   <div className="pt-2 border-t border-gray-200">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-[var(--brand-accent)] font-medium">
                         {match.time}
                       </p>
                       <div className="flex items-center gap-2 text-[var(--brand-accent)] text-sm opacity-0 group-hover:opacity-100 transition-opacity">
@@ -289,9 +289,9 @@ export function HomePage() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   {/* Time & Sport */}
                   <div className="flex items-center gap-4">
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white px-4 py-3 rounded-xl shadow-md min-w-[100px] text-center">
-                      <Clock className="w-4 h-4 mx-auto mb-1" />
-                      <p className="text-sm">{match.time}</p>
+                    <div className="bg-[var(--brand-accent)] text-black px-4 py-3 rounded-xl shadow-md min-w-[100px] text-center">
+                      <Clock className="w-4 h-4 mx-auto mb-1 text-black" />
+                      <p className="text-sm font-medium">{match.time}</p>
                     </div>
                     <div>
                       <Badge className="bg-yellow-100 text-[var(--brand-primary)] mb-2">
