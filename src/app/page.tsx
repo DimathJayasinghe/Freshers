@@ -6,18 +6,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "../components/ui/tabs";
-import {
-  Trophy,
-  Calendar,
-  Settings,
-  LogOut,
-  Shield,
-  Target,
-  Home,
-  Waves,
-  Zap,
-  Menu,
-} from "lucide-react";
+import { Trophy, Calendar, Target, Home, Waves, Zap } from "lucide-react";
 import { HomePage } from "../components/HomePage";
 import { AddSportsPage } from "../components/AddSportsPage";
 import { SummaryPage } from "../components/SummaryPage";
@@ -27,220 +16,16 @@ import { DrawPage } from "../components/DrawPage";
 import { SportResults } from "../components/SportResults";
 import { SwimmingMeet } from "../components/SwimmingMeet";
 import { AthleticsMeet } from "../components/AthleticsMeet";
-import { AdminDashboard } from "../components/AdminDashboard";
-import {
-  ManageSportsTypes,
-  SportType,
-} from "../components/ManageSportsTypes";
-import {
-  ManageFaculties,
-  Faculty,
-} from "../components/ManageFaculties";
-import { ManageLineup } from "../components/ManageLineup";
-import { SportManagement } from "../components/SportManagement";
-import { ManagePointsSystem } from "../components/ManagePointsSystem";
-import { MediaManagement } from "../components/MediaManagement";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
-import { toast } from "sonner";
+// Admin UI has been moved to /admin. No admin UI here anymore.
 
 // Asset paths from public/assets
 const pahasaraLogo = "/assets/28d386181c4b31e6d1c58ccd6ca93c8d0c7f764d.png";
 const uocLogo = "/assets/3a31c04d73a287116eb8960b48059b15193e9a9b.png";
 const physicalEdLogo = "/assets/28025570a47baf1666e250b00f4dc89667b7df28.png";
 
-type AdminView =
-  | "dashboard"
-  | "manage-types"
-  | "manage-faculties"
-  | "manage-lineup"
-  | "manage-sport"
-  | "add-match"
-  | "manage-points"
-  | "media-management";
-
 export default function App() {
   const [activeTab, setActiveTab] = useState("home");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminView, setAdminView] =
-    useState<AdminView>("dashboard");
-  const [selectedSport, setSelectedSport] =
-    useState<string>("");
-
-  const [sports, setSports] = useState<SportType[]>([
-    {
-      id: 1,
-      name: "Cricket",
-      category: "men",
-      maxTeams: 8,
-      scoringType: "points",
-      venue: "Main Cricket Ground",
-    },
-    {
-      id: 2,
-      name: "Cricket",
-      category: "women",
-      maxTeams: 8,
-      scoringType: "points",
-      venue: "Main Cricket Ground",
-    },
-    {
-      id: 3,
-      name: "Basketball",
-      category: "men",
-      maxTeams: 6,
-      scoringType: "points",
-      venue: "Indoor Stadium Court 1",
-    },
-    {
-      id: 4,
-      name: "Basketball",
-      category: "women",
-      maxTeams: 6,
-      scoringType: "points",
-      venue: "Indoor Stadium Court 2",
-    },
-    {
-      id: 5,
-      name: "Football",
-      category: "men",
-      maxTeams: 8,
-      scoringType: "points",
-      venue: "Main Football Field",
-    },
-    {
-      id: 6,
-      name: "Volleyball",
-      category: "women",
-      maxTeams: 6,
-      scoringType: "sets",
-      venue: "Volleyball Court A",
-    },
-  ]);
-
-  const [faculties, setFaculties] = useState<Faculty[]>([
-    {
-      id: 1,
-      name: "Faculty of Engineering",
-      shortName: "Engineering",
-      color: "#3b82f6",
-    },
-    {
-      id: 2,
-      name: "Faculty of Science",
-      shortName: "Science",
-      color: "#10b981",
-    },
-    {
-      id: 3,
-      name: "Faculty of Medicine",
-      shortName: "Medicine",
-      color: "#f59e0b",
-    },
-    {
-      id: 4,
-      name: "Faculty of Arts",
-      shortName: "Arts",
-      color: "#8b5cf6",
-    },
-    {
-      id: 5,
-      name: "Faculty of Management",
-      shortName: "Management",
-      color: "#ec4899",
-    },
-  ]);
-
-  const handleAdminToggle = () => {
-    setIsAdmin(!isAdmin);
-    if (!isAdmin) {
-      toast("Logged in as Admin");
-      setActiveTab("admin");
-      setAdminView("dashboard");
-    } else {
-      toast("Logged out from Admin");
-      setActiveTab("lineup");
-      setAdminView("dashboard");
-    }
-  };
-
-  const handleManageSport = (sportName: string) => {
-    setSelectedSport(sportName);
-    setAdminView("manage-sport");
-  };
-
-  const handleBackToDashboard = () => {
-    setAdminView("dashboard");
-    setSelectedSport("");
-  };
-
-  const renderAdminContent = () => {
-    switch (adminView) {
-      case "manage-types":
-        return (
-          <ManageSportsTypes
-            sports={sports}
-            onSportsChange={setSports}
-          />
-        );
-      case "manage-faculties":
-        return (
-          <ManageFaculties
-            faculties={faculties}
-            onFacultiesChange={setFaculties}
-          />
-        );
-      case "manage-lineup":
-        return (
-          <ManageLineup sports={sports} faculties={faculties} />
-        );
-      case "manage-sport":
-        return (
-          <SportManagement
-            sportName={selectedSport}
-            onBack={handleBackToDashboard}
-            faculties={faculties}
-          />
-        );
-      case "add-match":
-        return <AddSportsPage />;
-      case "manage-points":
-        return (
-          <ManagePointsSystem onBack={handleBackToDashboard} />
-        );
-      case "media-management":
-        return (
-          <MediaManagement onBack={handleBackToDashboard} />
-        );
-      default:
-        return (
-          <AdminDashboard
-            sports={sports}
-            faculties={faculties}
-            onManageSport={handleManageSport}
-            onManageSportsTypes={() =>
-              setAdminView("manage-types")
-            }
-            onManageFaculties={() =>
-              setAdminView("manage-faculties")
-            }
-            onManageLineup={() => setAdminView("manage-lineup")}
-            onManagePoints={() => setAdminView("manage-points")}
-            onManageMedia={() =>
-              setAdminView("media-management")
-            }
-          />
-        );
-    }
-  };
+  // Admin content removed from home. Use /admin for admin functions.
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-green-50/20 relative overflow-x-hidden">
@@ -383,61 +168,19 @@ export default function App() {
               />
             </div>
 
-            {/* Center: Title */}
+            {/* Center spacer */}
+            <div className="flex-1" />
+
+            {/* Right: Title with pulsing logo moved here */}
             <div className="flex items-center gap-3 animate-slide-in-right">
               <div className="relative w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-green-400/30 ring-offset-2 ring-offset-blue-900">
                 <Trophy className="w-6 h-6 text-white" />
                 <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-20"></div>
               </div>
-              <div>
-                <h1 className="text-white mb-1 tracking-tight">
-                  Pulse
-                </h1>
-                <p className="text-blue-200 text-sm">
-                  UOC Freshers' Sports Meet 2025
-                </p>
+              <div className="text-right">
+                <h1 className="text-white mb-1 tracking-tight">Pulse</h1>
+                <p className="text-blue-200 text-sm">UOC Freshers' Sports Meet 2025</p>
               </div>
-            </div>
-
-            {/* Right: Admin Menu */}
-            <div className="flex items-center gap-3 animate-fade-in">
-              {isAdmin && (
-                <Badge className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg animate-pulse">
-                  <Shield className="w-3 h-3 mr-1" />
-                  Admin Mode
-                </Badge>
-              )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-white hover:bg-white/10"
-                  >
-                    <Menu className="w-5 h-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-56"
-                >
-                  <DropdownMenuLabel>Menu</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleAdminToggle}>
-                    {isAdmin ? (
-                      <>
-                        <LogOut className="w-4 h-4 mr-2" />
-                        Logout from Admin
-                      </>
-                    ) : (
-                      <>
-                        <Shield className="w-4 h-4 mr-2" />
-                        Login as Admin
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -447,16 +190,11 @@ export default function App() {
       <main className="container mx-auto px-4 py-8 animate-fade-in">
         <Tabs
           value={activeTab}
-          onValueChange={(value: string) => {
-            setActiveTab(value);
-            if (value === "admin") {
-              setAdminView("dashboard");
-            }
-          }}
+          onValueChange={(value: string) => setActiveTab(value)}
           className="w-full"
         >
           <TabsList
-            className={`grid w-full max-w-7xl mx-auto ${isAdmin ? "grid-cols-6" : "grid-cols-5"} mb-8 h-auto p-2 glass-effect shadow-xl rounded-2xl border border-white/30`}
+            className={`grid w-full max-w-7xl mx-auto grid-cols-5 mb-8 h-auto p-2 glass-effect shadow-xl rounded-2xl border border-white/30`}
           >
             <TabsTrigger
               value="home"
@@ -510,15 +248,7 @@ export default function App() {
               </span>
             </TabsTrigger>
 
-            {isAdmin && (
-              <TabsTrigger
-                value="admin"
-                className="flex items-center gap-2 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-900 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl transition-all duration-300"
-              >
-                <Settings className="w-4 h-4" />
-                <span className="hidden lg:inline">Admin</span>
-              </TabsTrigger>
-            )}
+            {/* Admin tab removed; access admin at /admin */}
           </TabsList>
 
           <TabsContent value="home" className="mt-0">
@@ -545,11 +275,7 @@ export default function App() {
             <AthleticsMeet />
           </TabsContent>
 
-          {isAdmin && (
-            <TabsContent value="admin" className="mt-0">
-              {renderAdminContent()}
-            </TabsContent>
-          )}
+          {/* Admin content removed from home */}
         </Tabs>
       </main>
 
