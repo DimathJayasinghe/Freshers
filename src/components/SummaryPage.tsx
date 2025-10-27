@@ -170,15 +170,6 @@ interface LeaderboardProps {
 function Leaderboard({ scores, title, onFacultyClick }: LeaderboardProps) {
   return (
     <div className="space-y-6">
-      {/* Title Section with Trophy */}
-      <div className="text-center mb-8 animate-fade-in">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 mb-4 shadow-xl">
-          <Trophy className="w-8 h-8 text-yellow-900" />
-        </div>
-        <h3 className="text-gray-900 mb-2">{title}</h3>
-        <p className="text-sm text-gray-600">Final Standings</p>
-      </div>
-
       {/* Glass Container */}
       <div className="glass-leaderboard-container rounded-2xl shadow-2xl overflow-hidden border border-white/20 backdrop-blur-xl">
         {/* Table Header */}
@@ -187,7 +178,7 @@ function Leaderboard({ scores, title, onFacultyClick }: LeaderboardProps) {
             <p className="text-white/90 uppercase tracking-wider text-xs">Rank</p>
           </div>
           <div className="col-span-5 sm:col-span-6">
-            <p className="text-white/90 uppercase tracking-wider text-xs">University</p>
+            <p className="text-white/90 uppercase tracking-wider text-xs">Faculty</p>
           </div>
           <div className="col-span-2 text-center">
             <p className="text-white/90 uppercase tracking-wider text-xs">Medals</p>
@@ -229,7 +220,7 @@ function Leaderboard({ scores, title, onFacultyClick }: LeaderboardProps) {
                 </div>
               </div>
 
-              {/* University Name */}
+              {/* Faculty Name */}
               <div className="col-span-5 sm:col-span-6 flex items-center">
                 <div className="flex items-center gap-3">
                   <div 
@@ -290,10 +281,7 @@ function Leaderboard({ scores, title, onFacultyClick }: LeaderboardProps) {
         </div>
       </div>
 
-      {/* Click instruction */}
-      <p className="text-center text-sm text-gray-600 mt-4 animate-fade-in">
-        💡 Click on any row to view detailed performance report
-      </p>
+      {/* End Leaderboard */}
     </div>
   );
 }
@@ -312,40 +300,7 @@ export function SummaryPage() {
 
   return (
     <div className="max-w-7xl mx-auto relative">
-      {/* SVG Pattern Background */}
-      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-        <svg className="absolute w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.5" fill="#3b82f6" opacity="0.1" />
-            </pattern>
-            <pattern id="grid" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
-              <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#3b82f6" strokeWidth="0.5" opacity="0.1" />
-            </pattern>
-            <pattern id="diagonal" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect x="0" y="0" width="5" height="10" fill="#22c55e" opacity="0.05" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#dots)" />
-          <rect width="100%" height="100%" fill="url(#grid)" />
-          <rect width="100%" height="100%" fill="url(#diagonal)" />
-        </svg>
-      </div>
-
-      {/* Hero Section */}
-      <div className="text-center mb-12 animate-fade-in">
-        <div className="inline-block mb-4">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-green-500 rounded-2xl blur-xl opacity-30 animate-pulse"></div>
-            <h2 className="relative text-gray-900 bg-gradient-to-r from-blue-900 via-blue-700 to-green-600 bg-clip-text text-transparent px-8 py-4">
-              Leaderboard
-            </h2>
-          </div>
-        </div>
-        <p className="text-gray-700 max-w-2xl mx-auto">
-          Current standings and performance metrics across all categories
-        </p>
-      </div>
+      {/* Minimal UI: Tabs + Tables only */}
 
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

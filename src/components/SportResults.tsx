@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Trophy, Medal, Users, Calendar, Target, ChevronRight } from 'lucide-react';
+import { Trophy, Users, ChevronRight, Waves, Zap } from 'lucide-react';
 import { SportDetailsView } from './SportDetailsView';
+import { SwimmingMeet } from './SwimmingMeet';
+import { AthleticsMeet } from './AthleticsMeet';
 
 interface Sport {
   id: string;
@@ -252,55 +254,11 @@ export function SportResults() {
     <div className="max-w-6xl mx-auto">
       <div className="mb-8 text-center animate-fade-in">
         <h2 className="text-white mb-2 bg-gradient-to-r from-blue-900 via-blue-700 to-green-500 bg-clip-text text-transparent">Sport-wise Results</h2>
-        <p className="text-gray-600">Browse results and standings for each sport</p>
-        <div className="flex items-center justify-center gap-2 mt-3">
-          <div className="h-1 w-24 bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-full"></div>
-        </div>
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
-        <div className="glass-card border-blue-200 hover:shadow-lg transition-all duration-300 animate-fade-in rounded-xl">
-          <CardContent className="p-6 text-center">
-            <div className="bg-blue-500 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
-              <Trophy className="w-6 h-6 text-white" />
-            </div>
-            <p className="text-blue-900 mb-1">{sportsData.length}</p>
-            <p className="text-gray-600 text-sm">Total Sports</p>
-          </CardContent>
-        </div>
-        <div className="glass-card border-green-200 hover:shadow-lg transition-all duration-300 animate-fade-in rounded-xl" style={{ animationDelay: '0.1s' }}>
-          <CardContent className="p-6 text-center">
-            <div className="bg-green-500 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
-              <Medal className="w-6 h-6 text-white" />
-            </div>
-            <p className="text-green-600 mb-1">{sportsData.filter(s => s.status === 'completed').length}</p>
-            <p className="text-gray-600 text-sm">Completed</p>
-          </CardContent>
-        </div>
-        <div className="glass-card border-orange-200 hover:shadow-lg transition-all duration-300 animate-fade-in rounded-xl" style={{ animationDelay: '0.2s' }}>
-          <CardContent className="p-6 text-center">
-            <div className="bg-orange-500 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
-              <Target className="w-6 h-6 text-white" />
-            </div>
-            <p className="text-orange-600 mb-1">{sportsData.filter(s => s.status === 'ongoing').length}</p>
-            <p className="text-gray-600 text-sm">Ongoing</p>
-          </CardContent>
-        </div>
-        <div className="glass-card border-purple-200 hover:shadow-lg transition-all duration-300 animate-fade-in rounded-xl" style={{ animationDelay: '0.3s' }}>
-          <CardContent className="p-6 text-center">
-            <div className="bg-purple-500 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
-              <Calendar className="w-6 h-6 text-white" />
-            </div>
-            <p className="text-purple-600 mb-1">{sportsData.filter(s => s.status === 'upcoming').length}</p>
-            <p className="text-gray-600 text-sm">Upcoming</p>
-          </CardContent>
-        </div>
       </div>
 
       {/* Sports Grid with Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 mb-8 h-auto p-1 bg-white shadow-md rounded-xl">
+        <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-6 gap-1 mb-8 h-auto p-1 bg-white shadow-md rounded-xl">
           <TabsTrigger 
             value="all" 
             className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
@@ -335,6 +293,24 @@ export function SportResults() {
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">Mixed</span>
             <span className="sm:hidden">Mix</span>
+          </TabsTrigger>
+
+          <TabsTrigger 
+            value="swimming" 
+            className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
+          >
+            <Waves className="w-4 h-4" />
+            <span className="hidden sm:inline">Swimming</span>
+            <span className="sm:hidden">Swim</span>
+          </TabsTrigger>
+
+          <TabsTrigger 
+            value="athletics" 
+            className="flex items-center gap-2 py-3 data-[state=active]:bg-blue-900 data-[state=active]:text-white rounded-lg transition-all"
+          >
+            <Zap className="w-4 h-4" />
+            <span className="hidden sm:inline">Athletics</span>
+            <span className="sm:hidden">Athl</span>
           </TabsTrigger>
         </TabsList>
 
@@ -373,6 +349,19 @@ export function SportResults() {
                 <p className="text-gray-500">No mixed sports available</p>
               </div>
             )}
+          </div>
+        </TabsContent>
+
+        {/* Dedicated categories */}
+        <TabsContent value="swimming" className="mt-0">
+          <div className="glass-card p-2 rounded-xl">
+            <SwimmingMeet />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="athletics" className="mt-0">
+          <div className="glass-card p-2 rounded-xl">
+            <AthleticsMeet />
           </div>
         </TabsContent>
       </Tabs>

@@ -6,7 +6,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "../components/ui/tabs";
-import { Trophy, Calendar, Target, Home, Waves, Zap } from "lucide-react";
+import { Trophy, Calendar, Target, Home } from "lucide-react";
 import { HomePage } from "../components/HomePage";
 import { AddSportsPage } from "../components/AddSportsPage";
 import { SummaryPage } from "../components/SummaryPage";
@@ -14,8 +14,7 @@ import { LineupPage } from "../components/LineupPage";
 import { LineupPageEnhanced } from "../components/LineupPageEnhanced";
 import { DrawPage } from "../components/DrawPage";
 import { SportResults } from "../components/SportResults";
-import { SwimmingMeet } from "../components/SwimmingMeet";
-import { AthleticsMeet } from "../components/AthleticsMeet";
+// Swimming and Athletics moved under Results section
 // Admin UI has been moved to /admin. No admin UI here anymore.
 
 // Asset paths from public/assets
@@ -194,7 +193,7 @@ export default function App() {
           className="w-full"
         >
           <TabsList
-            className={`grid w-full max-w-7xl mx-auto grid-cols-5 mb-8 h-auto p-2 glass-effect shadow-xl rounded-2xl border border-white/30`}
+            className={`grid w-full max-w-7xl mx-auto grid-cols-4 mb-8 h-auto p-2 glass-effect shadow-xl rounded-2xl border border-white/30`}
           >
             <TabsTrigger
               value="home"
@@ -230,23 +229,7 @@ export default function App() {
               <span className="hidden lg:inline">Results</span>
             </TabsTrigger>
 
-            <TabsTrigger
-              value="swimming"
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-900 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl transition-all duration-300"
-            >
-              <Waves className="w-4 h-4" />
-              <span className="hidden lg:inline">Swimming</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="athletics"
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-900 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-xl transition-all duration-300"
-            >
-              <Zap className="w-4 h-4" />
-              <span className="hidden lg:inline">
-                Athletics
-              </span>
-            </TabsTrigger>
+            
 
             {/* Admin tab removed; access admin at /admin */}
           </TabsList>
@@ -267,13 +250,7 @@ export default function App() {
             <SportResults />
           </TabsContent>
 
-          <TabsContent value="swimming" className="mt-0">
-            <SwimmingMeet />
-          </TabsContent>
-
-          <TabsContent value="athletics" className="mt-0">
-            <AthleticsMeet />
-          </TabsContent>
+          
 
           {/* Admin content removed from home */}
         </Tabs>
