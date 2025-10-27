@@ -183,7 +183,7 @@ export function HomePage() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-            <h2 className="text-gray-900">
+            <h2 className="text-white">
               Live Matches
             </h2>
           </div>
@@ -196,7 +196,7 @@ export function HomePage() {
               onClick={() => setSelectedMatch(match)}
               className="glass-card rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden cursor-pointer group"
             >
-              <div className="bg-gradient-to-r from-blue-900 to-blue-800 p-4">
+              <div className="bg-gradient-to-r from-[var(--brand-dark)] to-[var(--brand-primary)] p-4">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-white text-sm">
                     {match.sport}
@@ -212,7 +212,7 @@ export function HomePage() {
                     </Badge>
                   )}
                 </div>
-                <p className="text-blue-200 text-xs">
+                <p className="text-yellow-200 text-xs">
                   {match.venue}
                 </p>
               </div>
@@ -254,7 +254,7 @@ export function HomePage() {
                       <p className="text-sm text-gray-600">
                         {match.time}
                       </p>
-                      <div className="flex items-center gap-2 text-blue-600 text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-2 text-[var(--brand-accent)] text-sm opacity-0 group-hover:opacity-100 transition-opacity">
                         <Eye className="w-4 h-4" />
                         <span>View Draw</span>
                       </div>
@@ -274,8 +274,8 @@ export function HomePage() {
       {/* Today's Draw / Schedule */}
       <div className="animate-fade-in">
         <div className="flex items-center gap-3 mb-6">
-          <Calendar className="w-6 h-6 text-blue-600" />
-          <h2 className="text-gray-900">Today's Schedule</h2>
+          <Calendar className="w-6 h-6 text-[var(--brand-accent)]" />
+          <h2 className="text-white">Today's Schedule</h2>
         </div>
 
         <div className="glass-effect rounded-2xl border border-white/30 shadow-xl overflow-hidden">
@@ -294,7 +294,7 @@ export function HomePage() {
                       <p className="text-sm">{match.time}</p>
                     </div>
                     <div>
-                      <Badge className="bg-blue-100 text-blue-700 mb-2">
+                      <Badge className="bg-yellow-100 text-[var(--brand-primary)] mb-2">
                         {match.sport}
                       </Badge>
                       <p className="text-xs text-gray-600">{match.round}</p>

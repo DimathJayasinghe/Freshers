@@ -3,6 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Brand palette */
+  --brand-primary: #62150e; /* deep maroon */
+  --brand-dark: #090b0c;    /* near-black */
+  --brand-accent: #c99908;  /* yellow accent */
 }
 
 @theme inline {
@@ -16,6 +20,10 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    /* keep brand colors consistent in dark mode */
+    --brand-primary: #62150e;
+    --brand-dark: #090b0c;
+    --brand-accent: #c99908;
   }
 }
 

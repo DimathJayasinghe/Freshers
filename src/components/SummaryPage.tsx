@@ -266,7 +266,7 @@ function Leaderboard({ scores, title, onFacultyClick }: LeaderboardProps) {
 
               {/* Total Points */}
               <div className="col-span-2 flex items-center justify-center">
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-full shadow-md">
+                <div className="bg-gradient-to-r from-[var(--brand-accent)] to-[#e0b20a] text-black px-4 py-2 rounded-full shadow-md">
                   <p className="font-semibold">{faculty.totalScore}</p>
                 </div>
               </div>
@@ -306,33 +306,31 @@ export function SummaryPage() {
 
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex justify-center mb-12">
-          <TabsList className="glass-effect shadow-xl rounded-2xl p-2 border border-white/20 backdrop-blur-xl bg-white/60">
-            <TabsTrigger 
-              value="overall" 
-              className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700 data-[state=active]:text-white rounded-xl transition-all duration-300 data-[state=active]:shadow-lg"
+        <TabsList className="flex w-full max-w-3xl mx-auto items-center gap-1 mb-8 h-auto p-1 bg-[var(--brand-dark)]/60 border border-white/10 shadow-md rounded-xl overflow-x-auto">
+            <TabsTrigger
+              value="overall"
+              className="shrink-0 flex items-center gap-2 py-3 px-3 text-white/70 data-[state=active]:bg-[var(--brand-accent)] data-[state=active]:text-black rounded-lg transition-all data-[state=active]:shadow"
             >
-              <Trophy className="w-4 h-4" />
-              <span>Overall Standings</span>
-            </TabsTrigger>
-            
-            <TabsTrigger 
-              value="mens" 
-              className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700 data-[state=active]:text-white rounded-xl transition-all duration-300 data-[state=active]:shadow-lg"
+            <Trophy className="w-4 h-4" />
+            <span>Overall Standings</span>
+          </TabsTrigger>
+          
+            <TabsTrigger
+              value="men"
+              className="shrink-0 flex items-center gap-2 py-3 px-3 text-white/70 data-[state=active]:bg-[var(--brand-accent)] data-[state=active]:text-black rounded-lg transition-all data-[state=active]:shadow"
             >
-              <Users className="w-4 h-4" />
-              <span>Men's</span>
-            </TabsTrigger>
+            <Users className="w-4 h-4" />
+            <span>Men's</span>
+          </TabsTrigger>
 
-            <TabsTrigger 
-              value="womens" 
-              className="flex items-center gap-2 px-6 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700 data-[state=active]:text-white rounded-xl transition-all duration-300 data-[state=active]:shadow-lg"
+            <TabsTrigger
+              value="women"
+              className="shrink-0 flex items-center gap-2 py-3 px-3 text-white/70 data-[state=active]:bg-[var(--brand-accent)] data-[state=active]:text-black rounded-lg transition-all data-[state=active]:shadow"
             >
-              <Users className="w-4 h-4" />
-              <span>Women's</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
+            <Users className="w-4 h-4" />
+            <span>Women's</span>
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="overall" className="mt-0">
           <Leaderboard 

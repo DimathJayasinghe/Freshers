@@ -29,7 +29,7 @@ export default function App() {
   // Admin content removed from home. Use /admin for admin functions.
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-green-50/20 relative overflow-x-hidden">
+  <div className="min-h-screen bg-[var(--brand-dark)] relative overflow-x-hidden flex flex-col">
       {/* Enhanced SVG Background Patterns */}
       <div className="fixed inset-0 -z-10 pointer-events-none">
         <svg
@@ -142,12 +142,12 @@ export default function App() {
         </svg>
 
         {/* Gradient overlays */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-green-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-400/5 rounded-full blur-3xl"></div>
+  <div className="absolute top-0 left-0 w-96 h-96 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(98, 21, 14, 0.08)' }}></div>
+  <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(9, 11, 12, 0.08)' }}></div>
+  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(201, 153, 8, 0.05)' }}></div>
       </div>
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white shadow-2xl sticky top-0 z-50 border-b border-blue-700/50 backdrop-blur-sm">
+  <header className="bg-gradient-to-r from-[var(--brand-dark)] via-[var(--brand-primary)] to-[var(--brand-dark)] text-white shadow-2xl sticky top-0 z-50 border-b border-white/10 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Left: Mobile menu trigger + desktop nav */}
@@ -225,10 +225,10 @@ export default function App() {
               <nav className="hidden md:flex items-center gap-2 overflow-x-auto">
               <button
                 onClick={() => setActiveTab("home")}
-                className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-blue-700/40 ${
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-white/10 ${
                   activeTab === "home"
-                    ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white shadow"
-                    : "text-blue-100"
+                      ? "bg-[var(--brand-primary)] text-white shadow"
+                      : "text-white/80"
                 }`}
                 aria-pressed={activeTab === "home"}
               >
@@ -238,10 +238,10 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab("lineup")}
-                className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-blue-700/40 ${
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-white/10 ${
                   activeTab === "lineup"
-                    ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white shadow"
-                    : "text-blue-100"
+                      ? "bg-[var(--brand-primary)] text-white shadow"
+                      : "text-white/80"
                 }`}
                 aria-pressed={activeTab === "lineup"}
               >
@@ -251,10 +251,10 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab("summary")}
-                className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-blue-700/40 ${
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-white/10 ${
                   activeTab === "summary"
-                    ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white shadow"
-                    : "text-blue-100"
+                      ? "bg-[var(--brand-primary)] text-white shadow"
+                      : "text-white/80"
                 }`}
                 aria-pressed={activeTab === "summary"}
               >
@@ -264,10 +264,10 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab("results")}
-                className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-blue-700/40 ${
+                  className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 hover:bg-white/10 ${
                   activeTab === "results"
-                    ? "bg-gradient-to-r from-blue-900 to-blue-700 text-white shadow"
-                    : "text-blue-100"
+                      ? "bg-[var(--brand-primary)] text-white shadow"
+                      : "text-white/80"
                 }`}
                 aria-pressed={activeTab === "results"}
               >
@@ -282,13 +282,13 @@ export default function App() {
 
             {/* Right: Title with pulsing logo */}
             <div className="flex items-center gap-3 animate-slide-in-right">
-              <div className="relative w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-green-400/30 ring-offset-2 ring-offset-blue-900">
+              <div className="relative w-12 h-12 bg-gradient-to-br from-[var(--brand-accent)] to-[#e0b20a] rounded-full flex items-center justify-center shadow-lg ring-2 ring-[var(--brand-accent)]/30 ring-offset-2 ring-offset-[var(--brand-dark)]">
                 <Trophy className="w-6 h-6 text-white" />
-                <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-20"></div>
+                <div className="absolute inset-0 rounded-full bg-[var(--brand-accent)] animate-ping opacity-20"></div>
               </div>
               <div className="text-right">
                 <h1 className="text-white mb-1 tracking-tight">Pulse</h1>
-                <p className="text-blue-200 text-sm">UOC Freshers' Sports Meet 2025</p>
+                <p className="text-yellow-200 text-sm">UOC Freshers' Sports Meet 2025</p>
               </div>
             </div>
           </div>
@@ -296,7 +296,7 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 animate-fade-in">
+  <main className="container mx-auto px-4 py-8 animate-fade-in flex-1 w-full">
         <Tabs
           value={activeTab}
           onValueChange={(value: string) => setActiveTab(value)}
@@ -328,7 +328,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-t border-blue-700/50 mt-16">
+  <footer className="bg-gradient-to-r from-[var(--brand-dark)] via-[var(--brand-primary)] to-[var(--brand-dark)] border-t border-white/10 mt-8">
         <div className="container mx-auto px-4 py-8">
           {/* Logos */}
           <div className="flex items-center justify-center gap-6 mb-6">
@@ -351,9 +351,9 @@ export default function App() {
 
           {/* Divider */}
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="h-px w-16 bg-gradient-to-r from-transparent to-blue-400"></div>
-            <Trophy className="w-5 h-5 text-green-400" />
-            <div className="h-px w-16 bg-gradient-to-l from-transparent to-blue-400"></div>
+            <div className="h-px w-16 bg-gradient-to-r from-transparent to-[var(--brand-accent)]"></div>
+            <Trophy className="w-5 h-5 text-[var(--brand-accent)]" />
+            <div className="h-px w-16 bg-gradient-to-l from-transparent to-[var(--brand-accent)]"></div>
           </div>
 
           {/* Credits */}
