@@ -2,8 +2,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 
+interface Faculty {
+  id: string;
+  name: string;
+}
+
 export default function Home() {
-  const [faculties, setFaculties] = useState([])
+  const [faculties, setFaculties] = useState<Faculty[]>([])
 
   useEffect(() => {
     fetchFaculties()
@@ -12,7 +17,7 @@ export default function Home() {
   async function fetchFaculties() {
     const { data, error } = await supabase.from('faculties').select('*')
     if (error) console.error(error)
-    else setFaculties(data)
+    else setFaculties(data || [])
   }
 
   return (
