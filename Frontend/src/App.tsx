@@ -10,7 +10,7 @@ import './App.css';
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-black flex flex-col">
+      <div className="min-h-screen bg-black flex flex-col ">
         <Header />
         <main className="flex-1">
           <Routes>

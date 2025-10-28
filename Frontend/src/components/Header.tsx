@@ -32,10 +32,32 @@ export function Header() {
   ];
 
   return (
-    <header className="w-full bg-black border-b border-red-500/30 shadow-lg shadow-red-900/20">
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 md:px-8 py-2 md:py-3">
-        {/* Mobile Menu */}
-        <div className="md:hidden">
+    <header className="w-full border-b border-red-500/30 shadow-lg shadow-red-900/20">
+      <div className="w-full max-w-7xl mx-auto flex items-center justify-between px-4 md:px-8 py-2 md:py-3">
+        {/* Logo and Event info - Left Side */}
+        <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
+          {/* UOC Logo */}
+          <div className="flex items-center justify-center">
+            <img 
+              src="/logos/uoc-logo.png" 
+              alt="University of Colombo" 
+              className="h-10 w-10 md:h-14 md:w-14 object-contain"
+            />
+          </div>
+          
+          <div className="text-left">
+            <div className="text-[10px] md:text-xs text-gray-400 font-semibold tracking-wider uppercase">
+              University of Colombo
+            </div>
+            <div className="text-xs md:text-base font-bold bg-gradient-to-r from-red-400 via-red-300 to-yellow-400 bg-clip-text text-transparent">
+              <span className="hidden sm:inline">Freshers' Meet 2025</span>
+              <span className="sm:hidden">Freshers' 2025</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu - Right Side */}
+        <div className="md:hidden flex-shrink-0">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
@@ -67,8 +89,8 @@ export function Header() {
                           : "w-full justify-start text-gray-300 hover:text-white hover:bg-red-900/40 gap-3"
                       }
                     >
-                      <Icon className="h-5 w-5" />
-                      {label}
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      <span>{label}</span>
                     </Button>
                   </Link>
                 ))}
@@ -77,47 +99,30 @@ export function Header() {
           </Sheet>
         </div>
 
-        {/* Desktop Navigation Menu */}
-        <NavigationMenu className="hidden md:flex">
-          <NavigationMenuList className="gap-1">
-            {navItems.map(({ path, icon: Icon, label }) => (
-              <NavigationMenuItem key={path}>
-                <Link to={path}>
-                  <NavigationMenuLink
-                    className={cn(
-                      navigationMenuTriggerStyle(),
-                      "gap-2 transition-all duration-300 h-9 flex flex-row items-center justify-center",
-                      isActive(path)
-                        ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg shadow-red-900/50 border border-red-500/50"
-                        : "text-gray-300 hover:text-white hover:bg-red-900/40 hover:scale-105 bg-transparent"
-                    )}
-                  >
-                    <Icon className={cn(
-                      "h-4 w-4 flex-shrink-0",
-                      isActive(path) ? "text-white" : "text-gray-300"
-                    )} />
-                    <span>{label}</span>
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-            ))}
-          </NavigationMenuList>
-        </NavigationMenu>
-
-        {/* Right side - Event info */}
-        <div className="flex items-center gap-2 md:gap-4">
-          <div className="flex items-center justify-center gap-2 bg-gradient-to-br from-yellow-400 via-yellow-500 to-amber-600 text-black px-3 md:px-4 py-1.5 md:py-2 rounded-full shadow-xl shadow-yellow-500/40">
-            <Trophy className="h-4 w-4 md:h-5 md:w-5 animate-pulse" />
-          </div>
-          <div className="text-right">
-            <div className="text-[10px] md:text-xs text-gray-400 font-semibold tracking-wider uppercase">
-              University of Colombo
-            </div>
-            <div className="text-xs md:text-base font-bold bg-gradient-to-r from-red-400 via-red-300 to-yellow-400 bg-clip-text text-transparent">
-              <span className="hidden sm:inline">Freshers' Meet 2025</span>
-              <span className="sm:hidden">Freshers' 2025</span>
-            </div>
-          </div>
+        {/* Desktop Navigation Menu - Right Side */}
+        <div className="hidden md:block flex-shrink-0">
+          <NavigationMenu>
+            <NavigationMenuList className="gap-2">
+              {navItems.map(({ path, icon: Icon, label }) => (
+                <NavigationMenuItem key={path}>
+                  <Link to={path}>
+                    <NavigationMenuLink
+                      className={cn(
+                        navigationMenuTriggerStyle(),
+                        "gap-2 transition-colors duration-200 h-9 flex flex-row items-center justify-center px-4 min-w-[100px]",
+                        isActive(path)
+                          ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg shadow-red-900/50 border border-red-500/50"
+                          : "text-gray-300 hover:text-white hover:bg-red-900/40 bg-transparent"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <span>{label}</span>
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+              ))}
+            </NavigationMenuList>
+          </NavigationMenu>
         </div>
       </div>
     </header>

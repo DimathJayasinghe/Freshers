@@ -41,7 +41,7 @@ export function Footer() {
   ];
 
   return (
-    <footer className="bg-black border-t border-red-900/30 mt-auto">
+    <footer className="border-t border-red-900/30 mt-auto">
       <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
 
         {/* Social Media Links */}
