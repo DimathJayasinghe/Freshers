@@ -12,6 +12,10 @@ export function Home() {
   const [live, setLive] = useState<LiveMatch[]>([]);
   const [today, setToday] = useState<ScheduleMatch[]>([]);
   const [top, setTop] = useState<TeamData[]>([]);
+  const [liveLoaded, setLiveLoaded] = useState(false);
+  const [todayLoaded, setTodayLoaded] = useState(false);
+  const [topLoaded, setTopLoaded] = useState(false);
+  const isLoading = !(liveLoaded && todayLoaded && topLoaded);
 
   useEffect(() => {
     let mounted = true;
@@ -22,7 +26,7 @@ export function Home() {
       .catch((err) => {
         console.error('[Home] liveMatches fetch error', err);
       })
-      .finally(() => {});
+      .finally(() => { if (mounted) setLiveLoaded(true); });
     fetchTodaySchedule()
       .then((data) => {
         if (mounted && data) setToday(data);
@@ -30,7 +34,7 @@ export function Home() {
       .catch((err) => {
         console.error('[Home] todaySchedule fetch error', err);
       })
-      .finally(() => {});
+      .finally(() => { if (mounted) setTodayLoaded(true); });
     fetchLeaderboard()
       .then((data) => {
         if (mounted && data && data.length > 0) setTop(data);
@@ -38,7 +42,7 @@ export function Home() {
       .catch((err) => {
         console.error('[Home] leaderboard fetch error', err);
       })
-      .finally(() => {});
+      .finally(() => { if (mounted) setTopLoaded(true); });
     return () => {
       mounted = false;
     };
@@ -177,7 +181,24 @@ export function Home() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            {live.map((match, index) => (
+            {isLoading && (
+              <>
+                {Array.from({ length: 2 }).map((_, idx) => (
+                  <Card key={`live-skel-${idx}`} className="bg-gradient-to-br from-red-950/30 via-gray-900 to-black border-white/10 animate-pulse">
+                    <CardContent className="p-6">
+                      <div className="h-5 w-40 bg-white/10 rounded mb-2" />
+                      <div className="h-3 w-24 bg-white/10 rounded mb-4" />
+                      <div className="space-y-3">
+                        <div className="h-10 bg-white/10 rounded" />
+                        <div className="h-6 w-16 mx-auto bg-white/10 rounded" />
+                        <div className="h-10 bg-white/10 rounded" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
+            )}
+            {!isLoading && live.map((match, index) => (
               <Card
                 key={match.id}
                 onClick={() => navigate('/results')}
@@ -266,7 +287,22 @@ export function Home() {
           </div>
 
           <div className="space-y-3 sm:space-y-4">
-            {today.map((event, index) => (
+            {isLoading && (
+              <>
+                {Array.from({ length: 3 }).map((_, idx) => (
+                  <Card key={`today-skel-${idx}`} className="bg-gradient-to-r from-yellow-950/10 via-black to-gray-900 border-white/10 animate-pulse">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-center gap-4">
+                        <div className="h-8 w-24 bg-white/10 rounded" />
+                        <div className="flex-1 h-5 bg-white/10 rounded" />
+                        <div className="h-8 w-32 bg-white/10 rounded hidden sm:block" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
+            )}
+            {!isLoading && today.map((event, index) => (
               <Card
                 key={event.id}
                 onClick={() => navigate('/lineup')}
@@ -301,7 +337,7 @@ export function Home() {
             ))}
           </div>
 
-          {today.length === 0 && (
+          {!isLoading && today.length === 0 && (
             <Card className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-gray-800">
               <CardContent className="py-12 text-center">
                 <div className="relative inline-block">

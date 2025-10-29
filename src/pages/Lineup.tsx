@@ -11,12 +11,14 @@ import { fetchScheduleCalendar, type ScheduleDay } from "../lib/api";
 export function Lineup() {
   const navigate = useNavigate();
   const [days, setDays] = useState<ScheduleDay[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let mounted = true;
     fetchScheduleCalendar()
       .then((d) => { if (mounted) setDays(d); })
-      .catch((e) => console.error('[Lineup] fetchScheduleCalendar error', e));
+      .catch((e) => console.error('[Lineup] fetchScheduleCalendar error', e))
+      .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
 
@@ -60,14 +62,22 @@ export function Lineup() {
             
             {/* Stats Row */}
             <div className="flex flex-wrap gap-4 justify-center items-center pt-4">
-              <Badge className="bg-green-600/20 text-green-400 border-green-500/50 px-4 py-2 text-sm hover:bg-green-600/30 transition-all animate-fade-in-up delay-300">
-                <CalendarDays className="w-4 h-4 mr-2 inline" />
-                {dayList.length} Days
-              </Badge>
-              <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-500/50 px-4 py-2 text-sm hover:bg-yellow-600/30 transition-all animate-fade-in-up delay-400">
-                <Clock className="w-4 h-4 mr-2 inline" />
-                {totalEvents} Events
-              </Badge>
+              {loading ? (
+                <div className="h-8 w-32 rounded-full bg-white/10 animate-pulse" />
+              ) : (
+                <Badge className="bg-green-600/20 text-green-400 border-green-500/50 px-4 py-2 text-sm hover:bg-green-600/30 transition-all animate-fade-in-up delay-300">
+                  <CalendarDays className="w-4 h-4 mr-2 inline" />
+                  {dayList.length} Days
+                </Badge>
+              )}
+              {loading ? (
+                <div className="h-8 w-36 rounded-full bg-white/10 animate-pulse" />
+              ) : (
+                <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-500/50 px-4 py-2 text-sm hover:bg-yellow-600/30 transition-all animate-fade-in-up delay-400">
+                  <Clock className="w-4 h-4 mr-2 inline" />
+                  {totalEvents} Events
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -76,7 +86,39 @@ export function Lineup() {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
         <div className="space-y-6">
-          {dayList.map((day, index) => {
+          {loading && (
+            <>
+              {Array.from({ length: 2 }).map((_, idx) => (
+                <Card key={`ln-skel-${idx}`} className="bg-black/40 backdrop-blur-xl border border-white/10 animate-pulse">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-red-700/40 rounded-lg p-3 min-w-[70px] text-center">
+                        <div className="h-3 bg-white/10 rounded mb-1" />
+                        <div className="h-6 bg-white/10 rounded mb-1" />
+                        <div className="h-3 bg-white/10 rounded" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="h-5 w-40 bg-white/10 rounded mb-2" />
+                        <div className="h-3 w-24 bg-white/10 rounded" />
+                      </div>
+                      <div className="h-6 w-20 bg-white/10 rounded" />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="space-y-3">
+                      {Array.from({ length: 3 }).map((__, i2) => (
+                        <div key={i2} className="p-4 rounded-lg border border-white/10 bg-white/5">
+                          <div className="h-5 bg-white/10 rounded mb-2" />
+                          <div className="h-4 w-32 bg-white/10 rounded" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          )}
+          {!loading && dayList.map((day, index) => {
               // Parse the date to get day number and month
               const dateObj = new Date(day.date);
               const dayNumber = dateObj.getDate();

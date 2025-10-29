@@ -11,6 +11,7 @@ import { fetchLeaderboard } from "../lib/api";
 export function Leaderboard() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<TeamData[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let mounted = true;
@@ -23,7 +24,7 @@ export function Leaderboard() {
         console.error('[Leaderboard] fetch error', err);
         // Fallback to static data silently
       })
-      .finally(() => {});
+      .finally(() => { if (mounted) setLoading(false); });
     return () => {
       mounted = false;
     };
@@ -69,7 +70,18 @@ export function Leaderboard() {
 
             {/* Top 3 Podium Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-8 max-w-4xl mx-auto">
-              {rows.slice(0, 3).map((team, index) => (
+              {loading && Array.from({ length: 3 }).map((_, index) => (
+                <Card key={`lb-skel-top-${index}`} className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-white/10 animate-pulse">
+                  <CardContent className="p-6 text-center">
+                    <div className="h-7 w-7 bg-white/10 rounded-full mx-auto mb-3" />
+                    <div className="h-5 w-20 bg-white/10 rounded mx-auto mb-2" />
+                    <div className="h-3 w-40 bg-white/10 rounded mx-auto mb-3" />
+                    <div className="h-10 bg-white/10 rounded mb-2" />
+                    <div className="h-3 w-16 bg-white/10 rounded mx-auto" />
+                  </CardContent>
+                </Card>
+              ))}
+              {!loading && rows.slice(0, 3).map((team, index) => (
                 <Card
                   key={team.rank}
                   onClick={() => handleFacultyClick(team.name)}
@@ -104,7 +116,7 @@ export function Leaderboard() {
                   </CardContent>
                 </Card>
               ))}
-              {rows.length === 0 && (
+              {!loading && rows.length === 0 && (
                 <div className="col-span-1 md:col-span-3 text-center text-gray-400 text-sm">
                   No leaderboard data
                 </div>
@@ -140,7 +152,22 @@ export function Leaderboard() {
 
             {/* Team Rows */}
             <div className="space-y-3">
-              {rows.map((team, index) => (
+              {loading && Array.from({ length: 6 }).map((_, index) => (
+                <div key={`lb-skel-row-${index}`} className="grid grid-cols-1 md:grid-cols-10 gap-4 p-4 rounded-lg border bg-white/5 border-white/10 animate-pulse">
+                  <div className="md:col-span-1 flex md:justify-center items-center">
+                    <div className="w-7 h-7 bg-white/10 rounded-full" />
+                  </div>
+                  <div className="hidden md:flex md:col-span-4 items-center">
+                    <div className="h-5 w-48 bg-white/10 rounded" />
+                  </div>
+                  <div className="md:col-span-5 grid grid-cols-3 gap-3 text-center">
+                    <div className="h-6 bg-white/10 rounded" />
+                    <div className="h-6 bg-white/10 rounded" />
+                    <div className="h-6 bg-white/10 rounded" />
+                  </div>
+                </div>
+              ))}
+              {!loading && rows.map((team, index) => (
                 <div
                   key={team.rank}
                   onClick={() => handleFacultyClick(team.name)}
@@ -206,7 +233,7 @@ export function Leaderboard() {
                   </div>
                 </div>
               ))}
-              {rows.length === 0 && (
+              {!loading && rows.length === 0 && (
                 <div className="text-center text-gray-400 text-sm py-6">No data loaded</div>
               )}
             </div>
