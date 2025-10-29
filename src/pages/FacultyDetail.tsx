@@ -23,6 +23,7 @@ export function FacultyDetail() {
   const navigate = useNavigate();
   const fallback = facultyId ? getFacultyById(facultyId) : undefined;
   const [detail, setDetail] = useState<FacultyDetailData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let mounted = true;
@@ -34,7 +35,7 @@ export function FacultyDetail() {
       } catch (e) {
         console.error('[FacultyDetail] fetchFacultyDetail error', e);
       } finally {
-        // no-op
+        if (mounted) setIsLoading(false);
       }
     };
     run();
@@ -68,6 +69,48 @@ export function FacultyDetail() {
     }
     return fallback;
   }, [detail, fallback]);
+
+  // Show loading state before deciding Not Found
+  if (!faculty && isLoading) {
+    return (
+      <div className="min-h-screen">
+        <section className="bg-gradient-to-br from-red-950 via-black to-gray-900 py-12 md:py-16 relative overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 md:px-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-10 w-40 bg-white/10 rounded animate-pulse" />
+            </div>
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6 animate-pulse">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-white/10" />
+              <div className="flex-1 space-y-4 w-full">
+                <div className="h-10 w-64 bg-white/10 rounded" />
+                <div className="h-6 w-80 bg-white/10 rounded" />
+                <div className="flex gap-4">
+                  <div className="h-16 w-32 bg-white/10 rounded" />
+                  <div className="h-16 w-32 bg-white/10 rounded" />
+                  <div className="h-16 w-32 bg-white/10 rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={`fd-skel-${i}`} className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-white/10">
+                <CardHeader className="pb-3">
+                  <div className="h-6 w-40 bg-white/10 rounded mb-2" />
+                  <div className="h-5 w-24 bg-white/10 rounded" />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-4 w-28 bg-white/10 rounded" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!faculty) {
     return (
