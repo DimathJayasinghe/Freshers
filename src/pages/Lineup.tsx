@@ -21,9 +21,15 @@ export function Lineup() {
   }, []);
 
   const handleSportClick = (sport: string) => {
+
+
     // Generate a slug from the sport label for routing
     const sportId = sport.toLowerCase().replace(/\s+/g, '-').replace(/[()&']/g, '');
-    navigate(`/sport/${sportId}`);
+    if (sportId === 'closing-ceremony') {
+      navigate('/closing-ceremony');
+    } else {
+      navigate(`/sport/${sportId}`);
+    }
   };
 
   const dayList = days;

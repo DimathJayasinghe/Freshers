@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PahasaraOverlay } from "@/components/PahasaraOverlay";
@@ -14,8 +15,18 @@ import { ClosingCeremony } from "@/pages/ClosingCeremony";
 import './App.css';
 
 function App() {
+  // Scroll to top on route change
+  function ScrollToTop() {
+    const location = useLocation();
+    useEffect(() => {
+      window.scrollTo(0, 0);
+    }, [location.pathname]);
+    return null;
+  }
+
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen bg-black flex flex-col ">
         <Header />
         <main className="flex-1">
