@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, MapPin, Calendar, Trophy, Users, Flame, ChevronRight } from "lucide-react";
+import { Calendar, Trophy, Users, Flame, ChevronRight, MapPin, Clock } from "lucide-react";
 import { liveMatches, todaySchedule } from "@/data/homeData";
+import { leaderboardData } from "@/data/leaderboardData";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -19,9 +20,9 @@ export function Home() {
           </div>
         
           <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="text-center space-y-4 sm:space-y-6 md:space-y-8 ">
-            {/* UOC Logo */}
-            <div className="flex justify-center mb-4 animate-fade-in">
+            <div className="text-center space-y-4 sm:space-y-6 md:space-y-8">
+              {/* UOC Logo */}
+              <div className="flex justify-center mb-4 animate-fade-in">
               <img 
                 src="/logos/uoc-logo.png" 
                 alt="University of Colombo" 
@@ -123,7 +124,7 @@ export function Home() {
         {/* Live Results Section */}
         <section className="animate-fade-in-up">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 md:mb-8">
-            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-full px-4 py-2">
+            <div className="flex items-center gap-2  px-4 py-2">
               <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full animate-pulse"></div>
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Live Results</h2>
             </div>
@@ -212,7 +213,7 @@ export function Home() {
         {/* Today's Schedule Section */}
         <section className="animate-fade-in-up delay-200">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 md:mb-8">
-            <div className="flex items-center gap-2 sm:gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 py-2">
+            <div className="flex items-center gap-2 sm:gap-3  px-4 py-2">
               <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Today's Schedule</h2>
             </div>
@@ -239,40 +240,22 @@ export function Home() {
                 {/* Animated background glow */}
                 <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <CardContent className="p-3 sm:p-4 relative z-10">
-                  <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                <CardContent className="p-4 sm:p-6 relative z-10">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                     {/* Time Badge */}
-                    <div className="bg-gradient-to-br from-yellow-500 to-amber-600 text-black rounded-xl p-3 min-w-[90px] text-center flex-shrink-0 group-hover:scale-105 transition-transform shadow-lg shadow-yellow-500/20">
-                      <Clock className="w-5 h-5 mx-auto mb-1" />
-                      <div className="font-bold text-sm">{event.time}</div>
+                    <div className="flex items-center gap-2 bg-gradient-to-br from-yellow-500 to-amber-600 text-black rounded-lg px-3 py-2 flex-shrink-0">
+                      <Clock className="w-4 h-4" />
+                      <span className="font-bold text-sm">{event.time}</span>
                     </div>
 
-                    {/* Sport & Match Info */}
-                    <div className="flex-1 bg-gradient-to-r from-white/5 to-transparent p-3 rounded-lg group-hover:from-white/10 transition-colors">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-1 h-6 bg-yellow-500 rounded-full"></div>
-                        <div>
-                          <div className="text-white font-bold text-sm md:text-base">{event.sport}</div>
-                          <div className="text-gray-400 text-xs">{event.match}</div>
-                        </div>
-                      </div>
-                      
-                      {/* Teams */}
-                      <div className="flex items-center gap-2 sm:gap-3 justify-center mt-3">
-                        <span className="text-white font-semibold text-sm md:text-base truncate flex-1 text-center sm:text-left bg-black/30 px-3 py-2 rounded-lg">
-                          {event.team1}
-                        </span>
-                        <span className="bg-gradient-to-r from-yellow-500 to-amber-600 text-black px-3 py-1.5 rounded-full text-xs font-bold flex-shrink-0 shadow-lg">
-                          VS
-                        </span>
-                        <span className="text-white font-semibold text-sm md:text-base truncate flex-1 text-center sm:text-right bg-black/30 px-3 py-2 rounded-lg">
-                          {event.team2}
-                        </span>
-                      </div>
+                    {/* Sport Name */}
+                    <div className="flex-1 flex items-center gap-3">
+                      <div className="w-1 h-8 bg-yellow-500"></div>
+                      <div className="text-white font-bold text-lg md:text-xl">{event.sport}</div>
                     </div>
 
-                    {/* Venue */}
-                    <div className="flex items-center gap-2 text-gray-400 text-sm bg-black/30 px-4 py-2 rounded-lg flex-shrink-0 group-hover:text-yellow-400 transition-colors">
+                    {/* Location */}
+                    <div className="flex items-center gap-2 text-gray-400 text-sm bg-black/30 px-3 py-2 rounded-lg flex-shrink-0 group-hover:text-yellow-400 transition-colors">
                       <MapPin className="w-4 h-4 flex-shrink-0 text-yellow-500" />
                       <span className="font-medium">{event.venue}</span>
                     </div>
@@ -303,6 +286,186 @@ export function Home() {
               </CardContent>
             </Card>
           )}
+
+          {/* Leaderboard Section */}
+          <section className="mt-12 animate-fade-in-up delay-300">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 md:mb-8">
+              <div className="flex items-center gap-2 sm:gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 py-2">
+                <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Top Rankings</h2>
+              </div>
+              <div className="flex-1 h-[2px] bg-gradient-to-r from-yellow-500/50 to-transparent hidden sm:block"></div>
+              <Button
+                onClick={() => navigate('/leaderboard')}
+                variant="ghost"
+                size="sm"
+                className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10 group"
+              >
+                Full Leaderboard
+                <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </div>
+
+            {/* Podium Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+              {/* 2nd Place */}
+              <Card 
+                onClick={() => navigate('/leaderboard')}
+                className="group relative overflow-hidden bg-gradient-to-br from-gray-300/10 via-gray-500/5 to-black border-gray-400/30 hover:border-gray-300/50 hover:shadow-2xl hover:shadow-gray-500/20 transition-all duration-300 cursor-pointer md:mt-8"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-400/0 via-gray-400/10 to-gray-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <CardContent className="p-6 relative z-10 text-center">
+                  {/* Rank Badge */}
+                  <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-gray-300 to-gray-500 flex items-center justify-center shadow-2xl shadow-gray-500/50 group-hover:scale-110 transition-transform">
+                    <span className="text-2xl font-bold text-black">2</span>
+                  </div>
+
+                  {/* Medal Icon */}
+                  <div className="mb-3">
+                    <Trophy className="w-12 h-12 mx-auto text-gray-400 group-hover:scale-110 transition-transform" />
+                  </div>
+
+                  {/* Faculty Info */}
+                  <div className="mb-4">
+                    <h3 className="text-white font-bold text-lg mb-1 group-hover:text-gray-300 transition-colors">
+                      {leaderboardData[1].name}
+                    </h3>
+                    <span className="inline-block px-3 py-1 bg-gray-500/20 border border-gray-400/30 rounded-full text-gray-300 text-sm font-semibold">
+                      {leaderboardData[1].code}
+                    </span>
+                  </div>
+
+                  {/* Points Breakdown */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Men's:</span>
+                      <span className="text-blue-400 font-bold">{leaderboardData[1].mensPoints}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Women's:</span>
+                      <span className="text-pink-400 font-bold">{leaderboardData[1].womensPoints}</span>
+                    </div>
+                  </div>
+
+                  {/* Total Points */}
+                  <div className="pt-4 border-t border-gray-700">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-gray-300 to-gray-500 bg-clip-text text-transparent">
+                      {leaderboardData[1].totalPoints}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">Total Points</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 1st Place - Elevated */}
+              <Card 
+                onClick={() => navigate('/leaderboard')}
+                className="group relative overflow-hidden bg-gradient-to-br from-yellow-400/20 via-amber-500/10 to-black border-yellow-500/50 hover:border-yellow-400/70 hover:shadow-2xl hover:shadow-yellow-500/30 transition-all duration-300 cursor-pointer md:scale-105 md:-mt-4"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/0 via-yellow-400/10 to-yellow-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                {/* Crown Icon */}
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20">
+                  <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center shadow-2xl shadow-yellow-500/50 animate-pulse">
+                    <Trophy className="w-6 h-6 text-black" />
+                  </div>
+                </div>
+
+                <CardContent className="p-6 pt-8 relative z-10 text-center">
+                  {/* Rank Badge */}
+                  <div className="mx-auto mb-4 w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-2xl shadow-yellow-500/50 group-hover:scale-110 transition-transform">
+                    <span className="text-3xl font-bold text-black">1</span>
+                  </div>
+
+                  {/* Medal Icon */}
+                  <div className="mb-3">
+                    <Trophy className="w-16 h-16 mx-auto text-yellow-500 group-hover:scale-110 transition-transform" />
+                  </div>
+
+                  {/* Faculty Info */}
+                  <div className="mb-4">
+                    <h3 className="text-white font-bold text-xl mb-2 group-hover:text-yellow-400 transition-colors">
+                      {leaderboardData[0].name}
+                    </h3>
+                    <span className="inline-block px-4 py-1 bg-yellow-500/20 border border-yellow-400/50 rounded-full text-yellow-400 text-sm font-bold">
+                      {leaderboardData[0].code}
+                    </span>
+                  </div>
+
+                  {/* Points Breakdown */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-300">Men's:</span>
+                      <span className="text-blue-400 font-bold">{leaderboardData[0].mensPoints}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-300">Women's:</span>
+                      <span className="text-pink-400 font-bold">{leaderboardData[0].womensPoints}</span>
+                    </div>
+                  </div>
+
+                  {/* Total Points */}
+                  <div className="pt-4 border-t border-yellow-700">
+                    <div className="text-5xl font-bold bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                      {leaderboardData[0].totalPoints}
+                    </div>
+                    <div className="text-xs text-yellow-400 mt-1 font-semibold">Total Points</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 3rd Place */}
+              <Card 
+                onClick={() => navigate('/leaderboard')}
+                className="group relative overflow-hidden bg-gradient-to-br from-amber-700/10 via-amber-800/5 to-black border-amber-600/30 hover:border-amber-500/50 hover:shadow-2xl hover:shadow-amber-500/20 transition-all duration-300 cursor-pointer md:mt-8"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <CardContent className="p-6 relative z-10 text-center">
+                  {/* Rank Badge */}
+                  <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center shadow-2xl shadow-amber-600/50 group-hover:scale-110 transition-transform">
+                    <span className="text-2xl font-bold text-white">3</span>
+                  </div>
+
+                  {/* Medal Icon */}
+                  <div className="mb-3">
+                    <Trophy className="w-12 h-12 mx-auto text-amber-600 group-hover:scale-110 transition-transform" />
+                  </div>
+
+                  {/* Faculty Info */}
+                  <div className="mb-4">
+                    <h3 className="text-white font-bold text-lg mb-1 group-hover:text-amber-500 transition-colors">
+                      {leaderboardData[2].name}
+                    </h3>
+                    <span className="inline-block px-3 py-1 bg-amber-600/20 border border-amber-500/30 rounded-full text-amber-400 text-sm font-semibold">
+                      {leaderboardData[2].code}
+                    </span>
+                  </div>
+
+                  {/* Points Breakdown */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Men's:</span>
+                      <span className="text-blue-400 font-bold">{leaderboardData[2].mensPoints}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Women's:</span>
+                      <span className="text-pink-400 font-bold">{leaderboardData[2].womensPoints}</span>
+                    </div>
+                  </div>
+
+                  {/* Total Points */}
+                  <div className="pt-4 border-t border-amber-800">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-amber-500 to-amber-700 bg-clip-text text-transparent">
+                      {leaderboardData[2].totalPoints}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">Total Points</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
 
           {/* Quick Actions */}
           <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">

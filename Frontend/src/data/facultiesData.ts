@@ -14,7 +14,7 @@ export interface Faculty {
   sportsParticipated: string[];
   achievements: Achievement[];
   teamMembers?: TeamMember[];
-}
+} 
 
 export interface Achievement {
   sport: string;
