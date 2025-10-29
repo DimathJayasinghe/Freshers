@@ -1,10 +1,14 @@
-// Tournament helpers
+// Tournament helpers (no dependency on local datasets)
 
-import { faculties } from './facultiesData';
-
-// Returns a short label for a faculty given its full name
+// Heuristic: build an acronym from words (e.g., "Faculty of Science" -> "FoS").
 export function getShortFacultyName(fullName: string): string {
-	const match = faculties.find(f => f.name.toLowerCase() === fullName.toLowerCase());
-	return match?.shortName ?? fullName;
+	if (!fullName) return '';
+	const words = fullName.trim().split(/\s+/);
+	if (words.length === 1) return words[0].slice(0, 3);
+	const acronym = words
+		.map((w) => (/[A-Za-z]/.test(w[0]) ? w[0] : ''))
+		.join('')
+		.slice(0, 4);
+	return acronym || fullName.slice(0, 4);
 }
 

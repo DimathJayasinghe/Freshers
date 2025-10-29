@@ -1,4 +1,4 @@
-// Faculties fallback data and helpers
+// Faculties helpers and types only (no fallback data)
 
 export type Faculty = {
 	id: string;
@@ -12,29 +12,17 @@ export type Faculty = {
 	achievements: { sport: string; position: string; year?: number }[];
 };
 
-export const faculties: Faculty[] = [
-	{
-		id: '-',
-		name: '-',
-		shortName: '-',
-		colors: { primary: '#c026d3', secondary: '#9333ea' },
-		logo: '/logos/faculties/fos.png',
-		totalPoints: 0,
-		position: 0,
-		sportsParticipated: ['-'],
-		achievements: [
-			{ sport: '-', position: 'Champion', year: 2024 },
-		],
-	},
-	
-];
-
-export function getFacultyById(id: string): Faculty | undefined {
-	return faculties.find((f) => f.id === id);
+export function getFacultyById(_id: string): Faculty | undefined {
+	// Mark param as used to satisfy linters
+	void _id;
+	// No local cache available; without DB mapping we can't resolve reliably.
+	return undefined;
 }
 
-export function getFacultyIdByName(name: string): string | undefined {
-	const match = faculties.find((f) => f.name.toLowerCase() === name.toLowerCase());
-	return match?.id;
+export function getFacultyIdByName(_name: string): string | undefined {
+	// Mark param as used to satisfy linters
+	void _name;
+	// No local cache available; return undefined to skip navigation when unknown.
+	return undefined;
 }
 

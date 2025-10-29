@@ -1,4 +1,4 @@
-// Home page fallback data and types
+// Home page data types only (no fallback data)
 
 export type LiveMatch = {
 	id: number;
@@ -19,20 +19,4 @@ export type ScheduleMatch = {
 	team2: string;
 	venue: string;
 };
-
-export const liveMatches: LiveMatch[] = [
-	{
-		id: 1,
-		sport: 'Cricket (Men\'s)',
-		venue: '-',
-		team1: '-',
-		team2: '-',
-		status: '-',
-		statusColor: 'text-green-400',
-	},
-];
-
-export const todaySchedule: ScheduleMatch[] = [
-	{ id: 1, time: '09:00 AM', sport: '-', match: 'Track Events', team1: '', team2: '', venue: '-' },
-];
 

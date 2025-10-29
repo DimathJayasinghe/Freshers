@@ -1,4 +1,4 @@
-// Leaderboard fallback data and types
+// Leaderboard data types only (no fallback data)
 
 export type TeamData = {
 	rank: number;
@@ -8,9 +8,4 @@ export type TeamData = {
 	womensPoints: number;
 	totalPoints: number;
 };
-
-// Minimal, non-authoritative fallback used before Supabase loads
-export const leaderboardData: TeamData[] = [
-	{ rank: 1, name: '-', code: '-', mensPoints: 0, womensPoints: 0, totalPoints: 0 },
-];
 

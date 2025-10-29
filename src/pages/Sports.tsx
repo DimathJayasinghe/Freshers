@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, Users, User, Waves, Activity, Search } from "lucide-react";
-import { sportsData, type Sport } from "@/data/sportsData";
+import type { Sport } from "@/data/sportsData";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ export function Sports() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [sports, setSports] = useState<Sport[]>(sportsData);
+  const [sports, setSports] = useState<Sport[]>([]);
 
   useEffect(() => {
     let mounted = true;

@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { faculties as facultiesDummy } from "@/data/facultiesData";
 import { Trophy, Users, Medal, TrendingUp, Sparkles, Target, Award, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,17 +18,7 @@ export function Faculties() {
     return () => { mounted = false; };
   }, []);
 
-  const list = rows ?? facultiesDummy.map(f => ({
-    id: f.id,
-    name: f.name,
-    shortName: f.shortName,
-    colors: f.colors,
-    logo: f.logo,
-    totalPoints: f.totalPoints,
-    rank: f.position,
-    sportsCount: f.sportsParticipated.length,
-    latestAchievement: f.achievements[0] ? { sport: f.achievements[0].sport, position: f.achievements[0].position, year: f.achievements[0].year ?? null } : null,
-  }));
+  const list = rows ?? [];
   return (
     <div className="min-h-screen">
       {/* Page Header with Animated Background */}

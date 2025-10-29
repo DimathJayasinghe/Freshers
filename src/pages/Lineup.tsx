@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, MapPin, CalendarDays, Sparkles, ChevronRight } from "lucide-react";
-import { scheduleData as scheduleDummy } from "@/data/lineupData";
-import { sportsData } from "@/data/sportsData";
+// no local fallbacks; rely on Supabase only
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,20 +21,12 @@ export function Lineup() {
   }, []);
 
   const handleSportClick = (sport: string) => {
-    // Find the sport in sportsData by matching the name
-    const sportMatch = sportsData.find(s => 
-      sport.toLowerCase().includes(s.name.toLowerCase())
-    );
-    
-    // Use the sport ID if found, otherwise fallback to slug conversion
-    const sportId = sportMatch 
-      ? sportMatch.id 
-      : sport.toLowerCase().replace(/\s+/g, '-').replace(/[()&']/g, '');
-    
+    // Generate a slug from the sport label for routing
+    const sportId = sport.toLowerCase().replace(/\s+/g, '-').replace(/[()&']/g, '');
     navigate(`/sport/${sportId}`);
   };
 
-  const dayList = days.length ? days : scheduleDummy;
+  const dayList = days;
   const totalEvents = dayList.reduce((sum, day) => sum + day.events.length, 0);
 
   return (
