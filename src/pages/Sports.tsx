@@ -1,11 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, Users, User, Waves, Activity, Search } from "lucide-react";
-import type { Sport } from "@/data/sportsData";
+import type { Sport } from "../data/sportsData";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { fetchSports } from "@/lib/api";
+import { fetchSports } from "../lib/api";
 
 export function Sports() {
   const navigate = useNavigate();

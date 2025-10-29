@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award, Sparkles } from "lucide-react";
-import type { TeamData } from "@/data/leaderboardData";
-import { getFacultyIdByName } from "@/data/facultiesData";
+import type { TeamData } from "../data/leaderboardData";
+import { getFacultyIdByName } from "../data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
-import { fetchLeaderboard } from "@/lib/api";
+import { fetchLeaderboard } from "../lib/api";
 
 export function Leaderboard() {
   const navigate = useNavigate();

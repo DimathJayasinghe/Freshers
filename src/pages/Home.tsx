@@ -1,11 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Trophy, Users, Flame, ChevronRight, MapPin, Clock } from "lucide-react";
-import type { LiveMatch, ScheduleMatch } from "@/data/homeData";
-import type { TeamData } from "@/data/leaderboardData";
+import type { LiveMatch, ScheduleMatch } from "../data/homeData";
+import type { TeamData } from "../data/leaderboardData";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { fetchLiveMatches, fetchTodaySchedule, fetchLeaderboard } from "@/lib/api";
+import { fetchLiveMatches, fetchTodaySchedule, fetchLeaderboard } from "../lib/api";
 
 export function Home() {
   const navigate = useNavigate();
