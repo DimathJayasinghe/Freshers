@@ -13,3 +13,6 @@ export const supabase: SupabaseClient | null = hasSupabaseEnv
       },
     })
   : null;
+
+
+  
