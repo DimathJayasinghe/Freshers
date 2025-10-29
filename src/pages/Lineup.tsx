@@ -1,14 +1,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, MapPin, CalendarDays, Sparkles, ChevronRight } from "lucide-react";
-import { scheduleData } from "@/data/lineupData";
+import { scheduleData as scheduleDummy } from "@/data/lineupData";
 import { sportsData } from "@/data/sportsData";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useEffect, useState } from "react";
+import { fetchScheduleCalendar, type ScheduleDay } from "@/lib/api";
 
 export function Lineup() {
   const navigate = useNavigate();
+  const [days, setDays] = useState<ScheduleDay[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchScheduleCalendar()
+      .then((d) => { if (mounted) setDays(d); })
+      .catch((e) => console.error('[Lineup] fetchScheduleCalendar error', e));
+    return () => { mounted = false; };
+  }, []);
 
   const handleSportClick = (sport: string) => {
     // Find the sport in sportsData by matching the name
@@ -24,7 +35,8 @@ export function Lineup() {
     navigate(`/sport/${sportId}`);
   };
 
-  const totalEvents = scheduleData.reduce((sum, day) => sum + day.events.length, 0);
+  const dayList = days.length ? days : scheduleDummy;
+  const totalEvents = dayList.reduce((sum, day) => sum + day.events.length, 0);
 
   return (
     <div className="min-h-screen">
@@ -53,7 +65,7 @@ export function Lineup() {
             <div className="flex flex-wrap gap-4 justify-center items-center pt-4">
               <Badge className="bg-green-600/20 text-green-400 border-green-500/50 px-4 py-2 text-sm hover:bg-green-600/30 transition-all animate-fade-in-up delay-300">
                 <CalendarDays className="w-4 h-4 mr-2 inline" />
-                {scheduleData.length} Days
+                {dayList.length} Days
               </Badge>
               <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-500/50 px-4 py-2 text-sm hover:bg-yellow-600/30 transition-all animate-fade-in-up delay-400">
                 <Clock className="w-4 h-4 mr-2 inline" />
@@ -67,7 +79,7 @@ export function Lineup() {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
         <div className="space-y-6">
-          {scheduleData.map((day, index) => {
+          {dayList.map((day, index) => {
               // Parse the date to get day number and month
               const dateObj = new Date(day.date);
               const dayNumber = dateObj.getDate();

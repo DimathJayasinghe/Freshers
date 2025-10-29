@@ -1,13 +1,33 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award, Sparkles } from "lucide-react";
-import { leaderboardData } from "@/data/leaderboardData";
+import { leaderboardData, type TeamData } from "@/data/leaderboardData";
 import { getFacultyIdByName } from "@/data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useEffect, useState } from "react";
+import { fetchLeaderboard } from "@/lib/api";
 
 export function Leaderboard() {
   const navigate = useNavigate();
+  const [rows, setRows] = useState<TeamData[]>(leaderboardData);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchLeaderboard()
+      .then((data) => {
+        if (!mounted) return;
+        if (data) setRows(data);
+      })
+      .catch((err) => {
+        console.error('[Leaderboard] fetch error', err);
+        // Fallback to static data silently
+      })
+      .finally(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Handle faculty name click
   const handleFacultyClick = (facultyName: string) => {
@@ -49,7 +69,7 @@ export function Leaderboard() {
 
             {/* Top 3 Podium Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-8 max-w-4xl mx-auto">
-              {leaderboardData.slice(0, 3).map((team, index) => (
+              {rows.slice(0, 3).map((team, index) => (
                 <Card
                   key={team.rank}
                   onClick={() => handleFacultyClick(team.name)}
@@ -115,7 +135,7 @@ export function Leaderboard() {
 
             {/* Team Rows */}
             <div className="space-y-3">
-              {leaderboardData.map((team, index) => (
+              {rows.map((team, index) => (
                 <div
                   key={team.rank}
                   onClick={() => handleFacultyClick(team.name)}

@@ -1,12 +1,48 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Trophy, Users, Flame, ChevronRight, MapPin, Clock } from "lucide-react";
-import { liveMatches, todaySchedule } from "@/data/homeData";
-import { leaderboardData } from "@/data/leaderboardData";
+import { liveMatches as liveMatchesDummy, todaySchedule as todayScheduleDummy, type LiveMatch, type ScheduleMatch } from "@/data/homeData";
+import { leaderboardData, type TeamData } from "@/data/leaderboardData";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { fetchLiveMatches, fetchTodaySchedule, fetchLeaderboard } from "@/lib/api";
 
 export function Home() {
   const navigate = useNavigate();
+  const [live, setLive] = useState<LiveMatch[]>(liveMatchesDummy);
+  const [today, setToday] = useState<ScheduleMatch[]>(todayScheduleDummy);
+  const [top, setTop] = useState<TeamData[]>(leaderboardData);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchLiveMatches()
+      .then((data) => {
+        if (mounted && data) setLive(data);
+      })
+      .catch((err) => {
+        console.error('[Home] liveMatches fetch error', err);
+      })
+      .finally(() => {});
+    fetchTodaySchedule()
+      .then((data) => {
+        if (mounted && data) setToday(data);
+      })
+      .catch((err) => {
+        console.error('[Home] todaySchedule fetch error', err);
+      })
+      .finally(() => {});
+    fetchLeaderboard()
+      .then((data) => {
+        if (mounted && data && data.length > 0) setTop(data);
+      })
+      .catch((err) => {
+        console.error('[Home] leaderboard fetch error', err);
+      })
+      .finally(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -100,7 +136,7 @@ export function Home() {
               >
                 <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
                   <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 group-hover:scale-110 transition-transform" />
-                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{liveMatches.length}</div>
+                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{live.length}</div>
                 </div>
                 <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-red-400 transition-colors">Live Now</div>
               </div>
@@ -110,7 +146,7 @@ export function Home() {
               >
                 <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 group-hover:scale-110 transition-transform" />
-                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{todaySchedule.length}</div>
+                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{today.length}</div>
                 </div>
                 <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-green-400 transition-colors">Today's Matches</div>
               </div>
@@ -141,7 +177,7 @@ export function Home() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            {liveMatches.map((match, index) => (
+            {live.map((match, index) => (
               <Card
                 key={match.id}
                 onClick={() => navigate('/results')}
@@ -194,7 +230,7 @@ export function Home() {
             ))}
           </div>
 
-          {liveMatches.length === 0 && (
+          {live.length === 0 && (
             <Card className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-gray-800">
               <CardContent className="py-12 text-center">
                 <div className="relative inline-block">
@@ -230,7 +266,7 @@ export function Home() {
           </div>
 
           <div className="space-y-3 sm:space-y-4">
-            {todaySchedule.map((event, index) => (
+            {today.map((event, index) => (
               <Card
                 key={event.id}
                 onClick={() => navigate('/lineup')}
@@ -265,7 +301,7 @@ export function Home() {
             ))}
           </div>
 
-          {todaySchedule.length === 0 && (
+          {today.length === 0 && (
             <Card className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-gray-800">
               <CardContent className="py-12 text-center">
                 <div className="relative inline-block">
@@ -329,10 +365,10 @@ export function Home() {
                   {/* Faculty Info */}
                   <div className="mb-4">
                     <h3 className="text-white font-bold text-lg mb-1 group-hover:text-gray-300 transition-colors">
-                      {leaderboardData[1].name}
+                      {top[1]?.name ?? leaderboardData[1].name}
                     </h3>
                     <span className="inline-block px-3 py-1 bg-gray-500/20 border border-gray-400/30 rounded-full text-gray-300 text-sm font-semibold">
-                      {leaderboardData[1].code}
+                      {top[1]?.code ?? leaderboardData[1].code}
                     </span>
                   </div>
 
@@ -340,18 +376,18 @@ export function Home() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Men's:</span>
-                      <span className="text-blue-400 font-bold">{leaderboardData[1].mensPoints}</span>
+                      <span className="text-blue-400 font-bold">{top[1]?.mensPoints ?? leaderboardData[1].mensPoints}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Women's:</span>
-                      <span className="text-pink-400 font-bold">{leaderboardData[1].womensPoints}</span>
+                      <span className="text-pink-400 font-bold">{top[1]?.womensPoints ?? leaderboardData[1].womensPoints}</span>
                     </div>
                   </div>
 
                   {/* Total Points */}
                   <div className="pt-4 border-t border-gray-700">
                     <div className="text-4xl font-bold bg-gradient-to-r from-gray-300 to-gray-500 bg-clip-text text-transparent">
-                      {leaderboardData[1].totalPoints}
+                      {top[1]?.totalPoints ?? leaderboardData[1].totalPoints}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">Total Points</div>
                   </div>
@@ -386,10 +422,10 @@ export function Home() {
                   {/* Faculty Info */}
                   <div className="mb-4">
                     <h3 className="text-white font-bold text-xl mb-2 group-hover:text-yellow-400 transition-colors">
-                      {leaderboardData[0].name}
+                      {top[0]?.name ?? leaderboardData[0].name}
                     </h3>
                     <span className="inline-block px-4 py-1 bg-yellow-500/20 border border-yellow-400/50 rounded-full text-yellow-400 text-sm font-bold">
-                      {leaderboardData[0].code}
+                      {top[0]?.code ?? leaderboardData[0].code}
                     </span>
                   </div>
 
@@ -397,18 +433,18 @@ export function Home() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-300">Men's:</span>
-                      <span className="text-blue-400 font-bold">{leaderboardData[0].mensPoints}</span>
+                      <span className="text-blue-400 font-bold">{top[0]?.mensPoints ?? leaderboardData[0].mensPoints}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-300">Women's:</span>
-                      <span className="text-pink-400 font-bold">{leaderboardData[0].womensPoints}</span>
+                      <span className="text-pink-400 font-bold">{top[0]?.womensPoints ?? leaderboardData[0].womensPoints}</span>
                     </div>
                   </div>
 
                   {/* Total Points */}
                   <div className="pt-4 border-t border-yellow-700">
                     <div className="text-5xl font-bold bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
-                      {leaderboardData[0].totalPoints}
+                      {top[0]?.totalPoints ?? leaderboardData[0].totalPoints}
                     </div>
                     <div className="text-xs text-yellow-400 mt-1 font-semibold">Total Points</div>
                   </div>
@@ -436,10 +472,10 @@ export function Home() {
                   {/* Faculty Info */}
                   <div className="mb-4">
                     <h3 className="text-white font-bold text-lg mb-1 group-hover:text-amber-500 transition-colors">
-                      {leaderboardData[2].name}
+                      {top[2]?.name ?? leaderboardData[2].name}
                     </h3>
                     <span className="inline-block px-3 py-1 bg-amber-600/20 border border-amber-500/30 rounded-full text-amber-400 text-sm font-semibold">
-                      {leaderboardData[2].code}
+                      {top[2]?.code ?? leaderboardData[2].code}
                     </span>
                   </div>
 
@@ -447,18 +483,18 @@ export function Home() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Men's:</span>
-                      <span className="text-blue-400 font-bold">{leaderboardData[2].mensPoints}</span>
+                      <span className="text-blue-400 font-bold">{top[2]?.mensPoints ?? leaderboardData[2].mensPoints}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Women's:</span>
-                      <span className="text-pink-400 font-bold">{leaderboardData[2].womensPoints}</span>
+                      <span className="text-pink-400 font-bold">{top[2]?.womensPoints ?? leaderboardData[2].womensPoints}</span>
                     </div>
                   </div>
 
                   {/* Total Points */}
                   <div className="pt-4 border-t border-amber-800">
                     <div className="text-4xl font-bold bg-gradient-to-r from-amber-500 to-amber-700 bg-clip-text text-transparent">
-                      {leaderboardData[2].totalPoints}
+                      {top[2]?.totalPoints ?? leaderboardData[2].totalPoints}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">Total Points</div>
                   </div>
