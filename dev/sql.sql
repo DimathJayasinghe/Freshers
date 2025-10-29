@@ -13,6 +13,13 @@ DO $$ BEGIN
 END $$;
 
 DO $$ BEGIN
+	PERFORM 1 FROM pg_type WHERE typname = 'sport_gender';
+	IF NOT FOUND THEN
+		CREATE TYPE sport_gender AS ENUM ('Mens','Womens','Both');
+	END IF;
+END $$;
+
+DO $$ BEGIN
 	PERFORM 1 FROM pg_type WHERE typname = 'match_status';
 	IF NOT FOUND THEN
 		CREATE TYPE match_status AS ENUM ('scheduled','live','completed','delayed','cancelled');
@@ -34,6 +41,7 @@ CREATE TABLE IF NOT EXISTS public.sports (
 	id           text PRIMARY KEY,            -- e.g. 'cricket', 'football'
 	name         text NOT NULL,               -- Display name
 	category     sport_category NOT NULL,     -- Matches sportsData.ts categories
+	gender       sport_gender NOT NULL DEFAULT 'Both', -- 'Mens' | 'Womens' | 'Both'
 	created_at   timestamptz NOT NULL DEFAULT now(),
 	UNIQUE(name)
 );

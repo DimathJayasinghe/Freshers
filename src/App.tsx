@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from "react-route
 import { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import AdminHeader from "@/components/AdminHeader";
+import AdminSports from "@/pages/admin/AdminSports";
 import { PahasaraOverlay } from "@/components/PahasaraOverlay";
 import { Home } from "@/pages/Home";
 import { Lineup } from "@/pages/Lineup";
@@ -12,7 +14,14 @@ import { SportDetail } from "@/pages/SportDetail";
 import { Faculties } from "@/pages/Faculties";
 import { FacultyDetail } from "@/pages/FacultyDetail";
 import { ClosingCeremony } from "@/pages/ClosingCeremony";
-import { AdminDashboard } from "@/pages/AdminDashboard";
+import AdminDashboard from "@/pages/AdminDashboard";
+import AdminFaculty from "@/pages/admin/AdminFaculty";
+import AdminLineup from "@/pages/admin/AdminLineup";
+import AdminPoints from "@/pages/admin/AdminPoints";
+import AdminMedia from "@/pages/admin/AdminMedia";
+import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminMediaLibrary from "@/pages/admin/AdminMediaLibrary";
+import AdminSportEdit from "@/pages/admin/AdminSportEdit";
 import './App.css';
 
 
@@ -30,7 +39,8 @@ function App() {
     <Router>
       <ScrollToTop />
       <div className="min-h-screen bg-black flex flex-col ">
-        <Header />
+        {/* Show AdminHeader for admin routes, otherwise normal Header */}
+        {window.location.pathname.startsWith('/admin') ? <AdminHeader /> : <Header />}
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -43,9 +53,18 @@ function App() {
             <Route path="/faculty/:facultyId" element={<FacultyDetail />} />
             <Route path="/closing-ceremony" element={<ClosingCeremony />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/sports" element={<AdminSports />} />
+            <Route path="/admin/sports/:sportId" element={<AdminSportEdit />} />
+            <Route path="/admin/faculties" element={<AdminFaculty />} />
+            <Route path="/admin/lineup" element={<AdminLineup />} />
+            <Route path="/admin/points" element={<AdminPoints />} />
+            <Route path="/admin/media" element={<AdminMedia />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/media-library" element={<AdminMediaLibrary />} />
           </Routes>
         </main>
-        <Footer />
+        {/* Don't show normal footer on admin pages */}
+        {!window.location.pathname.startsWith('/admin') && <Footer />}
         <PahasaraOverlay />
       </div>
     </Router>
