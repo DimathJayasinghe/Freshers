@@ -5,8 +5,6 @@ import { getFacultyIdByName } from "@/data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useState } from "react";
-import { fetchLeaderboard } from "@/lib/api";
 
 export function Leaderboard() {
   const navigate = useNavigate();
@@ -69,7 +67,7 @@ export function Leaderboard() {
 
             {/* Top 3 Podium Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-8 max-w-4xl mx-auto">
-              {rows.slice(0, 3).map((team, index) => (
+              {leaderboardData.slice(0, 3).map((team, index) => (
                 <Card
                   key={team.rank}
                   onClick={() => handleFacultyClick(team.name)}
@@ -140,7 +138,7 @@ export function Leaderboard() {
 
             {/* Team Rows */}
             <div className="space-y-3">
-              {rows.map((team, index) => (
+              {leaderboardData.map((team, index) => (
                 <div
                   key={team.rank}
                   onClick={() => handleFacultyClick(team.name)}
