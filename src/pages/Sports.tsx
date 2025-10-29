@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, Users, User, Waves, Activity, Search } from "lucide-react";
-import { sportsData } from "@/data/sportsData";
+import type { Sport } from "@/data/sportsData";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,15 @@ export function Sports() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [sports, setSports] = useState<Sport[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchSports()
+      .then((data) => { if (mounted && data && data.length > 0) setSports(data); })
+      .catch((err) => console.error('[Sports] fetchSports error', err));
+    return () => { mounted = false; };
+  }, []);
 
   const handleSportClick = (sportId: string) => {
     navigate(`/sport/${sportId}`);
