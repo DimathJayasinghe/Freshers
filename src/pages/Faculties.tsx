@@ -9,6 +9,7 @@ import { fetchFacultiesOverview, type FacultyOverview } from "../lib/api";
 export function Faculties() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<FacultyOverview[] | null>(null);
+  const loading = rows === null;
 
   useEffect(() => {
     let mounted = true;
@@ -44,14 +45,22 @@ export function Faculties() {
 
             {/* Stats */}
             <div className="flex flex-wrap gap-4 justify-center items-center pt-4">
-              <Badge className="bg-blue-600/20 text-blue-400 border-blue-500/50 px-4 py-2 text-sm animate-fade-in-up delay-300">
-                <Target className="w-4 h-4 mr-2 inline" />
-                {list.length} Faculties
-              </Badge>
-              <Badge className="bg-green-600/20 text-green-400 border-green-500/50 px-4 py-2 text-sm animate-fade-in-up delay-400">
-                <Award className="w-4 h-4 mr-2 inline" />
-                Active Competition
-              </Badge>
+              {loading ? (
+                <div className="h-8 w-40 rounded-full bg-white/10 animate-pulse" />
+              ) : (
+                <Badge className="bg-blue-600/20 text-blue-400 border-blue-500/50 px-4 py-2 text-sm animate-fade-in-up delay-300">
+                  <Target className="w-4 h-4 mr-2 inline" />
+                  {list.length} Faculties
+                </Badge>
+              )}
+              {loading ? (
+                <div className="h-8 w-44 rounded-full bg-white/10 animate-pulse" />
+              ) : (
+                <Badge className="bg-green-600/20 text-green-400 border-green-500/50 px-4 py-2 text-sm animate-fade-in-up delay-400">
+                  <Award className="w-4 h-4 mr-2 inline" />
+                  Active Competition
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -77,7 +86,30 @@ export function Faculties() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {list.slice(0, 3).map((faculty, index) => (
+            {loading && Array.from({ length: 3 }).map((_, index) => (
+              <Card key={`skeleton-top-${index}`} className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-white/10 animate-pulse">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="w-12 h-12 rounded-lg bg-white/10" />
+                      <div className="flex-1">
+                        <div className="h-5 w-32 bg-white/10 rounded mb-2" />
+                        <div className="h-3 w-40 bg-white/10 rounded" />
+                      </div>
+                    </div>
+                    <div className="w-6 h-6 bg-white/10 rounded" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="h-10 bg-white/10 rounded" />
+                    <div className="h-10 bg-white/10 rounded" />
+                    <div className="h-6 bg-white/10 rounded" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {!loading && list.slice(0, 3).map((faculty, index) => (
               <Card
                 key={faculty.id}
                 onClick={() => navigate(`/faculty/${faculty.id}`)}
@@ -147,7 +179,32 @@ export function Faculties() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {list.map((faculty, index) => (
+            {loading && Array.from({ length: 6 }).map((_, index) => (
+              <Card key={`skeleton-all-${index}`} className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-white/10 animate-pulse">
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <div className="w-16 h-16 rounded-lg bg-white/10 flex-shrink-0" />
+                    <div className="flex-1">
+                      <div className="h-5 w-40 bg-white/10 rounded mb-2" />
+                      <div className="h-3 w-56 bg-white/10 rounded" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="h-14 bg-white/10 rounded" />
+                    <div className="h-14 bg-white/10 rounded" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-6 w-16 bg-white/10 rounded" />
+                    <div className="h-6 w-12 bg-white/10 rounded" />
+                    <div className="h-6 w-20 bg-white/10 rounded" />
+                  </div>
+                  <div className="h-9 bg-white/10 rounded" />
+                </CardContent>
+              </Card>
+            ))}
+            {!loading && list.map((faculty, index) => (
               <Card
                 key={faculty.id}
                 onClick={() => navigate(`/faculty/${faculty.id}`)}
