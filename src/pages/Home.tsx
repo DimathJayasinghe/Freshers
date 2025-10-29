@@ -54,7 +54,7 @@ export function Home() {
             <div className="absolute top-20 right-20 w-96 h-96 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
             <div className="absolute bottom-20 left-20 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
           </div>
-        
+          {/*HOME */}
           <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div className="text-center space-y-4 sm:space-y-6 md:space-y-8">
               {/* UOC Logo */}
@@ -103,52 +103,52 @@ export function Home() {
               </Button>
             </div>
           </div>
-        </div>
-        </div>
-        
-        {/* Stats/Highlights Bar */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 backdrop-blur-md bg-black/40">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-8">
-              <div 
-                onClick={() => navigate('/sports')}
-                className="text-center cursor-pointer hover:scale-105 transition-transform group"
-              >
-                <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
-                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 group-hover:scale-110 transition-transform" />
-                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">12+</div>
+          </div>
+          
+          {/* Stats/Highlights Bar */}
+          <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 backdrop-blur-md bg-black/40">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-8">
+                <div 
+                  onClick={() => navigate('/sports')}
+                  className="text-center cursor-pointer hover:scale-105 transition-transform group"
+                >
+                  <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
+                    <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 group-hover:scale-110 transition-transform" />
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">12+</div>
+                  </div>
+                  <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-yellow-400 transition-colors">Sports Events</div>
                 </div>
-                <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-yellow-400 transition-colors">Sports Events</div>
-              </div>
-              <div 
-                onClick={() => navigate('/faculties')}
-                className="text-center cursor-pointer hover:scale-105 transition-transform group"
-              >
-                <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 group-hover:scale-110 transition-transform" />
-                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">11</div>
+                <div 
+                  onClick={() => navigate('/faculties')}
+                  className="text-center cursor-pointer hover:scale-105 transition-transform group"
+                >
+                  <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 group-hover:scale-110 transition-transform" />
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">11</div>
+                  </div>
+                  <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-blue-400 transition-colors">Faculties</div>
                 </div>
-                <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-blue-400 transition-colors">Faculties</div>
-              </div>
-              <div 
-                onClick={() => navigate('/results')}
-                className="text-center cursor-pointer hover:scale-105 transition-transform group"
-              >
-                <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
-                  <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 group-hover:scale-110 transition-transform" />
-                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{live.length}</div>
+                <div 
+                  onClick={() => navigate('/results')}
+                  className="text-center cursor-pointer hover:scale-105 transition-transform group"
+                >
+                  <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
+                    <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 group-hover:scale-110 transition-transform" />
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{live.length}</div>
+                  </div>
+                  <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-red-400 transition-colors">Live Now</div>
                 </div>
-                <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-red-400 transition-colors">Live Now</div>
-              </div>
-              <div 
-                onClick={() => navigate('/lineup')}
-                className="text-center cursor-pointer hover:scale-105 transition-transform group"
-              >
-                <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
-                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 group-hover:scale-110 transition-transform" />
-                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{today.length}</div>
+                <div 
+                  onClick={() => navigate('/lineup')}
+                  className="text-center cursor-pointer hover:scale-105 transition-transform group"
+                >
+                  <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 group-hover:scale-110 transition-transform" />
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{today.length}</div>
+                  </div>
+                  <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-green-400 transition-colors">Today's Matches</div>
                 </div>
-                <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-green-400 transition-colors">Today's Matches</div>
               </div>
             </div>
           </div>
