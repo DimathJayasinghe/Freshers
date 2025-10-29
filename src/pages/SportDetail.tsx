@@ -3,9 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, ArrowLeft, Users, Award, Calendar, Clock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { completedEvents } from "@/data/resultsData";
+import { useEffect, useState } from "react";
+import { fetchResults } from "@/lib/api";
 import { getShortFacultyName } from "@/data/tournamentData";
 import { getFacultyIdByName } from "@/data/facultiesData";
-import { useState } from "react";
 
 export function SportDetail() {
   const { sportName } = useParams<{ sportName: string }>();
@@ -13,6 +14,15 @@ export function SportDetail() {
   const [showMens, setShowMens] = useState(true);
   const [showWomens, setShowWomens] = useState(true);
   const [showMixed, setShowMixed] = useState(true);
+  const [allResults, setAllResults] = useState(completedEvents);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchResults()
+      .then((rows) => { if (mounted && rows && rows.length > 0) setAllResults(rows); })
+      .catch((e) => console.error('[SportDetail] fetchResults error', e));
+    return () => { mounted = false; };
+  }, []);
 
   // Handle faculty name click
   const handleFacultyClick = (e: React.MouseEvent, facultyName: string) => {
@@ -24,7 +34,7 @@ export function SportDetail() {
   };
 
   // Filter results for this sport
-  const sportResults = completedEvents.filter(
+  const sportResults = allResults.filter(
     (event) => event.sport.toLowerCase().replace(/\s+/g, '-') === sportName
   );
 

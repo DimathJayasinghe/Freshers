@@ -1,11 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Trophy, Medal, ArrowRight } from "lucide-react";
-import { completedEvents } from "@/data/resultsData";
+import { completedEvents as completedDummy, type CompletedEvent } from "@/data/resultsData";
 import { getFacultyIdByName } from "@/data/facultiesData";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { fetchResults } from "@/lib/api";
 
 export function Results() {
   const navigate = useNavigate();
+  const [rows, setRows] = useState<CompletedEvent[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchResults()
+      .then((data) => { if (mounted) setRows(data); })
+      .catch((e) => console.error('[Results] fetchResults error', e));
+    return () => { mounted = false; };
+  }, []);
 
   // Handle faculty name click
   const handleFacultyClick = (e: React.MouseEvent, facultyName: string) => {
@@ -17,13 +28,14 @@ export function Results() {
   };
   
   // Group events - now each event has all positions in a single entry
-  const sortedEvents = [...completedEvents].sort((a, b) => {
+  const events = rows.length ? rows : completedDummy;
+  const sortedEvents = [...events].sort((a, b) => {
     // Sort by date then time
     return new Date(`${b.date} ${b.time}`).getTime() - new Date(`${a.date} ${a.time}`).getTime();
   });
 
   // Handle navigation based on category
-  const handleCardClick = (event: typeof completedEvents[0]) => {
+  const handleCardClick = (event: CompletedEvent) => {
     // All sports go to their specific sport detail page
     navigate(`/sport/${event.sport.toLowerCase().replace(/\s+/g, '-')}`);
   };

@@ -44,6 +44,7 @@ export const faculties: Faculty[] = [
     sportsParticipated: ["Cricket", "Football", "Basketball", "Volleyball", "Badminton"],
     achievements: [
       { sport: "Cricket", position: "Champions", year: 2024 },
+
       { sport: "Football", position: "Runner-up", year: 2024 },
     ],
     teamMembers: [

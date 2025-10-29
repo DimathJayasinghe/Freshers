@@ -29,6 +29,7 @@ function App() {
             <Route path="/faculties" element={<Faculties />} />
             <Route path="/faculty/:facultyId" element={<FacultyDetail />} />
             <Route path="/closing-ceremony" element={<ClosingCeremony />} />
+            <Route path="/admin" element={<Admin />} />
           </Routes>
         </main>
         <Footer />
