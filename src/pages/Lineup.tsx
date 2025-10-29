@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
-import { fetchScheduleCalendar, type ScheduleDay } from "@/lib/api";
+import { fetchScheduleCalendar, type ScheduleDay } from "../lib/api";
 
 export function Lineup() {
   const navigate = useNavigate();

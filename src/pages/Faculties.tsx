@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { fetchFacultiesOverview, type FacultyOverview } from "@/lib/api";
+import { fetchFacultiesOverview, type FacultyOverview } from "../lib/api";
 
 export function Faculties() {
   const navigate = useNavigate();
