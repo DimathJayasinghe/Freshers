@@ -14,6 +14,7 @@ import { FacultyDetail } from "@/pages/FacultyDetail";
 import { ClosingCeremony } from "@/pages/ClosingCeremony";
 import './App.css';
 
+
 function App() {
   // Scroll to top on route change
   function ScrollToTop() {
