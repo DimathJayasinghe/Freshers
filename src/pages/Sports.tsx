@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, Users, User, Waves, Activity, Search } from "lucide-react";
 import type { Sport } from "../data/sportsData";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchSports } from "../lib/api";
@@ -56,10 +56,10 @@ export function Sports() {
   };
 
   // Get unique categories
-  const categories = ["All", ...Array.from(new Set(sports.map(sport => sport.category)))];
+  const categories = ["All", ...Array.from(new Set(sportsData.map(sport => sport.category)))];
 
   // Filter sports based on search and category
-  const filteredSports = sports.filter(sport => {
+  const filteredSports = sportsData.filter(sport => {
     const matchesSearch = sport.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "All" || sport.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -79,7 +79,7 @@ export function Sports() {
               Explore <span className="bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent">Sports</span>
             </h1>
             <p className="text-gray-300 text-lg max-w-2xl mx-auto">
-              Browse all {sports.length} sports competing in UOC Freshers' Meet 2025
+              Browse all {sportsData.length} sports competing in UOC Freshers' Meet 2025
             </p>
           </div>
         </div>
@@ -122,12 +122,12 @@ export function Sports() {
               {category}
               {category === "All" && (
                 <span className="ml-2 px-2 py-0.5 bg-red-500/20 rounded-full text-xs">
-                  {sports.length}
+                  {sportsData.length}
                 </span>
               )}
               {category !== "All" && (
                 <span className="ml-2 px-2 py-0.5 bg-white/10 rounded-full text-xs">
-                  {sports.filter(s => s.category === category).length}
+                  {sportsData.filter(s => s.category === category).length}
                 </span>
               )}
             </Button>

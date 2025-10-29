@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getFacultyById } from "@/data/facultiesData";
-import { useEffect, useMemo, useState } from "react";
-import { fetchFacultyDetail, type FacultyDetailData } from "@/lib/api";
+import { completedEvents } from "@/data/resultsData";
 import { 
   Trophy, 
   Medal, 
@@ -21,53 +20,7 @@ import {
 export function FacultyDetail() {
   const { facultyId } = useParams<{ facultyId: string }>();
   const navigate = useNavigate();
-  const fallback = facultyId ? getFacultyById(facultyId) : undefined;
-  const [detail, setDetail] = useState<FacultyDetailData | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      try {
-        if (!facultyId) return;
-        const d = await fetchFacultyDetail(facultyId);
-        if (mounted) setDetail(d);
-      } catch (e) {
-        console.error('[FacultyDetail] fetchFacultyDetail error', e);
-      } finally {
-        // no-op
-      }
-    };
-    run();
-    return () => { mounted = false; };
-  }, [facultyId]);
-
-  // Normalize a view-model to keep existing JSX mostly intact
-  const faculty = useMemo(() => {
-    if (detail) {
-      return {
-        id: detail.id,
-        name: detail.name,
-        shortName: detail.shortName,
-        colors: detail.colors,
-        logo: detail.logo,
-        totalPoints: detail.points.total,
-        position: undefined as number | undefined, // rank not included in detail; could be added later
-        sportsParticipated: detail.sports,
-        achievements: detail.achievements.map(a => ({ sport: a.sport ?? 'Event', position: a.position, year: a.year ?? undefined })),
-      } as {
-        id: string;
-        name: string;
-        shortName: string;
-        colors: { primary: string; secondary: string };
-        logo: string;
-        totalPoints: number;
-        position?: number;
-        sportsParticipated: string[];
-        achievements: { sport: string; position: string; year?: number }[];
-      };
-    }
-    return fallback;
-  }, [detail, fallback]);
+  const faculty = facultyId ? getFacultyById(facultyId) : undefined;
 
   if (!faculty) {
     return (
@@ -84,22 +37,20 @@ export function FacultyDetail() {
     );
   }
 
-  // Map textual positions to ordinal ranking
-  const toRank = (pos: string): number => {
-    const p = pos.toLowerCase();
-    if (/(^1st|champ|gold|winner)/.test(p)) return 1;
-    if (/(^2nd|runner|silver)/.test(p)) return 2;
-    if (/(^3rd|third|bronze)/.test(p)) return 3;
-    if (/(^4th|fourth)/.test(p)) return 4;
-    return 99; // participation/other
-  };
-
-  // Build achievements list from either DB detail or fallback
-  const facultyAchievements = (faculty.achievements || []).map(a => ({
-    sport: a.sport,
-    position: toRank(a.position),
-    date: a.year ? String(a.year) : "",
-  }));
+  // Aggregate all achievements from results data
+  const facultyAchievements = completedEvents.reduce((acc, event) => {
+    event.positions.forEach(position => {
+      if (position.faculty === faculty.name) {
+        const eventName = event.event ? `${event.sport} - ${event.event} (${event.gender})` : `${event.sport} (${event.gender})`;
+        acc.push({
+          sport: eventName,
+          position: position.place,
+          date: event.date,
+        });
+      }
+    });
+    return acc;
+  }, [] as Array<{ sport: string; position: number; date: string }>);
 
   // Categorize achievements
   const firstPlaces = facultyAchievements.filter(a => a.position === 1);
@@ -213,7 +164,7 @@ export function FacultyDetail() {
                     color: faculty.colors.primary,
                   }}
                 >
-                  #{faculty.position ?? "-"}
+                  #{faculty.position}
                 </Badge>
               </div>
               <p className="text-xl text-gray-300">{faculty.name}</p>
