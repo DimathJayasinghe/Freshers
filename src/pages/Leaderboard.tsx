@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award, Sparkles } from "lucide-react";
-import type { TeamData } from "@/data/leaderboardData";
+import { leaderboardData } from "@/data/leaderboardData";
 import { getFacultyIdByName } from "@/data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -8,24 +8,6 @@ import { Separator } from "@/components/ui/separator";
 
 export function Leaderboard() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState<TeamData[]>([]);
-
-  useEffect(() => {
-    let mounted = true;
-    fetchLeaderboard()
-      .then((data) => {
-        if (!mounted) return;
-        if (data) setRows(data);
-      })
-      .catch((err) => {
-        console.error('[Leaderboard] fetch error', err);
-        // Fallback to static data silently
-      })
-      .finally(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   // Handle faculty name click
   const handleFacultyClick = (facultyName: string) => {
@@ -102,11 +84,6 @@ export function Leaderboard() {
                   </CardContent>
                 </Card>
               ))}
-              {rows.length === 0 && (
-                <div className="col-span-1 md:col-span-3 text-center text-gray-400 text-sm">
-                  No leaderboard data
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -204,9 +181,6 @@ export function Leaderboard() {
                   </div>
                 </div>
               ))}
-              {rows.length === 0 && (
-                <div className="text-center text-gray-400 text-sm py-6">No data loaded</div>
-              )}
             </div>
           </CardContent>
         </Card>

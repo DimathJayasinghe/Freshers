@@ -1,46 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Trophy, Users, Flame, ChevronRight, MapPin, Clock } from "lucide-react";
-import type { LiveMatch, ScheduleMatch } from "@/data/homeData";
-import type { TeamData } from "@/data/leaderboardData";
+import { liveMatches, todaySchedule } from "@/data/homeData";
+import { leaderboardData } from "@/data/leaderboardData";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 export function Home() {
   const navigate = useNavigate();
-  const [live, setLive] = useState<LiveMatch[]>([]);
-  const [today, setToday] = useState<ScheduleMatch[]>([]);
-  const [top, setTop] = useState<TeamData[]>([]);
-
-  useEffect(() => {
-    let mounted = true;
-    fetchLiveMatches()
-      .then((data) => {
-        if (mounted && data) setLive(data);
-      })
-      .catch((err) => {
-        console.error('[Home] liveMatches fetch error', err);
-      })
-      .finally(() => {});
-    fetchTodaySchedule()
-      .then((data) => {
-        if (mounted && data) setToday(data);
-      })
-      .catch((err) => {
-        console.error('[Home] todaySchedule fetch error', err);
-      })
-      .finally(() => {});
-    fetchLeaderboard()
-      .then((data) => {
-        if (mounted && data && data.length > 0) setTop(data);
-      })
-      .catch((err) => {
-        console.error('[Home] leaderboard fetch error', err);
-      })
-      .finally(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   return (
     <div className="min-h-screen">
@@ -363,10 +329,10 @@ export function Home() {
                   {/* Faculty Info */}
                   <div className="mb-4">
                     <h3 className="text-white font-bold text-lg mb-1 group-hover:text-gray-300 transition-colors">
-                      {top[1]?.name ?? '—'}
+                      {leaderboardData[1].name}
                     </h3>
                     <span className="inline-block px-3 py-1 bg-gray-500/20 border border-gray-400/30 rounded-full text-gray-300 text-sm font-semibold">
-                      {top[1]?.code ?? '—'}
+                      {leaderboardData[1].code}
                     </span>
                   </div>
 
@@ -374,18 +340,18 @@ export function Home() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Men's:</span>
-                      <span className="text-blue-400 font-bold">{top[1]?.mensPoints ?? 0}</span>
+                      <span className="text-blue-400 font-bold">{leaderboardData[1].mensPoints}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Women's:</span>
-                      <span className="text-pink-400 font-bold">{top[1]?.womensPoints ?? 0}</span>
+                      <span className="text-pink-400 font-bold">{leaderboardData[1].womensPoints}</span>
                     </div>
                   </div>
 
                   {/* Total Points */}
                   <div className="pt-4 border-t border-gray-700">
                     <div className="text-4xl font-bold bg-gradient-to-r from-gray-300 to-gray-500 bg-clip-text text-transparent">
-                      {top[1]?.totalPoints ?? 0}
+                      {leaderboardData[1].totalPoints}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">Total Points</div>
                   </div>
@@ -420,10 +386,10 @@ export function Home() {
                   {/* Faculty Info */}
                   <div className="mb-4">
                     <h3 className="text-white font-bold text-xl mb-2 group-hover:text-yellow-400 transition-colors">
-                      {top[0]?.name ?? '—'}
+                      {leaderboardData[0].name}
                     </h3>
                     <span className="inline-block px-4 py-1 bg-yellow-500/20 border border-yellow-400/50 rounded-full text-yellow-400 text-sm font-bold">
-                      {top[0]?.code ?? '—'}
+                      {leaderboardData[0].code}
                     </span>
                   </div>
 
@@ -431,18 +397,18 @@ export function Home() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-300">Men's:</span>
-                      <span className="text-blue-400 font-bold">{top[0]?.mensPoints ?? 0}</span>
+                      <span className="text-blue-400 font-bold">{leaderboardData[0].mensPoints}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-300">Women's:</span>
-                      <span className="text-pink-400 font-bold">{top[0]?.womensPoints ?? 0}</span>
+                      <span className="text-pink-400 font-bold">{leaderboardData[0].womensPoints}</span>
                     </div>
                   </div>
 
                   {/* Total Points */}
                   <div className="pt-4 border-t border-yellow-700">
                     <div className="text-5xl font-bold bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
-                      {top[0]?.totalPoints ?? 0}
+                      {leaderboardData[0].totalPoints}
                     </div>
                     <div className="text-xs text-yellow-400 mt-1 font-semibold">Total Points</div>
                   </div>
@@ -470,10 +436,10 @@ export function Home() {
                   {/* Faculty Info */}
                   <div className="mb-4">
                     <h3 className="text-white font-bold text-lg mb-1 group-hover:text-amber-500 transition-colors">
-                      {top[2]?.name ?? '—'}
+                      {leaderboardData[2].name}
                     </h3>
                     <span className="inline-block px-3 py-1 bg-amber-600/20 border border-amber-500/30 rounded-full text-amber-400 text-sm font-semibold">
-                      {top[2]?.code ?? '—'}
+                      {leaderboardData[2].code}
                     </span>
                   </div>
 
@@ -481,18 +447,18 @@ export function Home() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Men's:</span>
-                      <span className="text-blue-400 font-bold">{top[2]?.mensPoints ?? 0}</span>
+                      <span className="text-blue-400 font-bold">{leaderboardData[2].mensPoints}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Women's:</span>
-                      <span className="text-pink-400 font-bold">{top[2]?.womensPoints ?? 0}</span>
+                      <span className="text-pink-400 font-bold">{leaderboardData[2].womensPoints}</span>
                     </div>
                   </div>
 
                   {/* Total Points */}
                   <div className="pt-4 border-t border-amber-800">
                     <div className="text-4xl font-bold bg-gradient-to-r from-amber-500 to-amber-700 bg-clip-text text-transparent">
-                      {top[2]?.totalPoints ?? 0}
+                      {leaderboardData[2].totalPoints}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">Total Points</div>
                   </div>

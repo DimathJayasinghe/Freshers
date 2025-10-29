@@ -1,24 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { faculties } from "@/data/facultiesData";
 import { Trophy, Users, Medal, TrendingUp, Sparkles, Target, Award, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { fetchFacultiesOverview, type FacultyOverview } from "../lib/api";
 
 export function Faculties() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState<FacultyOverview[] | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    fetchFacultiesOverview()
-      .then((data) => { if (mounted) setRows(data); })
-      .catch((err) => console.error('[Faculties] fetchFacultiesOverview error', err));
-    return () => { mounted = false; };
-  }, []);
-
-  const list = rows ?? [];
   return (
     <div className="min-h-screen">
       {/* Page Header with Animated Background */}

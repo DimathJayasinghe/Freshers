@@ -107,21 +107,20 @@ export function Header() {
             <NavigationMenuList className="gap-2">
               {navItems.map(({ path, icon: Icon, label }) => (
                 <NavigationMenuItem key={path}>
-                  <NavigationMenuLink
-                    asChild
-                    className={cn(
-                      navigationMenuTriggerStyle(),
-                      "gap-2 transition-colors duration-200 h-9 flex flex-row items-center justify-center px-4 min-w-[100px]",
-                      isActive(path)
-                        ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg shadow-red-900/50 border border-red-500/50"
-                        : "text-gray-300 hover:text-white hover:bg-red-900/40 bg-transparent"
-                    )}
-                  >
-                    <Link to={path} className="flex items-center gap-2">
+                  <Link to={path}>
+                    <NavigationMenuLink
+                      className={cn(
+                        navigationMenuTriggerStyle(),
+                        "gap-2 transition-colors duration-200 h-9 flex flex-row items-center justify-center px-4 min-w-[100px]",
+                        isActive(path)
+                          ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg shadow-red-900/50 border border-red-500/50"
+                          : "text-gray-300 hover:text-white hover:bg-red-900/40 bg-transparent"
+                      )}
+                    >
                       <Icon className="h-4 w-4 flex-shrink-0" />
                       <span>{label}</span>
-                    </Link>
-                  </NavigationMenuLink>
+                    </NavigationMenuLink>
+                  </Link>
                 </NavigationMenuItem>
               ))}
             </NavigationMenuList>

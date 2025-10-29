@@ -1,24 +1,30 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, MapPin, CalendarDays, Sparkles, ChevronRight } from "lucide-react";
-// no local fallbacks; rely on Supabase only
+import { scheduleData } from "@/data/lineupData";
+import { sportsData } from "@/data/sportsData";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useState } from "react";
-import { fetchScheduleCalendar, type ScheduleDay } from "../lib/api";
 
 export function Lineup() {
   const navigate = useNavigate();
 
   const handleSportClick = (sport: string) => {
-    // Generate a slug from the sport label for routing
-    const sportId = sport.toLowerCase().replace(/\s+/g, '-').replace(/[()&']/g, '');
+    // Find the sport in sportsData by matching the name
+    const sportMatch = sportsData.find(s => 
+      sport.toLowerCase().includes(s.name.toLowerCase())
+    );
+    
+    // Use the sport ID if found, otherwise fallback to slug conversion
+    const sportId = sportMatch 
+      ? sportMatch.id 
+      : sport.toLowerCase().replace(/\s+/g, '-').replace(/[()&']/g, '');
+    
     navigate(`/sport/${sportId}`);
   };
 
-  const dayList = days;
-  const totalEvents = dayList.reduce((sum, day) => sum + day.events.length, 0);
+  const totalEvents = scheduleData.reduce((sum, day) => sum + day.events.length, 0);
 
   return (
     <div className="min-h-screen">
