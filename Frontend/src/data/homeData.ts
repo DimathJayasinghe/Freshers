@@ -26,7 +26,7 @@ export interface TournamentStats {
 }
 
 export const tournamentStats: TournamentStats = {
-  totalSports: 12,
+  totalSports: 17,
   totalFaculties: 20,
   liveMatches: 2,
   todayMatches: 3

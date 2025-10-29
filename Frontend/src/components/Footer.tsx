@@ -71,7 +71,10 @@ export function Footer() {
         {/* Copyright */}
         <div className="text-center mt-8 pt-6 border-t border-red-900/30">
           <p className="text-gray-500 text-sm">
-            © {new Date().getFullYear()} Pahasara Media Unit - UCSC. All rights reserved.
+            © {new Date().getFullYear()} Pahasara | UCSC Media. All rights reserved.
+          </p>
+          <p className="text-gray-600 text-xs mt-2">
+            Updating and Developing Body
           </p>
           <p className="text-gray-600 text-xs mt-1">
             #PAHASARAUCSC

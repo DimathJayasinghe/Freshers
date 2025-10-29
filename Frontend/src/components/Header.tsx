@@ -1,4 +1,4 @@
-import { Home, LineChart, Trophy, Target, Menu } from "lucide-react";
+import { Home, LineChart, Trophy, Target, Menu, Dumbbell, Users } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,30 +26,32 @@ export function Header() {
 
   const navItems = [
     { path: "/", icon: Home, label: "Home" },
+    { path: "/faculties", icon: Users, label: "Faculties" },
+    { path: "/sports", icon: Dumbbell, label: "Sports" },
     { path: "/lineup", icon: LineChart, label: "Lineup" },
-    { path: "/leaderboard", icon: Trophy, label: "Leaderboard" },
     { path: "/results", icon: Target, label: "Results" },
+    { path: "/leaderboard", icon: Trophy, label: "Leaderboard" },
   ];
 
   return (
     <header className="w-full border-b border-red-500/30 shadow-lg shadow-red-900/20">
-      <div className="w-full max-w-7xl mx-auto flex items-center justify-between px-4 md:px-8 py-2 md:py-3">
+      <div className="w-full max-w-7xl mx-auto flex items-center justify-between px-4 lg:px-8 py-2 lg:py-3">
         {/* Logo and Event info - Left Side */}
-        <div className="flex items-center gap-3 md:gap-4 flex-shrink-0">
+        <div className="flex items-center gap-3 lg:gap-4 flex-shrink-0">
           {/* UOC Logo */}
           <div className="flex items-center justify-center">
             <img 
               src="/logos/uoc-logo.png" 
               alt="University of Colombo" 
-              className="h-10 w-10 md:h-14 md:w-14 object-contain"
+              className="h-10 w-10 lg:h-14 lg:w-14 object-contain"
             />
           </div>
           
           <div className="text-left">
-            <div className="text-[10px] md:text-xs text-gray-400 font-semibold tracking-wider uppercase">
+            <div className="text-[10px] lg:text-xs text-gray-400 font-semibold tracking-wider uppercase">
               University of Colombo
             </div>
-            <div className="text-xs md:text-base font-bold bg-gradient-to-r from-red-400 via-red-300 to-yellow-400 bg-clip-text text-transparent">
+            <div className="text-xs lg:text-base font-bold bg-gradient-to-r from-red-400 via-red-300 to-yellow-400 bg-clip-text text-transparent">
               <span className="hidden sm:inline">Freshers' Meet 2025</span>
               <span className="sm:hidden">Freshers' 2025</span>
             </div>
@@ -57,7 +59,7 @@ export function Header() {
         </div>
 
         {/* Mobile Menu - Right Side */}
-        <div className="md:hidden flex-shrink-0">
+        <div className="lg:hidden flex-shrink-0">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
@@ -100,7 +102,7 @@ export function Header() {
         </div>
 
         {/* Desktop Navigation Menu - Right Side */}
-        <div className="hidden md:block flex-shrink-0">
+        <div className="hidden lg:block flex-shrink-0">
           <NavigationMenu>
             <NavigationMenuList className="gap-2">
               {navItems.map(({ path, icon: Icon, label }) => (
