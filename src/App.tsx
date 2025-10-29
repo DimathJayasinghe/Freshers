@@ -15,6 +15,7 @@ import { ClosingCeremony } from "@/pages/ClosingCeremony";
 import { AdminDashboard } from "@/pages/AdminDashboard";
 import './App.css';
 
+
 function App() {
   // Scroll to top on route change
   function ScrollToTop() {
