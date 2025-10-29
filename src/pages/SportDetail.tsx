@@ -2,7 +2,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, ArrowLeft, Users, Award, Calendar, Clock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { completedEvents } from "@/data/resultsData";
 import { useEffect, useState } from "react";
 import { fetchResults } from "@/lib/api";
 import { getShortFacultyName } from "@/data/tournamentData";
@@ -14,13 +13,17 @@ export function SportDetail() {
   const [showMens, setShowMens] = useState(true);
   const [showWomens, setShowWomens] = useState(true);
   const [showMixed, setShowMixed] = useState(true);
-  const [allResults, setAllResults] = useState(completedEvents);
+  const [allResults, setAllResults] = useState([] as Awaited<ReturnType<typeof fetchResults>>);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     fetchResults()
-      .then((rows) => { if (mounted && rows && rows.length > 0) setAllResults(rows); })
-      .catch((e) => console.error('[SportDetail] fetchResults error', e));
+      .then((rows) => { if (mounted) setAllResults(rows || []); })
+      .catch((e) => { console.error('[SportDetail] fetchResults error', e); if (mounted) setError('Failed to load results'); })
+      .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
 
@@ -38,11 +41,27 @@ export function SportDetail() {
     (event) => event.sport.toLowerCase().replace(/\s+/g, '-') === sportName
   );
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-gray-400">Loading…</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-red-400">{error}</div>
+      </div>
+    );
+  }
+
   if (sportResults.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-white mb-4">Sport Not Found</h1>
+          <h1 className="text-3xl font-bold text-white mb-4">No results for this sport yet</h1>
           <Button onClick={() => navigate('/results')}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Results

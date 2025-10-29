@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Trophy, Medal, ArrowRight } from "lucide-react";
-import { completedEvents as completedDummy, type CompletedEvent } from "@/data/resultsData";
+import type { CompletedEvent } from "@/data/resultsData";
 import { getFacultyIdByName } from "@/data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -9,12 +9,16 @@ import { fetchResults } from "@/lib/api";
 export function Results() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<CompletedEvent[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     fetchResults()
-      .then((data) => { if (mounted) setRows(data); })
-      .catch((e) => console.error('[Results] fetchResults error', e));
+      .then((data) => { if (mounted) setRows(data || []); })
+      .catch((e) => { console.error('[Results] fetchResults error', e); if (mounted) setError('Failed to load results'); })
+      .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
 
@@ -28,8 +32,7 @@ export function Results() {
   };
   
   // Group events - now each event has all positions in a single entry
-  const events = rows.length ? rows : completedDummy;
-  const sortedEvents = [...events].sort((a, b) => {
+  const sortedEvents = [...rows].sort((a, b) => {
     // Sort by date then time
     return new Date(`${b.date} ${b.time}`).getTime() - new Date(`${a.date} ${a.time}`).getTime();
   });
@@ -75,6 +78,16 @@ export function Results() {
 
       {/* Results Grid */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
+        {/* Loading / Error / Empty States */}
+        {loading && (
+          <div className="text-center text-gray-400 py-8">Loading results…</div>
+        )}
+        {!loading && error && (
+          <div className="text-center text-red-400 py-8">{error}</div>
+        )}
+        {!loading && !error && sortedEvents.length === 0 && (
+          <div className="text-center text-gray-400 py-8">No results available yet.</div>
+        )}
         {/* Results Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {sortedEvents.map((event) => (
