@@ -1,48 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Trophy, Users, Flame, ChevronRight, MapPin, Clock } from "lucide-react";
-import { liveMatches as liveMatchesDummy, todaySchedule as todayScheduleDummy, type LiveMatch, type ScheduleMatch } from "@/data/homeData";
-import { leaderboardData, type TeamData } from "@/data/leaderboardData";
+import { liveMatches, todaySchedule } from "@/data/homeData";
+import { leaderboardData } from "@/data/leaderboardData";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { fetchLiveMatches, fetchTodaySchedule, fetchLeaderboard } from "@/lib/api";
 
 export function Home() {
   const navigate = useNavigate();
-  const [live, setLive] = useState<LiveMatch[]>(liveMatchesDummy);
-  const [today, setToday] = useState<ScheduleMatch[]>(todayScheduleDummy);
-  const [top, setTop] = useState<TeamData[]>(leaderboardData);
-
-  useEffect(() => {
-    let mounted = true;
-    fetchLiveMatches()
-      .then((data) => {
-        if (mounted && data) setLive(data);
-      })
-      .catch((err) => {
-        console.error('[Home] liveMatches fetch error', err);
-      })
-      .finally(() => {});
-    fetchTodaySchedule()
-      .then((data) => {
-        if (mounted && data) setToday(data);
-      })
-      .catch((err) => {
-        console.error('[Home] todaySchedule fetch error', err);
-      })
-      .finally(() => {});
-    fetchLeaderboard()
-      .then((data) => {
-        if (mounted && data && data.length > 0) setTop(data);
-      })
-      .catch((err) => {
-        console.error('[Home] leaderboard fetch error', err);
-      })
-      .finally(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   return (
     <div className="min-h-screen">
@@ -136,7 +100,7 @@ export function Home() {
               >
                 <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
                   <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 group-hover:scale-110 transition-transform" />
-                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{live.length}</div>
+                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{liveMatches.length}</div>
                 </div>
                 <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-red-400 transition-colors">Live Now</div>
               </div>
@@ -146,7 +110,7 @@ export function Home() {
               >
                 <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 group-hover:scale-110 transition-transform" />
-                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{today.length}</div>
+                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{todaySchedule.length}</div>
                 </div>
                 <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-green-400 transition-colors">Today's Matches</div>
               </div>
@@ -177,7 +141,7 @@ export function Home() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            {live.map((match, index) => (
+            {liveMatches.map((match, index) => (
               <Card
                 key={match.id}
                 onClick={() => navigate('/results')}
@@ -230,7 +194,7 @@ export function Home() {
             ))}
           </div>
 
-          {live.length === 0 && (
+          {liveMatches.length === 0 && (
             <Card className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-gray-800">
               <CardContent className="py-12 text-center">
                 <div className="relative inline-block">
@@ -266,7 +230,7 @@ export function Home() {
           </div>
 
           <div className="space-y-3 sm:space-y-4">
-            {today.map((event, index) => (
+            {todaySchedule.map((event, index) => (
               <Card
                 key={event.id}
                 onClick={() => navigate('/lineup')}
@@ -301,7 +265,7 @@ export function Home() {
             ))}
           </div>
 
-          {today.length === 0 && (
+          {todaySchedule.length === 0 && (
             <Card className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-gray-800">
               <CardContent className="py-12 text-center">
                 <div className="relative inline-block">
