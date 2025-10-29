@@ -80,7 +80,39 @@ export function Results() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
         {/* Loading / Error / Empty States */}
         {loading && (
-          <div className="text-center text-gray-400 py-8">Loading results…</div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <Card key={`res-skel-${idx}`} className="border-2 border-white/10 animate-pulse">
+                <CardHeader className="pb-3 border-b border-gray-800">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/10 rounded-lg w-9 h-9" />
+                      <div>
+                        <div className="h-5 w-40 bg-white/10 rounded mb-2" />
+                        <div className="h-3 w-28 bg-white/10 rounded" />
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="h-3 w-16 bg-white/10 rounded mb-1" />
+                      <div className="h-3 w-20 bg-white/10 rounded" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-3">
+                  {Array.from({ length: 3 }).map((__, i2) => (
+                    <div key={i2} className="flex items-center gap-4 p-4 rounded-xl bg-white/5">
+                      <div className="w-10 h-10 rounded-full bg-white/10" />
+                      <div className="flex-1">
+                        <div className="h-4 w-48 bg-white/10 rounded mb-2" />
+                        <div className="h-3 w-24 bg-white/10 rounded" />
+                      </div>
+                      <div className="h-6 w-10 bg-white/10 rounded" />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
         {!loading && error && (
           <div className="text-center text-red-400 py-8">{error}</div>
