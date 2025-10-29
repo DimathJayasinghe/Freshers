@@ -1,35 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { faculties as facultiesDummy } from "@/data/facultiesData";
+import { faculties } from "@/data/facultiesData";
 import { Trophy, Users, Medal, TrendingUp, Sparkles, Target, Award, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { fetchFacultiesOverview, type FacultyOverview } from "@/lib/api";
 
 export function Faculties() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState<FacultyOverview[] | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    fetchFacultiesOverview()
-      .then((data) => { if (mounted) setRows(data); })
-      .catch((err) => console.error('[Faculties] fetchFacultiesOverview error', err));
-    return () => { mounted = false; };
-  }, []);
-
-  const list = rows ?? facultiesDummy.map(f => ({
-    id: f.id,
-    name: f.name,
-    shortName: f.shortName,
-    colors: f.colors,
-    logo: f.logo,
-    totalPoints: f.totalPoints,
-    rank: f.position,
-    sportsCount: f.sportsParticipated.length,
-    latestAchievement: f.achievements[0] ? { sport: f.achievements[0].sport, position: f.achievements[0].position, year: f.achievements[0].year ?? null } : null,
-  }));
   return (
     <div className="min-h-screen">
       {/* Page Header with Animated Background */}
@@ -57,7 +34,7 @@ export function Faculties() {
             <div className="flex flex-wrap gap-4 justify-center items-center pt-4">
               <Badge className="bg-blue-600/20 text-blue-400 border-blue-500/50 px-4 py-2 text-sm animate-fade-in-up delay-300">
                 <Target className="w-4 h-4 mr-2 inline" />
-                {list.length} Faculties
+                {faculties.length} Faculties
               </Badge>
               <Badge className="bg-green-600/20 text-green-400 border-green-500/50 px-4 py-2 text-sm animate-fade-in-up delay-400">
                 <Award className="w-4 h-4 mr-2 inline" />
@@ -88,7 +65,7 @@ export function Faculties() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {list.slice(0, 3).map((faculty, index) => (
+            {faculties.slice(0, 3).map((faculty, index) => (
               <Card
                 key={faculty.id}
                 onClick={() => navigate(`/faculty/${faculty.id}`)}
@@ -132,13 +109,13 @@ export function Faculties() {
                     </div>
                     <div className="flex items-center justify-between bg-black/30 rounded-lg p-2">
                       <span className="text-gray-400 text-sm">Sports</span>
-                      <span className="text-white font-semibold">{faculty.sportsCount}</span>
+                      <span className="text-white font-semibold">{faculty.sportsParticipated.length}</span>
                     </div>
-                    {faculty.latestAchievement && (
+                    {faculty.achievements.length > 0 && (
                       <div className="pt-2 border-t border-gray-800">
                         <div className="flex items-center gap-2 text-yellow-500 text-xs">
                           <Medal className="w-4 h-4" />
-                          <span className="line-clamp-1">Recent: {faculty.latestAchievement.sport} {faculty.latestAchievement.position}</span>
+                          <span className="line-clamp-1">Recent: {faculty.achievements[0].sport} {faculty.achievements[0].position}</span>
                         </div>
                       </div>
                     )}
@@ -158,7 +135,7 @@ export function Faculties() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {list.map((faculty, index) => (
+            {faculties.map((faculty, index) => (
               <Card
                 key={faculty.id}
                 onClick={() => navigate(`/faculty/${faculty.id}`)}
@@ -167,7 +144,7 @@ export function Faculties() {
               >
                 <CardHeader>
                   <div className="flex items-start gap-4">
-                      <div
+                    <div
                       className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-lg"
                       style={{ backgroundColor: faculty.colors.primary + '20', border: `2px solid ${faculty.colors.primary}` }}
                     >
@@ -175,7 +152,7 @@ export function Faculties() {
                         className="w-12 h-12 rounded flex items-center justify-center text-white font-bold text-xl"
                         style={{ backgroundColor: faculty.colors.primary }}
                       >
-                          {faculty.shortName.charAt(0)}
+                        {faculty.shortName.charAt(0)}
                       </div>
                     </div>
                     <div className="flex-1">
@@ -185,7 +162,7 @@ export function Faculties() {
                         </CardTitle>
                         <div className="flex items-center gap-1">
                           <TrendingUp className="w-4 h-4 text-green-500" />
-                          <span className="text-white font-bold">#{faculty.rank ?? '-'}</span>
+                          <span className="text-white font-bold">#{faculty.position}</span>
                         </div>
                       </div>
                       <p className="text-xs text-gray-400 line-clamp-1">{faculty.name}</p>
@@ -200,24 +177,24 @@ export function Faculties() {
                       <div className="text-xs text-gray-400 mt-1">Points</div>
                     </div>
                     <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 rounded-lg p-3 text-center group-hover:border-blue-500/40 transition-colors">
-                      <div className="text-2xl font-bold text-white">{faculty.sportsCount}</div>
+                      <div className="text-2xl font-bold text-white">{faculty.sportsParticipated.length}</div>
                       <div className="text-xs text-gray-400 mt-1">Sports</div>
                     </div>
                   </div>
 
                   {/* Sports Tags */}
                   <div className="flex flex-wrap gap-2">
-                    {Array.from({ length: Math.min(3, faculty.sportsCount) }).map((_, i) => (
+                    {faculty.sportsParticipated.slice(0, 3).map((sport) => (
                       <Badge
-                        key={i}
+                        key={sport}
                         className="bg-red-900/30 border border-red-700/50 text-red-300 text-xs hover:bg-red-900/50 transition-colors"
                       >
-                        Sport
+                        {sport}
                       </Badge>
                     ))}
-                    {faculty.sportsCount > 3 && (
+                    {faculty.sportsParticipated.length > 3 && (
                       <Badge className="bg-gray-800 text-gray-400 text-xs border-gray-700">
-                        +{faculty.sportsCount - 3}
+                        +{faculty.sportsParticipated.length - 3}
                       </Badge>
                     )}
                   </div>
