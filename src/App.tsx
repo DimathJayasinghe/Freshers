@@ -12,6 +12,7 @@ import { SportDetail } from "@/pages/SportDetail";
 import { Faculties } from "@/pages/Faculties";
 import { FacultyDetail } from "@/pages/FacultyDetail";
 import { ClosingCeremony } from "@/pages/ClosingCeremony";
+import { AdminDashboard } from "@/pages/AdminDashboard";
 import './App.css';
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
             <Route path="/faculties" element={<Faculties />} />
             <Route path="/faculty/:facultyId" element={<FacultyDetail />} />
             <Route path="/closing-ceremony" element={<ClosingCeremony />} />
+            <Route path="/admin" element={<AdminDashboard />} />
           </Routes>
         </main>
         <Footer />

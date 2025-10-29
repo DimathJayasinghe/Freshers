@@ -50,16 +50,23 @@ export function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero/Banner Section - Full viewport height on mobile, auto on desktop */}
-      <section className="relative overflow-hidden min-h-[calc(100vh-64px)]">
-        <div className="bg-gradient-to-br from-red-950 via-black to-red-950 min-h-[calc(100vh-64px)]">
+      {/* Hero/Banner Section - Full viewport height on mobile (accounting for a 64px header), auto on desktop */}
+      {/*
+        Behavior:
+        - Mobile (base): hero uses min-height: calc(100vh - 64px) so it fills the viewport without overlapping the header.
+        - Desktop (md+): hero height becomes auto so it won't force large whitespace.
+        - Add bottom padding on mobile to reserve space for the absolutely-positioned Stats bar so it doesn't overlap the main content below.
+      */}
+      <section className="relative overflow-hidden pb-[88px] md:pb-0">
+        <div className="bg-gradient-to-br from-red-950 via-black to-red-950 min-h-[calc(100vh-64px)] md:min-h-0">
           {/* Animated Background Elements */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-20 right-20 w-96 h-96 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
             <div className="absolute bottom-20 left-20 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
           </div>
+          <div className="flex flex-col justify-between items-center bg ">
           {/*HOME */}
-          <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="flex-1 relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div className="text-center space-y-4 sm:space-y-6 md:space-y-8">
               {/* UOC Logo */}
               <div className="flex justify-center mb-4 animate-fade-in">
@@ -110,7 +117,7 @@ export function Home() {
           </div>
           
           {/* Stats/Highlights Bar */}
-          <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 backdrop-blur-md bg-black/40">
+          <div className="flex-1 border-t border-white/10 backdrop-blur-md bg-black/40 w-full">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-8">
                 <div 
@@ -155,6 +162,7 @@ export function Home() {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </section>
