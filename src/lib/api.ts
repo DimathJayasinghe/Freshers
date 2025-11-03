@@ -1,4 +1,5 @@
 import { supabase, hasSupabaseEnv } from './supabaseClient';
+import { getSiteUrl } from './utils';
 import type { TeamData } from '@/data/leaderboardData';
 import type { LiveMatch, ScheduleMatch } from '@/data/homeData';
 import type { Sport } from '@/data/sportsData';
@@ -811,8 +812,10 @@ export async function sendAdminOtp(email: string) {
   if (!allowed) {
     throw new Error('This email is not authorized for admin access');
   }
+  // Build redirect URL for production (Netlify) or local dev
+  const redirectUrl = getSiteUrl('/admin');
   // Allow auto-create for whitelisted admin email to avoid "Signups not allowed for otp" when no user exists yet
-  const { data, error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: window.location.origin + '/admin' } });
+  const { data, error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: redirectUrl } });
   if (error) throw error;
   return data;
 }
