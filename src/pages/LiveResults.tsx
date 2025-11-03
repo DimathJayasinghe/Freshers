@@ -70,27 +70,50 @@ export function LiveResults() {
 
     // Realtime subscription for score/status changes (matches) and series creation/finish
     if (hasSupabaseEnv && supabase) {
-      matchesChannel = supabase!.channel(`rt-live-series-matches-${selectedSport}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'live_series_matches' }, async () => {
-          // On any change to live_series_matches, refetch the selected sport's live matches
+      // Matches channel
+      console.info('[LiveResults] Subscribing to Realtime: live_series_matches for sport', selectedSport);
+      matchesChannel = supabase
+        .channel(`rt-live-series-matches-${selectedSport}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_series_matches' }, async () => {
           try {
             const rows = await fetchLiveSeriesMatchesBySport(selectedSport);
             if (!alive) return;
             setFixtures(rows);
           } catch (e) {
-            console.error('[LiveResults] realtime matches refetch error', e);
+            console.error('[LiveResults] realtime matches INSERT refetch error', e);
           }
         })
-        .subscribe();
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_series_matches' }, async () => {
+          try {
+            const rows = await fetchLiveSeriesMatchesBySport(selectedSport);
+            if (!alive) return;
+            setFixtures(rows);
+          } catch (e) {
+            console.error('[LiveResults] realtime matches UPDATE refetch error', e);
+          }
+        })
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'live_series_matches' }, async () => {
+          try {
+            const rows = await fetchLiveSeriesMatchesBySport(selectedSport);
+            if (!alive) return;
+            setFixtures(rows);
+          } catch (e) {
+            console.error('[LiveResults] realtime matches DELETE refetch error', e);
+          }
+        })
+        .subscribe((status) => {
+          console.info('[LiveResults] Matches channel status:', status);
+        });
 
-      seriesChannel = supabase!.channel(`rt-live-series-${selectedSport}`)
+      // Series channel
+      console.info('[LiveResults] Subscribing to Realtime: live_sport_series');
+      seriesChannel = supabase
+        .channel(`rt-live-series-${selectedSport}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'live_sport_series' }, async () => {
-          // Update sports list so admin-created/finished series reflect in the filter pills
           try {
             const list = await fetchLiveSportsNow();
             if (!alive) return;
             setSports(list);
-            // If currently selected sport is no longer in the live list, switch to first available
             const exists = list.some(s => s.id === selectedSport);
             if (!exists) {
               if (list.length > 0) {
@@ -105,7 +128,11 @@ export function LiveResults() {
             console.error('[LiveResults] realtime sports refetch error', e);
           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.info('[LiveResults] Series channel status:', status);
+        });
+    } else {
+      console.warn('[LiveResults] Realtime disabled: Supabase env not configured');
     }
 
     return () => {
