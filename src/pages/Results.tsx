@@ -67,7 +67,7 @@ export function Results() {
               <span className="text-green-400 text-sm font-semibold">Completed Events</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-white">
-              Live <span className="bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent">Results</span>
+              <span className="bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent">Results</span>
             </h1>
             <p className="text-gray-300 text-lg max-w-2xl mx-auto">
               View completed events, winners, and championship results

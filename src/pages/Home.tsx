@@ -1,15 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Trophy, Users, Flame, ChevronRight, MapPin, Clock } from "lucide-react";
-import type { LiveMatch, ScheduleMatch } from "../data/homeData";
+import type { ScheduleMatch } from "../data/homeData";
 import type { TeamData } from "../data/leaderboardData";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { fetchLiveMatches, fetchTodaySchedule, fetchLeaderboard } from "../lib/api";
+import { fetchLiveSportsNow, fetchTodaySchedule, fetchLeaderboard } from "../lib/api";
 
 export function Home() {
   const navigate = useNavigate();
-  const [live, setLive] = useState<LiveMatch[]>([]);
+  const [liveSports, setLiveSports] = useState<{ id: string; name: string }[]>([]);
   const [today, setToday] = useState<ScheduleMatch[]>([]);
   const [top, setTop] = useState<TeamData[]>([]);
   const [liveLoaded, setLiveLoaded] = useState(false);
@@ -19,12 +19,12 @@ export function Home() {
 
   useEffect(() => {
     let mounted = true;
-    fetchLiveMatches()
+    fetchLiveSportsNow()
       .then((data) => {
-        if (mounted && data) setLive(data);
+        if (mounted && data) setLiveSports(data);
       })
       .catch((err) => {
-        console.error('[Home] liveMatches fetch error', err);
+        console.error('[Home] liveSports fetch error', err);
       })
       .finally(() => { if (mounted) setLiveLoaded(true); });
     fetchTodaySchedule()
@@ -98,7 +98,7 @@ export function Home() {
             
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center pt-2 sm:pt-4 px-4 animate-fade-in-up delay-400">
               <Button 
-                onClick={() => navigate('/results')}
+                onClick={() => navigate('/live')}
                 className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg rounded-full shadow-lg shadow-red-500/50 group"
               >
                 View Live Matches
@@ -141,12 +141,12 @@ export function Home() {
                   <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-blue-400 transition-colors">Faculties</div>
                 </div>
                 <div 
-                  onClick={() => navigate('/results')}
+                  onClick={() => navigate('/live')}
                   className="text-center cursor-pointer hover:scale-105 transition-transform group"
                 >
                   <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
                     <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 group-hover:scale-110 transition-transform" />
-                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{live.length}</div>
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{liveSports.length}</div>
                   </div>
                   <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-red-400 transition-colors">Live Now</div>
                 </div>
@@ -178,7 +178,7 @@ export function Home() {
             </div>
             <div className="flex-1 h-[2px] bg-gradient-to-r from-red-500/50 to-transparent hidden sm:block"></div>
             <Button
-              onClick={() => navigate('/results')}
+              onClick={() => navigate('/live')}
               variant="ghost"
               size="sm"
               className="text-red-400 hover:text-red-300 hover:bg-red-500/10 group"
@@ -188,78 +188,44 @@ export function Home() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             {isLoading && (
               <>
-                {Array.from({ length: 2 }).map((_, idx) => (
+                {Array.from({ length: 3 }).map((_, idx) => (
                   <Card key={`live-skel-${idx}`} className="bg-gradient-to-br from-red-950/30 via-gray-900 to-black border-white/10 animate-pulse">
                     <CardContent className="p-6">
-                      <div className="h-5 w-40 bg-white/10 rounded mb-2" />
-                      <div className="h-3 w-24 bg-white/10 rounded mb-4" />
-                      <div className="space-y-3">
-                        <div className="h-10 bg-white/10 rounded" />
-                        <div className="h-6 w-16 mx-auto bg-white/10 rounded" />
-                        <div className="h-10 bg-white/10 rounded" />
-                      </div>
+                      <div className="h-6 w-44 bg-white/10 rounded" />
                     </CardContent>
                   </Card>
                 ))}
               </>
             )}
-            {!isLoading && live.map((match, index) => (
-              <Card
-                key={match.id}
-                onClick={() => navigate('/results')}
-                className="group relative overflow-hidden bg-gradient-to-br from-red-950/50 via-gray-900 to-black border-red-800/50 hover:border-red-600 hover:shadow-2xl hover:shadow-red-500/20 transition-all duration-300 cursor-pointer animate-fade-in-up"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                {/* Animated background glow */}
-                <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                
-                <CardHeader className="pb-3 relative z-10">
-                  <div className="flex justify-between items-start flex-wrap gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-white text-base md:text-lg mb-1 group-hover:text-red-400 transition-colors truncate flex items-center gap-2">
+
+            {!isLoading && liveSports.map((s, index) => (
+                <Card
+                  key={`${s.id}-${index}`}
+                  onClick={() => navigate(`/live?sport=${encodeURIComponent(s.id)}`)}
+                  className="group relative overflow-hidden bg-gradient-to-br from-red-950/50 via-gray-900 to-black border-red-800/50 hover:border-red-600 hover:shadow-2xl hover:shadow-red-500/20 transition-all duration-300 cursor-pointer animate-fade-in-up"
+                  style={{ animationDelay: `${index * 80}ms` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <CardHeader className="py-5 relative z-10">
+                    <div className="flex items-center justify-between gap-3">
+                      <CardTitle className="text-white text-base md:text-lg group-hover:text-red-400 transition-colors truncate flex items-center gap-2">
                         <div className="w-1 h-6 bg-red-500 rounded-full"></div>
-                        {match.sport}
+                        {s.name}
                       </CardTitle>
-                      <p className="text-xs md:text-sm text-gray-400 truncate ml-3">{match.venue}</p>
+                      <span className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-bold rounded-full flex items-center gap-2 animate-pulse flex-shrink-0 shadow-lg shadow-red-500/50">
+                        <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
+                        LIVE
+                      </span>
                     </div>
-                    <span className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-bold rounded-full flex items-center gap-2 animate-pulse flex-shrink-0 shadow-lg shadow-red-500/50">
-                      <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
-                      LIVE
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent className="relative z-10">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-white/5 to-transparent group-hover:from-white/10 transition-colors">
-                      <div className="w-10 h-10 bg-gradient-to-br from-red-700 to-red-900 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg">
-                        <Users className="w-5 h-5 text-white" />
-                      </div>
-                      <span className="text-white font-semibold text-sm md:text-base truncate">{match.team1}</span>
-                    </div>
-                    <div className="text-center">
-                      <div className="inline-flex items-center gap-2 px-4 py-1 bg-gradient-to-r from-gray-800 to-gray-900 rounded-full border border-white/10">
-                        <span className="text-gray-400 text-xs font-bold">VS</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-white/5 to-transparent group-hover:from-white/10 transition-colors">
-                      <div className="w-10 h-10 bg-gradient-to-br from-red-700 to-red-900 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg">
-                        <Users className="w-5 h-5 text-white" />
-                      </div>
-                      <span className="text-white font-semibold text-sm md:text-base truncate">{match.team2}</span>
-                    </div>
-                    <div className={`text-center pt-2 font-bold text-sm ${match.statusColor} px-4 py-2 bg-black/30 rounded-lg border border-white/5`}>
-                      {match.status}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                </Card>
             ))}
           </div>
 
-          {live.length === 0 && (
+          {liveSports.length === 0 && (
             <Card className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-gray-800">
               <CardContent className="py-12 text-center">
                 <div className="relative inline-block">

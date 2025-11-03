@@ -1,144 +1,474 @@
-import { useEffect, useState } from "react";
-import AdminLayout from "@/components/AdminLayout";
-import AdminCard from "@/components/AdminCard";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Calendar, Settings, Image } from "lucide-react";
-import { fetchSports } from "@/lib/api";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from 'react';
+import AdminLayout from '@/components/AdminLayout';
+import { AdminHeader } from '@/components/AdminHeader';
+import { fetchSports, fetchFacultiesList, fetchActiveSeriesBySport, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, applySeriesResultsToPointsAndResults, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries } from '@/lib/api';
+import { Check, Loader2 } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
 
-export function AdminDashboard() {
-  const navigate = useNavigate();
-  const [sports, setSports] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+type SportOption = { id: string; name: string; category: string; gender?: string };
+
+const AdminDashboardPage: React.FC = () => {
+  const [sports, setSports] = useState<SportOption[]>([]);
+  const [faculties, setFaculties] = useState<{ id: string; name: string; short_name: string }[]>([]);
+  const facultyNameById = useMemo(() => Object.fromEntries(faculties.map(f => [f.id, f.name])), [faculties]);
+
+  const [selectedSportId, setSelectedSportId] = useState<string>('');
+  const [seriesTitle, setSeriesTitle] = useState<string>('');
+  const [seriesGender, setSeriesGender] = useState<'male'|'female'|'mixed'>('male');
+  const [activeSeries, setActiveSeries] = useState<{ id: number; sport_id: string; title: string | null; is_finished?: boolean; gender?: 'male'|'female'|'mixed' } | null>(null);
+
+  const [matches, setMatches] = useState<any[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [savingMatchIds, setSavingMatchIds] = useState<number[]>([]);
+  const [savedMatchIds, setSavedMatchIds] = useState<number[]>([]);
+  const [liveSports, setLiveSports] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const ls = await fetchLiveSportsNow();
+        setLiveSports(ls);
+      } catch (err) {
+        // non-blocking
+        console.warn('live sports now fetch failed', err);
+      }
+    })();
+  }, [refreshKey]);
+
+  // Controlled match order to avoid unique constraint collisions
+  const suggestedOrder = useMemo(() => (matches.length ? Math.max(...matches.map(m => Number(m.match_order) || 0)) + 1 : 1), [matches]);
+  const [matchOrder, setMatchOrder] = useState<number>(1);
+  useEffect(() => { setMatchOrder(suggestedOrder); }, [suggestedOrder]);
 
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    fetchSports()
-      .then((data) => { if (mounted && data) setSports(data); })
-      .catch((e) => console.error('[AdminDashboard] fetchSports error', e))
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
+    (async () => {
+      try {
+        const [sp, fc] = await Promise.all([fetchSports(), fetchFacultiesList()]);
+        setSports(sp as any);
+        setFaculties(fc);
+      } catch (err) {
+        console.error('Failed to load sports/faculties', err);
+      }
+    })();
   }, []);
 
+  useEffect(() => {
+    if (!selectedSportId) { setActiveSeries(null); setMatches([]); return; }
+    (async () => {
+      try {
+        const series = await fetchActiveSeriesBySport(selectedSportId);
+        setActiveSeries(series);
+        if (series?.id) {
+          const m = await fetchMatchesBySeries(series.id);
+          setMatches(m);
+        } else {
+          setMatches([]);
+        }
+      } catch (err) {
+        console.error('Failed to load active series/matches', err);
+      }
+    })();
+  }, [selectedSportId, refreshKey]);
+
+  // const selectedSport = useMemo(() => sports.find(s => s.id === selectedSportId), [sports, selectedSportId]);
+
+  async function handleCreateSeries(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedSportId) return;
+    const s = await createLiveSeries(selectedSportId, seriesTitle || null, seriesGender);
+    setActiveSeries(s);
+  }
+
+  async function handleAddMatch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!activeSeries?.id) return;
+    setFormError(null);
+    // Capture form element before any await to avoid React SyntheticEvent pooling
+    const formEl = e.currentTarget as HTMLFormElement;
+    const form = new FormData(formEl);
+    const match_order = Number(form.get('match_order') || matchOrder || 1);
+    const venue = String(form.get('venue') || '');
+    const stage = (String(form.get('stage') || '')) as any;
+    const faculty1_id = String(form.get('faculty1_id'));
+    const faculty2_id = String(form.get('faculty2_id'));
+    const status_text = String(form.get('status_text') || null);
+    try {
+      await addLiveMatch({
+        series_id: activeSeries.id,
+        match_order,
+        venue,
+        stage,
+        faculty1_id,
+        faculty2_id,
+        faculty1_score: null,
+        faculty2_score: null,
+        status: 'live',
+        status_text,
+        is_finished: false,
+        winner_faculty_id: null,
+      } as any);
+      setRefreshKey((k) => k + 1);
+      setMatchOrder((o) => o + 1);
+      formEl.reset();
+    } catch (err: any) {
+      console.error('add match failed', err);
+      setFormError(err?.message || 'Failed to add match');
+    }
+  }
+
+  async function performSave(idx: number) {
+    const m = matches[idx];
+    const id = m.id as number;
+    setSavingMatchIds((arr) => (arr.includes(id) ? arr : [...arr, id]));
+    setConfirmSaveLoading(true);
+    try {
+      // Persist scores and winner selection together on Save
+      await updateLiveMatch(id, {
+        faculty1_score: m.faculty1_score ?? '',
+        faculty2_score: m.faculty2_score ?? '',
+        winner_faculty_id: m.winner_faculty_id ?? null,
+      });
+      setSavedMatchIds((arr) => (arr.includes(id) ? arr : [...arr, id]));
+      setTimeout(() => {
+        setSavedMatchIds((arr) => arr.filter((x) => x !== id));
+      }, 1200);
+      setRefreshKey((k) => k + 1);
+      setConfirmSaveIdx(null);
+    } finally {
+      setSavingMatchIds((arr) => arr.filter((x) => x !== id));
+      setConfirmSaveLoading(false);
+    }
+  }
+
+  function saveScores(idx: number) {
+    setConfirmSaveIdx(idx);
+  }
+
+  function markWinner(idx: number, winnerId: string) {
+    // Only update local state; actual persistence happens when clicking Save
+    setMatches((arr) => arr.map((x, i) => (i === idx ? { ...x, winner_faculty_id: winnerId || null } : x)));
+  }
+
+  // Finalization UI state
+  const [champion, setChampion] = useState<string>('');
+  const [runnerUp, setRunnerUp] = useState<string>('');
+  const [third, setThird] = useState<string>('');
+  const [finalizeError, setFinalizeError] = useState<string | null>(null);
+  const [finalizeOk, setFinalizeOk] = useState<string | null>(null);
+  const [confirmSaveIdx, setConfirmSaveIdx] = useState<number | null>(null);
+  const [confirmSaveLoading, setConfirmSaveLoading] = useState(false);
+  const [confirmFinalizeOpen, setConfirmFinalizeOpen] = useState(false);
+  const [confirmFinalizeLoading, setConfirmFinalizeLoading] = useState(false);
+
+  async function onFinalizeSeries() {
+    if (!activeSeries?.id || !selectedSportId) return;
+    setFinalizeError(null);
+    setFinalizeOk(null);
+    if (!champion || !runnerUp || !third) { setFinalizeError('Please select champion, runner-up and third place'); return; }
+    try {
+  await finishSeries(activeSeries.id, { champion, runner_up: runnerUp, third });
+  const gLabel: "Men's" | "Women's" | 'Mixed' = activeSeries?.gender === 'female' ? "Women's" : activeSeries?.gender === 'mixed' ? 'Mixed' : "Men's";
+  await applySeriesResultsToPointsAndResults(selectedSportId, { champion, runner_up: runnerUp, third }, gLabel, activeSeries.id);
+      setFinalizeOk('Series finalized and points applied');
+      setRefreshKey((k) => k + 1);
+    } catch (err: any) {
+      console.error('finalize failed', err);
+      setFinalizeError(err?.message || 'Failed to finalize');
+    }
+  }
+
+  // finalizeSeries removed from UI for now per request
+
   return (
-    <>
+    <div className="min-h-screen bg-black text-white">
+      <AdminHeader />
       <AdminLayout title="Admin Dashboard">
-        <div className="text-white">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-white">Admin Dashboard</h1>
-            <div className="flex items-center gap-3">
-              <Button onClick={() => navigate('/')} variant="ghost">Back to site</Button>
-              <Badge className="bg-red-600/20 text-red-400">Admin</Badge>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
+              <h3 className="font-semibold mb-2">1) Select sport & series</h3>
+              <label className="block text-sm mb-1">Sport</label>
+              <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2 mb-3" value={selectedSportId} onChange={(e) => setSelectedSportId(e.target.value)}>
+                <option value="">-- choose --</option>
+                {sports.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              {liveSports.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-xs text-gray-400 mb-1">Currently Live:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {liveSports.map(s => (
+                      <button key={s.id} className={`px-3 py-1 rounded-full text-xs border ${selectedSportId===s.id?'bg-red-600 text-white border-red-500':'bg-black/40 text-gray-300 border-white/10 hover:border-red-600'}`} onClick={() => setSelectedSportId(s.id)}>
+                        {s.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {activeSeries ? (
+                <div className="text-green-300 text-sm">Active series: #{activeSeries.id} {activeSeries.title ? `— ${activeSeries.title}` : ''} {activeSeries?.gender ? `· ${activeSeries.gender === 'male' ? 'Men' : activeSeries.gender === 'female' ? 'Women' : 'Mixed'}` : ''}</div>
+              ) : (
+                <form onSubmit={handleCreateSeries} className="mt-2 space-y-2">
+                  <label className="block text-sm">Series title (optional)</label>
+                  <input className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="e.g., Knockouts" value={seriesTitle} onChange={(e) => setSeriesTitle(e.target.value)} />
+                  <div>
+                    <label className="block text-sm">Gender</label>
+                    <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={seriesGender} onChange={(e) => setSeriesGender(e.target.value as any)}>
+                      <option value="male">Men</option>
+                      <option value="female">Women</option>
+                      <option value="mixed">Mixed</option>
+                    </select>
+                  </div>
+                  <button className="w-full bg-red-600 hover:bg-red-500 rounded-md py-2">Create series</button>
+                </form>
+              )}
+            </div>
+
+            <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
+              <h3 className="font-semibold mb-2">2) Add live match</h3>
+              {!activeSeries ? (
+                <div className="text-sm text-gray-400">Select a sport and create/continue a series first.</div>
+              ) : (
+                <form onSubmit={handleAddMatch} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm">Order</label>
+                      <input name="match_order" type="number" min={1} value={matchOrder} onChange={(e) => setMatchOrder(Number(e.target.value||1))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" />
+                    </div>
+                    <div>
+                      <label className="block text-sm">Venue</label>
+                      <input name="venue" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="Court 1" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm">Stage</label>
+                      <select name="stage" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2">
+                        <option value="">--</option>
+                        <option value="round_of_16">Round of 16</option>
+                        <option value="quarter_final">Quarter Final</option>
+                        <option value="semi_final">Semi Final</option>
+                        <option value="final">Final</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm">Status text</label>
+                      <input name="status_text" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="QF1" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm">Team 1</label>
+                      <select name="faculty1_id" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" required>
+                        <option value="">-- choose --</option>
+                        {faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm">Team 2</label>
+                      <select name="faculty2_id" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" required>
+                        <option value="">-- choose --</option>
+                        {faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  {formError && <div className="text-red-400 text-sm">{formError}</div>}
+                  <button className="w-full bg-red-600 hover:bg-red-500 rounded-md py-2">Add match</button>
+                </form>
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <AdminCard>
-                <div className="flex items-center gap-3 mb-2">
-                  <Settings className="w-5 h-5 text-white" />
-                  <div className="text-white font-medium">Manage Sports</div>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400 mb-4">Configure sport types and categories.</p>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/admin/sports')}>Open</Button>
-                </div>
-              </AdminCard>
-
-            <AdminCard>
-              <div className="flex items-center gap-3 mb-2">
-                <Users className="w-5 h-5 text-white" />
-                <div className="text-white font-medium">Manage Faculties</div>
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">3) Matches in series</h3>
+                {activeSeries?.gender && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">{activeSeries.gender === 'male' ? 'Men' : activeSeries.gender === 'female' ? 'Women' : 'Mixed'}</span>
+                )}
               </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-4">Configure participating teams and details.</p>
-                <Button variant="outline" size="sm" onClick={() => navigate('/admin/faculties')}>Open</Button>
-              </div>
-            </AdminCard>
-
-            <AdminCard>
-              <div className="flex items-center gap-3 mb-2">
-                <Calendar className="w-5 h-5 text-white" />
-                <div className="text-white font-medium">Manage Lineup</div>
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-4">Schedule daily matches and update times.</p>
-                <Button variant="outline" size="sm" onClick={() => navigate('/admin/lineup')}>Open</Button>
-              </div>
-            </AdminCard>
-
-            <AdminCard>
-              <div className="flex items-center gap-3 mb-2">
-                <Trophy className="w-5 h-5 text-white" />
-                <div className="text-white font-medium">Points System</div>
-              </div>
-              <div>
-                <p className="text-sm text-gray-400 mb-4">Adjust scoring rules and weights.</p>
-                <Button variant="outline" size="sm" onClick={() => navigate('/admin/points')}>Open</Button>
-              </div>
-            </AdminCard>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-            <AdminCard>
-              <div className="flex items-center gap-3 mb-2"><Image className="w-5 h-5" /><div className="text-white font-medium">Media Management</div></div>
-              <div>
-                <p className="text-sm text-gray-400 mb-4">Upload banners, covers and promotional assets.</p>
-                <Button variant="outline" size="sm" onClick={() => navigate('/admin/media')}>Open</Button>
-              </div>
-            </AdminCard>
-
-            <AdminCard>
-              <div className="flex items-center gap-3 mb-2"><Settings className="w-5 h-5" /><div className="text-white font-medium">System Settings</div></div>
-              <div>
-                <p className="text-sm text-gray-400 mb-4">Global configuration and feature toggles.</p>
-                <Button variant="outline" size="sm" onClick={() => navigate('/admin/settings')}>Open</Button>
-              </div>
-            </AdminCard>
-
-            <AdminCard>
-              <div className="flex items-center gap-3 mb-2"><Image className="w-5 h-5" /><div className="text-white font-medium">Media Library</div></div>
-              <div>
-                <p className="text-sm text-gray-400 mb-4">Browse uploaded assets.</p>
-                <Button variant="outline" size="sm" onClick={() => navigate('/admin/media-library')}>Open</Button>
-              </div>
-            </AdminCard>
-          </div>
-
-          <div>
-            <h2 className="text-xl font-bold text-white mb-4">Individual Sports</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <AdminCard key={`sk-${i}`} className="animate-pulse"><div className="h-24" /></AdminCard>
-                ))
+              {!activeSeries ? (
+                <div className="text-sm text-gray-400">No active series selected.</div>
+              ) : matches.length === 0 ? (
+                <div className="text-sm text-gray-400">No matches yet.</div>
               ) : (
-                sports.map((s) => (
-                  <AdminCard key={s.id}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="text-white font-medium">{s.name}</div>
-                        <Badge className="bg-white/5 text-white text-xs">{s.category}</Badge>
+                <div className="space-y-3">
+                  {matches.map((m, idx) => (
+                    <div key={m.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-black/40 border border-zinc-800 rounded-lg p-3 overflow-hidden">
+                      <div className="md:col-span-4 min-w-0">
+                        <div className="text-xs text-gray-400">Match #{m.match_order} — {m.stage || 'stage'}</div>
+                        <div className="text-sm text-gray-300">{m.venue || 'venue'}</div>
+                        {m.winner_faculty_id && <div className="text-xs text-green-400 mt-1">Winner: {facultyNameById[m.winner_faculty_id] || m.winner_faculty_id}</div>}
+                        <div className="mt-2 text-[11px] text-gray-400">
+                          <span className="inline-flex items-center gap-1 mr-3"><span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" /> Team 1:</span>
+                          <span className="text-gray-300">{facultyNameById[m.faculty1_id] || 'Unknown'}</span>
+                          <span className="mx-2 text-gray-600">|</span>
+                          <span className="inline-flex items-center gap-1 mr-2"><span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500" /> Team 2:</span>
+                          <span className="text-gray-300">{facultyNameById[m.faculty2_id] || 'Unknown'}</span>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-400">Max: {s.maxTeams ?? '-'}</div>
+                      <div className="md:col-span-2 min-w-0">
+                        <label className="block text-xs text-gray-500">Team 1 score — <span className="text-gray-300">{facultyNameById[m.faculty1_id] || 'Unknown'}</span></label>
+                        <input value={m.faculty1_score ?? ''} onChange={(e) => { const v = e.target.value; setMatches((arr) => arr.map((x,i) => i===idx? { ...x, faculty1_score: v } : x)); }} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition" />
+                      </div>
+                      <div className="md:col-span-2 min-w-0">
+                        <label className="block text-xs text-gray-500">Team 2 score — <span className="text-gray-300">{facultyNameById[m.faculty2_id] || 'Unknown'}</span></label>
+                        <input value={m.faculty2_score ?? ''} onChange={(e) => { const v = e.target.value; setMatches((arr) => arr.map((x,i) => i===idx? { ...x, faculty2_score: v } : x)); }} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition" />
+                      </div>
+                      <div className="md:col-span-2 min-w-0">
+                        <button
+                          className={`px-3 py-1.5 rounded-md border transition-transform active:scale-95 disabled:opacity-50 w-full ${savedMatchIds.includes(m.id) ? 'bg-green-900/40 border-green-700/60' : 'bg-zinc-800 border-zinc-700'}`}
+                          disabled={savingMatchIds.includes(m.id)}
+                          onClick={() => saveScores(idx)}
+                        >
+                          {savingMatchIds.includes(m.id) ? (
+                            <span className="inline-flex items-center gap-2 justify-center"><Loader2 className="w-4 h-4 animate-spin" /><span>Saving</span></span>
+                          ) : savedMatchIds.includes(m.id) ? (
+                            <span className="inline-flex items-center gap-2 justify-center"><Check className="w-4 h-4 text-green-400" /><span>Saved</span></span>
+                          ) : (
+                            'Save'
+                          )}
+                        </button>
+                      </div>
+                      <div className="md:col-span-2 min-w-0">
+                        <label className="block text-xs text-gray-500">Winner</label>
+                        <select className="bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm w-full focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition" value={m.winner_faculty_id ?? ''} onChange={(e) => markWinner(idx, e.target.value)}>
+                          <option value="">Set winner…</option>
+                          <option value={m.faculty1_id}>Team 1 — {facultyNameById[m.faculty1_id] || 'Unknown'}</option>
+                          <option value={m.faculty2_id}>Team 2 — {facultyNameById[m.faculty2_id] || 'Unknown'}</option>
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Finalization */}
+            <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
+              <h3 className="font-semibold mb-2">4) All matches done</h3>
+              {!activeSeries ? (
+                <div className="text-sm text-gray-400">Select a sport and create/continue a series first.</div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700 mb-2"
+                      onClick={() => {
+                        // Try to auto-fill podium from matches
+                        const finalMatch = matches.find(m => m.stage === 'final' && (m.winner_faculty_id || (m.faculty1_score || m.faculty2_score)));
+                        if (finalMatch) {
+                          const champ = finalMatch.winner_faculty_id || '';
+                          const run = champ ? (champ === finalMatch.faculty1_id ? finalMatch.faculty2_id : finalMatch.faculty1_id) : '';
+                          setChampion(champ);
+                          setRunnerUp(run);
+                        }
+                        // Attempt to infer third from any match with status_text containing 'third'
+                        const thirdMatch = matches.find(m => (m.status_text || '').toLowerCase().includes('third'));
+                        if (thirdMatch && thirdMatch.winner_faculty_id) {
+                          setThird(thirdMatch.winner_faculty_id);
+                        }
+                      }}
+                    >
+                      Auto-fill podium from matches
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm">Champion</label>
+                      <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={champion} onChange={(e) => setChampion(e.target.value)}>
+                        <option value="">-- choose --</option>
+                        {faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-400 mb-3">Venue: {s.venue ?? 'TBD'}</div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">Manage {s.name}</Button>
-                        <Button variant="outline" size="sm">Edit</Button>
-                      </div>
+                      <label className="block text-sm">Runner-up</label>
+                      <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={runnerUp} onChange={(e) => setRunnerUp(e.target.value)}>
+                        <option value="">-- choose --</option>
+                        {faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
                     </div>
-                  </AdminCard>
-                ))
+                    <div>
+                      <label className="block text-sm">Third place</label>
+                      <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={third} onChange={(e) => setThird(e.target.value)}>
+                        <option value="">-- choose --</option>
+                        {faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  {finalizeError && <div className="text-red-400 text-sm">{finalizeError}</div>}
+                  {finalizeOk && <div className="text-green-400 text-sm">{finalizeOk}</div>}
+                  <button onClick={() => setConfirmFinalizeOpen(true)} className="w-full bg-green-700 hover:bg-green-600 rounded-md py-2">Finalize series + apply points</button>
+                </div>
               )}
             </div>
           </div>
         </div>
       </AdminLayout>
-    </>
-  );
-}
+      {/* Custom confirmation dialogs */}
+      <ConfirmDialog
+        open={confirmSaveIdx !== null}
+        title="Save scores?"
+        description={(() => {
+          if (confirmSaveIdx === null) return null as any;
+          const m = matches[confirmSaveIdx];
+          if (!m) return null as any;
+          const t1 = facultyNameById[m.faculty1_id] || 'Team 1';
+          const t2 = facultyNameById[m.faculty2_id] || 'Team 2';
+          return (
+            <div>
+              <div className="text-sm text-zinc-300">Match #{m.match_order} — {m.stage || 'stage'}</div>
+              <div className="mt-1 text-zinc-400">
+                {t1}: <span className="text-white">{m.faculty1_score ?? ''}</span>
+                <span className="mx-2 text-zinc-600">vs</span>
+                {t2}: <span className="text-white">{m.faculty2_score ?? ''}</span>
+              </div>
+            </div>
+          );
+        })()}
+        confirmLabel="Save"
+        cancelLabel="Cancel"
+        loading={confirmSaveLoading}
+        onConfirm={() => { if (confirmSaveIdx !== null) performSave(confirmSaveIdx); }}
+        onCancel={() => setConfirmSaveIdx(null)}
+      />
 
-export default AdminDashboard;
+      <ConfirmDialog
+        open={confirmFinalizeOpen}
+        title="Finalize series?"
+        description={(
+          <div className="space-y-1">
+            <div><span className="text-zinc-400">Champion:</span> <span className="text-white">{facultyNameById[champion] || '—'}</span></div>
+            <div><span className="text-zinc-400">Runner-up:</span> <span className="text-white">{facultyNameById[runnerUp] || '—'}</span></div>
+            <div><span className="text-zinc-400">Third:</span> <span className="text-white">{facultyNameById[third] || '—'}</span></div>
+            <div className="pt-2 text-xs text-zinc-500">This will apply points and remove the live series.</div>
+          </div>
+        )}
+        confirmLabel="Finalize"
+        cancelLabel="Back"
+        loading={confirmFinalizeLoading}
+        onConfirm={async () => {
+          setConfirmFinalizeLoading(true);
+          try {
+            await onFinalizeSeries();
+            if (activeSeries?.id) {
+              await completeAllMatchesInSeries(activeSeries.id);
+              await deleteLiveSeries(activeSeries.id);
+              setActiveSeries(null);
+              setMatches([]);
+              setRefreshKey(k=>k+1);
+            }
+            setConfirmFinalizeOpen(false);
+          } finally {
+            setConfirmFinalizeLoading(false);
+          }
+        }}
+        onCancel={() => setConfirmFinalizeOpen(false)}
+      />
+    </div>
+  );
+};
+
+export default AdminDashboardPage;
