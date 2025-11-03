@@ -12,12 +12,14 @@ export function Sports() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [sports, setSports] = useState<Sport[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let mounted = true;
     fetchSports()
       .then((data) => { if (mounted && data && data.length > 0) setSports(data); })
-      .catch((err) => console.error('[Sports] fetchSports error', err));
+      .catch((err) => console.error('[Sports] fetchSports error', err))
+      .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
 
@@ -79,7 +81,11 @@ export function Sports() {
               Explore <span className="bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-500 bg-clip-text text-transparent">Sports</span>
             </h1>
             <p className="text-gray-300 text-lg max-w-2xl mx-auto">
-              Browse all {sports.length} sports competing in UOC Freshers' Meet 2025
+              {loading ? (
+                <span className="inline-block h-5 w-60 bg-white/10 rounded animate-pulse" />
+              ) : (
+                <>Browse all {sports.length} sports competing in UOC Freshers' Meet 2025</>
+              )}
             </p>
           </div>
         </div>
@@ -138,12 +144,33 @@ export function Sports() {
       {/* Results Count */}
       <div className="mb-4">
         <p className="text-gray-400 text-sm">
-          Showing {filteredSports.length} {filteredSports.length === 1 ? 'sport' : 'sports'}
+          {loading ? (
+            <span className="inline-block h-4 w-40 bg-white/10 rounded animate-pulse" />
+          ) : (
+            <>Showing {filteredSports.length} {filteredSports.length === 1 ? 'sport' : 'sports'}</>
+          )}
         </p>
       </div>
 
       {/* Sports Grid */}
-      {filteredSports.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <Card key={`sp-skel-${idx}`} className="bg-black/40 backdrop-blur-xl border border-white/10 animate-pulse">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="h-6 w-40 bg-white/10 rounded mb-2" />
+                    <div className="h-6 w-28 bg-white/10 rounded" />
+                  </div>
+                  <div className="w-8 h-8 bg-white/10 rounded" />
+                </div>
+                <div className="h-10 bg-white/10 rounded" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : filteredSports.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSports.map((sport) => (
             <Card
