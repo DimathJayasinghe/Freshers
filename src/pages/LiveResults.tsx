@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,9 @@ export function LiveResults() {
   const [loadingSports, setLoadingSports] = useState<boolean>(true);
   const [loadingFixtures, setLoadingFixtures] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // Track last scores to animate when numbers change
+  const lastScoresRef = useRef<Record<string, { s1: string | null; s2: string | null }>>({});
+  const [flashKeys, setFlashKeys] = useState<Record<string, number>>({});
 
   // Load ongoing sports on mount
   useEffect(() => {
@@ -57,6 +60,37 @@ export function LiveResults() {
       try {
         const rows = await fetchLiveSeriesMatchesBySport(selectedSport);
         if (!alive) return;
+        // Detect score changes and trigger flash animation
+        const newLast: Record<string, { s1: string | null; s2: string | null }> = {};
+        rows.forEach((r) => {
+          const prev = lastScoresRef.current[String(r.id)];
+          const cur1 = (r as any).team1_score ?? null;
+          const cur2 = (r as any).team2_score ?? null;
+          if (prev) {
+            if (prev.s1 !== cur1) {
+              const key = `${r.id}-1`;
+              setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+              setTimeout(() => {
+                setFlashKeys((fk) => {
+                  const { [key]: _omit, ...rest } = fk;
+                  return rest;
+                });
+              }, 700);
+            }
+            if (prev.s2 !== cur2) {
+              const key = `${r.id}-2`;
+              setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+              setTimeout(() => {
+                setFlashKeys((fk) => {
+                  const { [key]: _omit, ...rest } = fk;
+                  return rest;
+                });
+              }, 700);
+            }
+          }
+          newLast[String(r.id)] = { s1: cur1, s2: cur2 };
+        });
+        lastScoresRef.current = newLast;
         setFixtures(rows);
       } catch (e) {
         console.error('[LiveResults] fetchLiveSeriesMatchesBySport error', e);
@@ -78,6 +112,36 @@ export function LiveResults() {
           try {
             const rows = await fetchLiveSeriesMatchesBySport(selectedSport);
             if (!alive) return;
+            const newLast: Record<string, { s1: string | null; s2: string | null }> = {};
+            rows.forEach((r) => {
+              const prev = lastScoresRef.current[String(r.id)];
+              const cur1 = (r as any).team1_score ?? null;
+              const cur2 = (r as any).team2_score ?? null;
+              if (prev) {
+                if (prev.s1 !== cur1) {
+                  const key = `${r.id}-1`;
+                  setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+                  setTimeout(() => {
+                    setFlashKeys((fk) => {
+                      const { [key]: _omit, ...rest } = fk;
+                      return rest;
+                    });
+                  }, 700);
+                }
+                if (prev.s2 !== cur2) {
+                  const key = `${r.id}-2`;
+                  setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+                  setTimeout(() => {
+                    setFlashKeys((fk) => {
+                      const { [key]: _omit, ...rest } = fk;
+                      return rest;
+                    });
+                  }, 700);
+                }
+              }
+              newLast[String(r.id)] = { s1: cur1, s2: cur2 };
+            });
+            lastScoresRef.current = newLast;
             setFixtures(rows);
           } catch (e) {
             console.error('[LiveResults] realtime matches INSERT refetch error', e);
@@ -87,6 +151,36 @@ export function LiveResults() {
           try {
             const rows = await fetchLiveSeriesMatchesBySport(selectedSport);
             if (!alive) return;
+            const newLast: Record<string, { s1: string | null; s2: string | null }> = {};
+            rows.forEach((r) => {
+              const prev = lastScoresRef.current[String(r.id)];
+              const cur1 = (r as any).team1_score ?? null;
+              const cur2 = (r as any).team2_score ?? null;
+              if (prev) {
+                if (prev.s1 !== cur1) {
+                  const key = `${r.id}-1`;
+                  setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+                  setTimeout(() => {
+                    setFlashKeys((fk) => {
+                      const { [key]: _omit, ...rest } = fk;
+                      return rest;
+                    });
+                  }, 700);
+                }
+                if (prev.s2 !== cur2) {
+                  const key = `${r.id}-2`;
+                  setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+                  setTimeout(() => {
+                    setFlashKeys((fk) => {
+                      const { [key]: _omit, ...rest } = fk;
+                      return rest;
+                    });
+                  }, 700);
+                }
+              }
+              newLast[String(r.id)] = { s1: cur1, s2: cur2 };
+            });
+            lastScoresRef.current = newLast;
             setFixtures(rows);
           } catch (e) {
             console.error('[LiveResults] realtime matches UPDATE refetch error', e);
@@ -96,6 +190,36 @@ export function LiveResults() {
           try {
             const rows = await fetchLiveSeriesMatchesBySport(selectedSport);
             if (!alive) return;
+            const newLast: Record<string, { s1: string | null; s2: string | null }> = {};
+            rows.forEach((r) => {
+              const prev = lastScoresRef.current[String(r.id)];
+              const cur1 = (r as any).team1_score ?? null;
+              const cur2 = (r as any).team2_score ?? null;
+              if (prev) {
+                if (prev.s1 !== cur1) {
+                  const key = `${r.id}-1`;
+                  setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+                  setTimeout(() => {
+                    setFlashKeys((fk) => {
+                      const { [key]: _omit, ...rest } = fk;
+                      return rest;
+                    });
+                  }, 700);
+                }
+                if (prev.s2 !== cur2) {
+                  const key = `${r.id}-2`;
+                  setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+                  setTimeout(() => {
+                    setFlashKeys((fk) => {
+                      const { [key]: _omit, ...rest } = fk;
+                      return rest;
+                    });
+                  }, 700);
+                }
+              }
+              newLast[String(r.id)] = { s1: cur1, s2: cur2 };
+            });
+            lastScoresRef.current = newLast;
             setFixtures(rows);
           } catch (e) {
             console.error('[LiveResults] realtime matches DELETE refetch error', e);
@@ -275,12 +399,27 @@ export function LiveResults() {
                         </div>
                       </div>
                       <div className="mt-3 flex items-center justify-center gap-4">
-                        <div className="text-lg font-bold text-yellow-400 min-w-16 text-center">{m.team1_score ?? '-'}</div>
-                        <div className="text-gray-500">-</div>
-                        <div className="text-lg font-bold text-yellow-400 min-w-16 text-center">{m.team2_score ?? '-'}</div>
+                        {(() => {
+                          const key1 = `${m.id}-1`;
+                          const key2 = `${m.id}-2`;
+                          const flash1 = Boolean((flashKeys as any)?.[key1]);
+                          const flash2 = Boolean((flashKeys as any)?.[key2]);
+                          return (
+                            <>
+                              <div className={`text-lg font-bold min-w-16 text-center transform-gpu transition-all duration-300 ${flash1 ? 'scale-125 text-yellow-200 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'text-yellow-400'}`}>{m.team1_score ?? '-'}</div>
+                              <div className="text-gray-500">-</div>
+                              <div className={`text-lg font-bold min-w-16 text-center transform-gpu transition-all duration-300 ${flash2 ? 'scale-125 text-yellow-200 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'text-yellow-400'}`}>{m.team2_score ?? '-'}</div>
+                            </>
+                          );
+                        })()}
                       </div>
                       {m.winner_name && (
-                        <div className="mt-2 text-center text-xs text-green-400">Winner: {m.winner_name}</div>
+                        <div className="mt-3 flex justify-center">
+                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-400/30 text-green-300 text-xs font-semibold shadow-[0_0_12px_rgba(34,197,94,0.25)]">
+                            <svg aria-hidden className="w-4 h-4 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 8h10l1 4a4 4 0 1 1-7.9 1h0A4 4 0 1 1 6 12l1-4Z"/></svg>
+                            <span>Winner: {m.winner_name}</span>
+                          </div>
+                        </div>
                       )}
                       {m.status_text && (
                         <div className="mt-2 text-center text-xs text-green-400">{m.status_text}</div>
