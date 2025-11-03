@@ -13,6 +13,9 @@ import { SportDetail } from "@/pages/SportDetail";
 import { Faculties } from "@/pages/Faculties";
 import { FacultyDetail } from "@/pages/FacultyDetail";
 import { ClosingCeremony } from "@/pages/ClosingCeremony";
+import AdminLogin from "@/pages/admin/Login";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import RequireAdmin from "@/pages/admin/RequireAdmin";
 import './App.css';
 
 
@@ -30,7 +33,7 @@ function App() {
     <Router>
       <ScrollToTop />
       <div className="min-h-screen bg-black flex flex-col ">
-        <Header/>
+        <ChromeHeader />
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -43,14 +46,28 @@ function App() {
             <Route path="/faculties" element={<Faculties />} />
             <Route path="/faculty/:facultyId" element={<FacultyDetail />} />
             <Route path="/closing-ceremony" element={<ClosingCeremony />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
           </Routes>
         </main>
         {/* Don't show normal footer on admin pages */}
-        <Footer />
+        <ChromeFooter />
         <PahasaraOverlay />
       </div>
     </Router>
   );
+}
+
+function ChromeHeader() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  return isAdminRoute ? null : <Header />;
+}
+
+function ChromeFooter() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  return isAdminRoute ? null : <Footer />;
 }
 
 export default App;

@@ -2,12 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LogOut, Home, Settings, Users, Trophy, Calendar } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabaseClient";
 
 export function AdminHeader() {
   const navigate = useNavigate();
 
   return (
-  <header className="w-full border-b border-red-500/30 bg-black/80 text-white">
+  <header className="w-full border-b border-red-500/30 bg-black/80 text-white sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/60">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <img src="/logos/uoc-logo.png" alt="logo" className="h-10 w-10 object-contain" />
@@ -42,8 +43,15 @@ export function AdminHeader() {
 
         <div className="flex items-center gap-3">
           <Badge className="bg-red-600/20 text-red-400">Admin</Badge>
-          <Button variant="ghost" onClick={() => navigate('/')}>Back to site</Button>
-          <Button variant="outline" onClick={() => { /* stub logout */ navigate('/'); }}>
+          <Button variant="ghost" className="hover:bg-white/10" onClick={() => navigate('/')}>Back to site</Button>
+          <Button
+            variant="outline"
+            className="border-red-500/40 hover:bg-red-500/10"
+            onClick={async () => {
+              try { await supabase?.auth.signOut(); } catch {}
+              navigate('/admin/login');
+            }}
+          >
             <LogOut className="w-4 h-4" />
             <span className="ml-2">Logout</span>
           </Button>

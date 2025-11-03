@@ -4,14 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Flame, ChevronRight, MapPin, ListOrdered, RefreshCw } from 'lucide-react';
 import { supabase, hasSupabaseEnv } from '@/lib/supabaseClient';
-import { fetchOngoingSports, fetchLiveFixturesBySport, type LiveFixture } from '@/lib/api';
+import { fetchLiveSportsNow, fetchLiveSeriesMatchesBySport, type LiveSeriesMatchView } from '@/lib/api';
 
 export function LiveResults() {
   const navigate = useNavigate();
   const [sports, setSports] = useState<{ id: string; name: string }[]>([]);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [selectedSportName, setSelectedSportName] = useState<string>('');
-  const [fixtures, setFixtures] = useState<LiveFixture[]>([]);
+  const [fixtures, setFixtures] = useState<LiveSeriesMatchView[]>([]);
   const [loadingSports, setLoadingSports] = useState<boolean>(true);
   const [loadingFixtures, setLoadingFixtures] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export function LiveResults() {
     let alive = true;
     setLoadingSports(true);
     setError(null);
-    fetchOngoingSports()
+    fetchLiveSportsNow()
       .then((rows) => {
         if (!alive) return;
         setSports(rows);
@@ -41,25 +41,26 @@ export function LiveResults() {
     };
   }, []);
 
-  // Load fixtures for selected sport and attach realtime
+  // Load live matches for selected sport (from live schema) and attach realtime on live tables
   useEffect(() => {
     if (!selectedSport) {
       setFixtures([]);
       return;
     }
     let alive = true;
-    let channel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null;
+    let matchesChannel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null;
+    let seriesChannel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null;
     setLoadingFixtures(true);
     setError(null);
 
     const load = async () => {
       try {
-        const rows = await fetchLiveFixturesBySport(selectedSport);
+        const rows = await fetchLiveSeriesMatchesBySport(selectedSport);
         if (!alive) return;
         setFixtures(rows);
       } catch (e) {
-        console.error('[LiveResults] fetchLiveFixturesBySport error', e);
-        if (alive) setError('Failed to load fixtures');
+        console.error('[LiveResults] fetchLiveSeriesMatchesBySport error', e);
+        if (alive) setError('Failed to load live matches');
       } finally {
         if (alive) setLoadingFixtures(false);
       }
@@ -67,53 +68,50 @@ export function LiveResults() {
 
     load();
 
-    // Realtime subscription for score/status changes
+    // Realtime subscription for score/status changes (matches) and series creation/finish
     if (hasSupabaseEnv && supabase) {
-      channel = supabase.channel(`rt-live-fixtures-${selectedSport}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'fixtures', filter: `sport_id=eq.${selectedSport}` }, (payload) => {
-          const rec = (payload.new ?? payload.old) as any;
-          if (!rec) return;
-          // Only care about rows related to the selected sport
-          if (rec.sport_id !== selectedSport) return;
+      matchesChannel = supabase!.channel(`rt-live-series-matches-${selectedSport}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'live_series_matches' }, async () => {
+          // On any change to live_series_matches, refetch the selected sport's live matches
+          try {
+            const rows = await fetchLiveSeriesMatchesBySport(selectedSport);
+            if (!alive) return;
+            setFixtures(rows);
+          } catch (e) {
+            console.error('[LiveResults] realtime matches refetch error', e);
+          }
+        })
+        .subscribe();
 
-          setFixtures((prev) => {
-            // If status moved away from 'live', remove it
-            if (payload.eventType === 'UPDATE' && rec.status && rec.status !== 'live') {
-              return prev.filter((m) => m.id !== rec.id);
+      seriesChannel = supabase!.channel(`rt-live-series-${selectedSport}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'live_sport_series' }, async () => {
+          // Update sports list so admin-created/finished series reflect in the filter pills
+          try {
+            const list = await fetchLiveSportsNow();
+            if (!alive) return;
+            setSports(list);
+            // If currently selected sport is no longer in the live list, switch to first available
+            const exists = list.some(s => s.id === selectedSport);
+            if (!exists) {
+              if (list.length > 0) {
+                setSelectedSport(list[0].id);
+                setSelectedSportName(list[0].name);
+              } else {
+                setSelectedSport(null);
+                setFixtures([]);
+              }
             }
-            if (payload.eventType === 'DELETE') {
-              return prev.filter((m) => m.id !== rec.id);
-            }
-            // INSERT or UPDATE while live => upsert
-            const idx = prev.findIndex((m) => m.id === rec.id);
-            const updated: LiveFixture = {
-              id: rec.id,
-              sport_id: rec.sport_id,
-              sport_name: prev[idx]?.sport_name ?? selectedSportName,
-              venue: rec.venue,
-              team1: prev[idx]?.team1 ?? '', // we keep previous resolved names
-              team2: prev[idx]?.team2 ?? '',
-              team1_score: rec.team1_score ?? null,
-              team2_score: rec.team2_score ?? null,
-              status: rec.status,
-              status_text: rec.status_text ?? null,
-            };
-            if (idx >= 0) {
-              const next = prev.slice();
-              next[idx] = { ...next[idx], ...updated };
-              return next;
-            }
-            return [...prev, updated].sort((a, b) => a.id - b.id);
-          });
+          } catch (e) {
+            console.error('[LiveResults] realtime sports refetch error', e);
+          }
         })
         .subscribe();
     }
 
     return () => {
       alive = false;
-      if (channel) {
-        supabase?.removeChannel(channel);
-      }
+      if (matchesChannel) supabase?.removeChannel(matchesChannel);
+      if (seriesChannel) supabase?.removeChannel(seriesChannel);
     };
   }, [selectedSport, selectedSportName]);
 
@@ -189,7 +187,7 @@ export function LiveResults() {
               // manual refresh
               if (!selectedSport) return;
               setLoadingFixtures(true);
-              fetchLiveFixturesBySport(selectedSport)
+              fetchLiveSeriesMatchesBySport(selectedSport)
                 .then((rows) => setFixtures(rows))
                 .catch((e) => { console.error(e); setError('Failed to refresh'); })
                 .finally(() => setLoadingFixtures(false));
@@ -254,6 +252,9 @@ export function LiveResults() {
                         <div className="text-gray-500">-</div>
                         <div className="text-lg font-bold text-yellow-400 min-w-16 text-center">{m.team2_score ?? '-'}</div>
                       </div>
+                      {m.winner_name && (
+                        <div className="mt-2 text-center text-xs text-green-400">Winner: {m.winner_name}</div>
+                      )}
                       {m.status_text && (
                         <div className="mt-2 text-center text-xs text-green-400">{m.status_text}</div>
                       )}
