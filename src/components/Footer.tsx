@@ -2,28 +2,28 @@ import { Facebook, Instagram, Youtube, Linkedin, Twitter, Globe } from "lucide-r
 
 export function Footer() {
   const socialLinks = [
-    { 
-      name: "Facebook", 
-      icon: Facebook, 
-      url: "https://www.facebook.com/pahasaraucsc",
+    {
+      name: "Facebook",
+      icon: Facebook,
+      url: "https://facebook.com/PahasaraUCSC",
       color: "hover:text-blue-500"
     },
-    { 
-      name: "Instagram", 
-      icon: Instagram, 
-      url: "https://www.instagram.com/pahasaraucsc",
+    {
+      name: "Instagram",
+      icon: Instagram,
+      url: "https://www.instagram.com/ucscmedia",
       color: "hover:text-pink-500"
     },
-    { 
-      name: "YouTube", 
-      icon: Youtube, 
+    {
+      name: "YouTube",
+      icon: Youtube,
       url: "https://www.youtube.com/@pahasaraucsc",
       color: "hover:text-red-500"
     },
-    { 
-      name: "LinkedIn", 
-      icon: Linkedin, 
-      url: "https://www.linkedin.com/company/pahasaraucsc",
+    {
+      name: "LinkedIn",
+      icon: Linkedin,
+      url: "https://www.linkedin.com/company/ucscmedia",
       color: "hover:text-blue-400"
     },
     { 

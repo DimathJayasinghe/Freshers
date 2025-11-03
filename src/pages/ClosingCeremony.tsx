@@ -219,7 +219,7 @@ export function ClosingCeremony() {
             <div className="flex flex-wrap gap-4 justify-center">
               <Button
                 onClick={() => navigate('/lineup')}
-                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                className=" bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
               >
                 View Full Schedule
               </Button>
