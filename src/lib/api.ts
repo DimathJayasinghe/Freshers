@@ -445,6 +445,7 @@ export type LiveSeriesMatchView = {
   series_id: number;
   sport_id: string;
   sport_name: string;
+  gender?: 'male' | 'female' | 'mixed';
   match_order: number;
   venue: string | null;
   stage: string | null;
@@ -462,7 +463,7 @@ export async function fetchLiveSeriesMatchesBySport(sportId: string): Promise<Li
   if (!hasSupabaseEnv || !supabase) return [];
   const { data, error } = await supabase
     .from('live_series_matches_view')
-    .select('id,series_id,sport_id,sport_name,match_order,venue,stage,status,status_text,team1,team2,team1_score,team2_score,is_finished,winner_name')
+    .select('id,series_id,sport_id,sport_name,gender,match_order,venue,stage,status,status_text,team1,team2,team1_score,team2_score,is_finished,winner_name')
     .eq('sport_id', sportId)
     .order('match_order', { ascending: true })
     .order('id', { ascending: true });
@@ -822,17 +823,17 @@ export async function verifyAdminSession(): Promise<boolean> {
 }
 
 // Live Series (admin)
-export type AdminLiveSeries = { id: number; sport_id: string; title: string | null; is_finished: boolean };
-export async function createLiveSeries(sport_id: string, title?: string | null): Promise<AdminLiveSeries | null> {
+export type AdminLiveSeries = { id: number; sport_id: string; title: string | null; is_finished: boolean; gender?: 'male' | 'female' | 'mixed' };
+export async function createLiveSeries(sport_id: string, title?: string | null, gender: 'male' | 'female' | 'mixed' = 'male'): Promise<AdminLiveSeries | null> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.from('live_sport_series').insert([{ sport_id, title: title ?? null }]).select('id,sport_id,title,is_finished').single();
+  const { data, error } = await supabase.from('live_sport_series').insert([{ sport_id, title: title ?? null, gender }]).select('id,sport_id,title,is_finished,gender').single();
   if (error) { console.error('[API] createLiveSeries error', error); throw error; }
   return data as AdminLiveSeries;
 }
 
 export async function fetchActiveSeriesBySport(sport_id: string): Promise<AdminLiveSeries | null> {
   if (!hasSupabaseEnv || !supabase) return null;
-  const { data, error } = await supabase.from('live_sport_series').select('id,sport_id,title,is_finished').eq('sport_id', sport_id).eq('is_finished', false).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  const { data, error } = await supabase.from('live_sport_series').select('id,sport_id,title,is_finished,gender').eq('sport_id', sport_id).eq('is_finished', false).order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (error) { console.error('[API] fetchActiveSeriesBySport error', error); throw error; }
   return (data as AdminLiveSeries) ?? null;
 }
@@ -864,7 +865,12 @@ export async function finishSeries(series_id: number, podium: { champion: string
 }
 
 // Apply leaderboard points and write a results row (overall standings)
-export async function applySeriesResultsToPointsAndResults(sport_id: string, podium: { champion: string; runner_up: string; third: string }, gender: "Men's" | "Women's" | 'Mixed' = "Men's") {
+export async function applySeriesResultsToPointsAndResults(
+  sport_id: string,
+  podium: { champion: string; runner_up: string; third: string },
+  gender: "Men's" | "Women's" | 'Mixed' = "Men's",
+  series_id?: number
+) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   // Create/insert results row for standings
   const { data: resRow, error: resErr } = await supabase.from('results').insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date: new Date().toISOString().slice(0,10), event_time: '00:00:00' }]).select('id').single();
@@ -907,6 +913,43 @@ export async function applySeriesResultsToPointsAndResults(sport_id: string, pod
       await supabase.from('faculty_points').insert([{ faculty_id, mens_points: mens, womens_points: womens, updated_at: new Date().toISOString() }]);
     }
   }
+  // Update faculty participation (faculty_sports) for everyone who took part in this series
+  try {
+    let participantFacultyIds: string[] = Array.from(new Set([podium.champion, podium.runner_up, podium.third].filter(Boolean)));
+    if (series_id) {
+      const { data: matches, error: mErr } = await supabase
+        .from('live_series_matches')
+        .select('faculty1_id,faculty2_id')
+        .eq('series_id', series_id);
+      if (!mErr && matches) {
+        const ids = new Set<string>(participantFacultyIds);
+        (matches as any[]).forEach((m) => { if (m.faculty1_id) ids.add(m.faculty1_id); if (m.faculty2_id) ids.add(m.faculty2_id); });
+        participantFacultyIds = Array.from(ids);
+      }
+    }
+
+    if (participantFacultyIds.length > 0) {
+      const upsertRows = participantFacultyIds.map((fid) => ({ faculty_id: fid, sport_id }));
+      // Upsert on composite key so we don't create duplicates
+      await supabase.from('faculty_sports').upsert(upsertRows as any, { onConflict: 'faculty_id,sport_id', ignoreDuplicates: true } as any);
+    }
+  } catch (e) {
+    console.warn('[API] applySeries: faculty_sports upsert warn', e);
+  }
+
+  // Insert achievements for champion/runner-up/third
+  try {
+    const year = new Date().getFullYear();
+    const achRows = [
+      { faculty_id: podium.champion, sport_id, position: 'Champions', year },
+      { faculty_id: podium.runner_up, sport_id, position: 'Runner-up', year },
+      { faculty_id: podium.third, sport_id, position: 'Third place', year },
+    ];
+    await supabase.from('faculty_achievements').insert(achRows);
+  } catch (e) {
+    console.warn('[API] applySeries: achievements insert warn', e);
+  }
+
   return { resultId };
 }
 

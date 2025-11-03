@@ -14,7 +14,8 @@ const AdminDashboardPage: React.FC = () => {
 
   const [selectedSportId, setSelectedSportId] = useState<string>('');
   const [seriesTitle, setSeriesTitle] = useState<string>('');
-  const [activeSeries, setActiveSeries] = useState<{ id: number; sport_id: string; title: string | null } | null>(null);
+  const [seriesGender, setSeriesGender] = useState<'male'|'female'|'mixed'>('male');
+  const [activeSeries, setActiveSeries] = useState<{ id: number; sport_id: string; title: string | null; is_finished?: boolean; gender?: 'male'|'female'|'mixed' } | null>(null);
 
   const [matches, setMatches] = useState<any[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -74,7 +75,7 @@ const AdminDashboardPage: React.FC = () => {
   async function handleCreateSeries(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedSportId) return;
-    const s = await createLiveSeries(selectedSportId, seriesTitle || null);
+    const s = await createLiveSeries(selectedSportId, seriesTitle || null, seriesGender);
     setActiveSeries(s);
   }
 
@@ -121,7 +122,12 @@ const AdminDashboardPage: React.FC = () => {
     setSavingMatchIds((arr) => (arr.includes(id) ? arr : [...arr, id]));
     setConfirmSaveLoading(true);
     try {
-      await updateLiveMatch(id, { faculty1_score: m.faculty1_score ?? '', faculty2_score: m.faculty2_score ?? '' });
+      // Persist scores and winner selection together on Save
+      await updateLiveMatch(id, {
+        faculty1_score: m.faculty1_score ?? '',
+        faculty2_score: m.faculty2_score ?? '',
+        winner_faculty_id: m.winner_faculty_id ?? null,
+      });
       setSavedMatchIds((arr) => (arr.includes(id) ? arr : [...arr, id]));
       setTimeout(() => {
         setSavedMatchIds((arr) => arr.filter((x) => x !== id));
@@ -138,11 +144,9 @@ const AdminDashboardPage: React.FC = () => {
     setConfirmSaveIdx(idx);
   }
 
-  async function markWinner(idx: number, winnerId: string) {
-    const m = matches[idx];
-    // Keep match live but show winner to audience; finalization happens later
-    await updateLiveMatch(m.id, { winner_faculty_id: winnerId });
-    setRefreshKey((k) => k + 1);
+  function markWinner(idx: number, winnerId: string) {
+    // Only update local state; actual persistence happens when clicking Save
+    setMatches((arr) => arr.map((x, i) => (i === idx ? { ...x, winner_faculty_id: winnerId || null } : x)));
   }
 
   // Finalization UI state
@@ -162,8 +166,9 @@ const AdminDashboardPage: React.FC = () => {
     setFinalizeOk(null);
     if (!champion || !runnerUp || !third) { setFinalizeError('Please select champion, runner-up and third place'); return; }
     try {
-      await finishSeries(activeSeries.id, { champion, runner_up: runnerUp, third });
-      await applySeriesResultsToPointsAndResults(selectedSportId, { champion, runner_up: runnerUp, third });
+  await finishSeries(activeSeries.id, { champion, runner_up: runnerUp, third });
+  const gLabel: "Men's" | "Women's" | 'Mixed' = activeSeries?.gender === 'female' ? "Women's" : activeSeries?.gender === 'mixed' ? 'Mixed' : "Men's";
+  await applySeriesResultsToPointsAndResults(selectedSportId, { champion, runner_up: runnerUp, third }, gLabel, activeSeries.id);
       setFinalizeOk('Series finalized and points applied');
       setRefreshKey((k) => k + 1);
     } catch (err: any) {
@@ -202,11 +207,19 @@ const AdminDashboardPage: React.FC = () => {
                 </div>
               )}
               {activeSeries ? (
-                <div className="text-green-300 text-sm">Active series: #{activeSeries.id} {activeSeries.title ? `— ${activeSeries.title}` : ''}</div>
+                <div className="text-green-300 text-sm">Active series: #{activeSeries.id} {activeSeries.title ? `— ${activeSeries.title}` : ''} {activeSeries?.gender ? `· ${activeSeries.gender === 'male' ? 'Men' : activeSeries.gender === 'female' ? 'Women' : 'Mixed'}` : ''}</div>
               ) : (
                 <form onSubmit={handleCreateSeries} className="mt-2 space-y-2">
                   <label className="block text-sm">Series title (optional)</label>
                   <input className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="e.g., Knockouts" value={seriesTitle} onChange={(e) => setSeriesTitle(e.target.value)} />
+                  <div>
+                    <label className="block text-sm">Gender</label>
+                    <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={seriesGender} onChange={(e) => setSeriesGender(e.target.value as any)}>
+                      <option value="male">Men</option>
+                      <option value="female">Women</option>
+                      <option value="mixed">Mixed</option>
+                    </select>
+                  </div>
                   <button className="w-full bg-red-600 hover:bg-red-500 rounded-md py-2">Create series</button>
                 </form>
               )}
@@ -271,6 +284,9 @@ const AdminDashboardPage: React.FC = () => {
             <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold">3) Matches in series</h3>
+                {activeSeries?.gender && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">{activeSeries.gender === 'male' ? 'Men' : activeSeries.gender === 'female' ? 'Women' : 'Mixed'}</span>
+                )}
               </div>
               {!activeSeries ? (
                 <div className="text-sm text-gray-400">No active series selected.</div>

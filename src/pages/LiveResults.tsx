@@ -379,7 +379,14 @@ export function LiveResults() {
                   {fixtures.map((m, idx) => (
                     <div key={m.id} className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-red-600/40 transition-colors">
                       <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="text-sm text-gray-400 font-semibold">Match {idx + 1}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm text-gray-400 font-semibold">Match {idx + 1}</div>
+                          {m.gender && (
+                            <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-300">
+                              {m.gender === 'male' ? 'Men' : m.gender === 'female' ? 'Women' : 'Mixed'}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-xs text-gray-300 bg-black/30 px-2 py-1 rounded">
                           <MapPin className="w-4 h-4 text-red-400" />
                           <span>{m.venue}</span>
