@@ -1,15 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Trophy, Users, Flame, ChevronRight, MapPin, Clock } from "lucide-react";
-import type { LiveMatch, ScheduleMatch } from "../data/homeData";
+import type { ScheduleMatch } from "../data/homeData";
 import type { TeamData } from "../data/leaderboardData";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { fetchLiveMatches, fetchTodaySchedule, fetchLeaderboard } from "../lib/api";
+import { fetchLiveSportsNow, fetchTodaySchedule, fetchLeaderboard } from "../lib/api";
 
 export function Home() {
   const navigate = useNavigate();
-  const [live, setLive] = useState<LiveMatch[]>([]);
+  const [liveSports, setLiveSports] = useState<{ id: string; name: string }[]>([]);
   const [today, setToday] = useState<ScheduleMatch[]>([]);
   const [top, setTop] = useState<TeamData[]>([]);
   const [liveLoaded, setLiveLoaded] = useState(false);
@@ -19,12 +19,12 @@ export function Home() {
 
   useEffect(() => {
     let mounted = true;
-    fetchLiveMatches()
+    fetchLiveSportsNow()
       .then((data) => {
-        if (mounted && data) setLive(data);
+        if (mounted && data) setLiveSports(data);
       })
       .catch((err) => {
-        console.error('[Home] liveMatches fetch error', err);
+        console.error('[Home] liveSports fetch error', err);
       })
       .finally(() => { if (mounted) setLiveLoaded(true); });
     fetchTodaySchedule()
@@ -146,7 +146,7 @@ export function Home() {
                 >
                   <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
                     <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 group-hover:scale-110 transition-transform" />
-                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{live.length}</div>
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{liveSports.length}</div>
                   </div>
                   <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-red-400 transition-colors">Live Now</div>
                 </div>
@@ -201,12 +201,10 @@ export function Home() {
               </>
             )}
 
-            {!isLoading && (() => {
-              const uniqueSports = Array.from(new Set(live.map(m => m.sport)));
-              return uniqueSports.map((sport, index) => (
+            {!isLoading && liveSports.map((s, index) => (
                 <Card
-                  key={`${sport}-${index}`}
-                  onClick={() => navigate('/live')}
+                  key={`${s.id}-${index}`}
+                  onClick={() => navigate(`/live?sport=${encodeURIComponent(s.id)}`)}
                   className="group relative overflow-hidden bg-gradient-to-br from-red-950/50 via-gray-900 to-black border-red-800/50 hover:border-red-600 hover:shadow-2xl hover:shadow-red-500/20 transition-all duration-300 cursor-pointer animate-fade-in-up"
                   style={{ animationDelay: `${index * 80}ms` }}
                 >
@@ -215,7 +213,7 @@ export function Home() {
                     <div className="flex items-center justify-between gap-3">
                       <CardTitle className="text-white text-base md:text-lg group-hover:text-red-400 transition-colors truncate flex items-center gap-2">
                         <div className="w-1 h-6 bg-red-500 rounded-full"></div>
-                        {sport}
+                        {s.name}
                       </CardTitle>
                       <span className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-bold rounded-full flex items-center gap-2 animate-pulse flex-shrink-0 shadow-lg shadow-red-500/50">
                         <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
@@ -224,11 +222,10 @@ export function Home() {
                     </div>
                   </CardHeader>
                 </Card>
-              ));
-            })()}
+            ))}
           </div>
 
-          {live.length === 0 && (
+          {liveSports.length === 0 && (
             <Card className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-gray-800">
               <CardContent className="py-12 text-center">
                 <div className="relative inline-block">

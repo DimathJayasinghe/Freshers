@@ -24,14 +24,28 @@ export function LiveResults() {
     let alive = true;
     setLoadingSports(true);
     setError(null);
+    // Read preselected sport from query param if available
+    const params = new URLSearchParams(window.location.search);
+    const preselectSport = params.get('sport');
     fetchLiveSportsNow()
       .then((rows) => {
         if (!alive) return;
         setSports(rows);
-        // auto-select first if available
-        if (rows.length > 0) {
-          setSelectedSport((prev) => prev ?? rows[0].id);
-          setSelectedSportName((prev) => prev || rows[0].name);
+        // Select by URL param if provided and exists; otherwise auto-select first
+        if (preselectSport) {
+          const found = rows.find(r => r.id === preselectSport);
+          if (found) {
+            setSelectedSport(found.id);
+            setSelectedSportName(found.name);
+          } else if (rows.length > 0) {
+            setSelectedSport((prev) => prev ?? rows[0].id);
+            setSelectedSportName((prev) => prev || rows[0].name);
+          }
+        } else {
+          if (rows.length > 0) {
+            setSelectedSport((prev) => prev ?? rows[0].id);
+            setSelectedSportName((prev) => prev || rows[0].name);
+          }
         }
       })
       .catch((e) => {
