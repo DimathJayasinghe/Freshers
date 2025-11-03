@@ -343,6 +343,91 @@ export async function fetchLiveMatches(): Promise<LiveMatch[]> {
   }));
 }
 
+// -----------------------
+// Live fixtures by sport (for Live Results page)
+// -----------------------
+export type LiveFixture = {
+  id: number;
+  sport_id: string;
+  sport_name: string;
+  venue: string; // e.g., Court 1
+  team1: string;
+  team2: string;
+  team1_score: string | null;
+  team2_score: string | null;
+  status: string; // 'live' | 'scheduled' | 'completed' ...
+  status_text: string | null;
+};
+
+// Distinct ongoing sports (status='live') -> [{ id, name }]
+export async function fetchOngoingSports(): Promise<{ id: string; name: string }[]> {
+  if (!hasSupabaseEnv || !supabase) return [];
+  // Pull distinct sport ids from live fixtures and join names
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select('sport_id, sports(name)')
+    .eq('status', 'live');
+  if (error) {
+    console.error('[API] fetchOngoingSports error', error);
+    throw error;
+  }
+  const seen = new Map<string, string>();
+  (data as any[] | null || []).forEach((row) => {
+    const sportId = row.sport_id as string;
+    const sObj = Array.isArray(row.sports) ? row.sports[0] : row.sports;
+    const name = sObj?.name as string | undefined;
+    if (sportId && name && !seen.has(sportId)) seen.set(sportId, name);
+  });
+  return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+}
+
+export async function fetchLiveFixturesBySport(sportId: string): Promise<LiveFixture[]> {
+  if (!hasSupabaseEnv || !supabase) return [];
+  const { data, error } = await supabase
+    .from('fixtures')
+    .select('id,sport_id,venue,status,status_text,team1_score,team2_score, sports(name), team1:faculties!fixtures_team1_faculty_id_fkey(name), team2:faculties!fixtures_team2_faculty_id_fkey(name)')
+    .eq('sport_id', sportId)
+    .eq('status', 'live')
+    .order('id', { ascending: true });
+  if (error) {
+    console.error('[API] fetchLiveFixturesBySport error', error);
+    throw error;
+  }
+  // Note: PostgREST embeds for faculties may come as arrays or single objects depending on configuration
+  const rows = (data || []) as any[];
+  return rows.map((r) => {
+    const sportObj = Array.isArray(r.sports) ? r.sports[0] : r.sports;
+    const t1 = (Array.isArray(r.team1) ? r.team1[0] : r.team1) || { name: '' };
+    const t2 = (Array.isArray(r.team2) ? r.team2[0] : r.team2) || { name: '' };
+    return {
+      id: r.id as number,
+      sport_id: r.sport_id as string,
+      sport_name: sportObj?.name as string,
+      venue: r.venue as string,
+      team1: t1?.name as string,
+      team2: t2?.name as string,
+      team1_score: (r.team1_score ?? null) as string | null,
+      team2_score: (r.team2_score ?? null) as string | null,
+      status: r.status as string,
+      status_text: (r.status_text ?? null) as string | null,
+    } satisfies LiveFixture;
+  });
+}
+
+// Admin helper: update fixture scores and/or status (triggers realtime)
+export async function updateFixture(
+  id: number,
+  payload: Partial<{ team1_score: string | null; team2_score: string | null; status: string; status_text: string | null; winner_faculty_id: string | null }>
+) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase.from('fixtures').update(payload).eq('id', id).select();
+  if (error) {
+    console.error('[API] updateFixture error', error);
+    throw error;
+  }
+  return data;
+}
+
 type ScheduledEventRow = {
   id: number;
   event_date: string; // ISO date
