@@ -1,0 +1,283 @@
+"""
+Winner Post Generator
+Automatically generates winner announcement posts by editing template images
+"""
+
+from PIL import Image, ImageDraw, ImageFont
+import os
+from datetime import datetime
+from typing import Dict, List, Tuple
+
+class PostGenerator:
+    def __init__(self, template_folder="templates", output_folder="generated_posts"):
+        self.template_folder = template_folder
+        self.output_folder = output_folder
+
+        # Create output folder if it doesn't exist
+        os.makedirs(output_folder, exist_ok=True)
+    
+    def generate_winner_post(
+        self,
+        template_path: str,
+        sport_name: str,
+        faculty_name: str,
+        points: int,
+        position: str = "Champion",
+        text_positions: Dict = None,
+        output_filename: str = None
+    ) -> str:
+        """
+        Generate a winner post from template
+        
+        Args:
+            template_path: Path to template image
+            sport_name: Name of the sport
+            faculty_name: Name of winning faculty
+            points: Points scored
+            position: Winner position (Champion, 1st Place, etc.)
+            text_positions: Dictionary with text coordinates and styling
+            output_filename: Custom output filename (optional)
+        
+        Returns:
+            Path to generated image
+        """
+        # Load template image
+        template = Image.open(template_path)
+        
+        # Create a copy to work with
+        img = template.copy()
+        draw = ImageDraw.Draw(img)
+        
+        # Default text positions if none provided
+        if text_positions is None:
+            width, height = img.size
+            text_positions = {
+                'sport': {
+                    'position': (width // 2, height // 4),
+                    'font_size': 60,
+                    'color': (255, 255, 255),  # White
+                    'align': 'center'
+                },
+                'faculty': {
+                    'position': (width // 2, height // 2),
+                    'font_size': 80,
+                    'color': (255, 215, 0),  # Gold
+                    'align': 'center'
+                },
+                'position': {
+                    'position': (width // 2, height // 2 + 100),
+                    'font_size': 50,
+                    'color': (255, 255, 255),
+                    'align': 'center'
+                },
+                'points': {
+                    'position': (width // 2, height - 150),
+                    'font_size': 40,
+                    'color': (255, 255, 255),
+                    'align': 'center'
+                }
+            }
+        
+        # Load fonts (try different font paths for compatibility)
+        font_paths = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/System/Library/Fonts/Helvetica.ttc",
+            "arial.ttf",
+            "C:\\Windows\\Fonts\\arial.ttf"
+        ]
+        
+        def get_font(size):
+            for font_path in font_paths:
+                try:
+                    return ImageFont.truetype(font_path, size)
+                except:
+                    continue
+            return ImageFont.load_default()
+        
+        # Draw sport name
+        if 'sport' in text_positions:
+            config = text_positions['sport']
+            font = get_font(config['font_size'])
+            text = f"{sport_name.upper()}"
+            
+            if config.get('align') == 'center':
+                bbox = draw.textbbox((0, 0), text, font=font)
+                text_width = bbox[2] - bbox[0]
+                pos = (config['position'][0] - text_width // 2, config['position'][1])
+            else:
+                pos = config['position']
+            
+            # Add text shadow for better visibility
+            shadow_offset = 2
+            draw.text(
+                (pos[0] + shadow_offset, pos[1] + shadow_offset),
+                text,
+                font=font,
+                fill=(0, 0, 0, 200)
+            )
+            draw.text(pos, text, font=font, fill=config['color'])
+        
+        # Draw faculty name
+        if 'faculty' in text_positions:
+            config = text_positions['faculty']
+            font = get_font(config['font_size'])
+            text = faculty_name.upper()
+            
+            if config.get('align') == 'center':
+                bbox = draw.textbbox((0, 0), text, font=font)
+                text_width = bbox[2] - bbox[0]
+                pos = (config['position'][0] - text_width // 2, config['position'][1])
+            else:
+                pos = config['position']
+            
+            shadow_offset = 3
+            draw.text(
+                (pos[0] + shadow_offset, pos[1] + shadow_offset),
+                text,
+                font=font,
+                fill=(0, 0, 0, 200)
+            )
+            draw.text(pos, text, font=font, fill=config['color'])
+        
+        # Draw position
+        if 'position' in text_positions:
+            config = text_positions['position']
+            font = get_font(config['font_size'])
+            text = position.upper()
+            
+            if config.get('align') == 'center':
+                bbox = draw.textbbox((0, 0), text, font=font)
+                text_width = bbox[2] - bbox[0]
+                pos = (config['position'][0] - text_width // 2, config['position'][1])
+            else:
+                pos = config['position']
+            
+            shadow_offset = 2
+            draw.text(
+                (pos[0] + shadow_offset, pos[1] + shadow_offset),
+                text,
+                font=font,
+                fill=(0, 0, 0, 200)
+            )
+            draw.text(pos, text, font=font, fill=config['color'])
+        
+        # Draw points
+        if 'points' in text_positions:
+            config = text_positions['points']
+            font = get_font(config['font_size'])
+            text = f"{points} POINTS"
+            
+            if config.get('align') == 'center':
+                bbox = draw.textbbox((0, 0), text, font=font)
+                text_width = bbox[2] - bbox[0]
+                pos = (config['position'][0] - text_width // 2, config['position'][1])
+            else:
+                pos = config['position']
+            
+            shadow_offset = 2
+            draw.text(
+                (pos[0] + shadow_offset, pos[1] + shadow_offset),
+                text,
+                font=font,
+                fill=(0, 0, 0, 200)
+            )
+            draw.text(pos, text, font=font, fill=config['color'])
+        
+        # Generate output filename
+        if output_filename is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_filename = f"winner_{sport_name.replace(' ', '_')}_{timestamp}.png"
+        
+        output_path = os.path.join(self.output_folder, output_filename)
+        
+        # Save the generated image
+        img.save(output_path, quality=95)
+        print(f"✅ Generated post: {output_path}")
+        
+        return output_path
+    
+    def generate_all_winners(
+        self,
+        template_path: str,
+        winners_data: List[Dict]
+    ) -> List[str]:
+        """
+        Generate posts for multiple winners
+        
+        Args:
+            template_path: Path to template image
+            winners_data: List of winner dictionaries with keys:
+                         - sport_name
+                         - faculty_name
+                         - points
+                         - position (optional)
+        
+        Returns:
+            List of paths to generated images
+        """
+        generated_posts = []
+        
+        for winner in winners_data:
+            try:
+                output_path = self.generate_winner_post(
+                    template_path=template_path,
+                    sport_name=winner['sport_name'],
+                    faculty_name=winner['faculty_name'],
+                    points=winner['points'],
+                    position=winner.get('position', 'Champion')
+                )
+                generated_posts.append(output_path)
+            except Exception as e:
+                print(f"❌ Error generating post for {winner.get('faculty_name')}: {e}")
+        
+        return generated_posts
+
+
+# Example usage
+if __name__ == "__main__":
+    # Initialize generator
+    generator = PostGenerator(
+        template_folder="templates",
+        output_folder="generated_posts"
+    )
+    
+    # Example: Single winner post
+    print("🎨 Generating winner posts...\n")
+    
+    # Method 1: Generate single post
+    generator.generate_winner_post(
+        template_path="templates/winner_template.png",
+        sport_name="Basketball",
+        faculty_name="Faculty of Engineering",
+        points=450,
+        position="Champion"
+    )
+    
+    # Method 2: Generate multiple posts at once
+    winners_data = [
+        {
+            'sport_name': 'Cricket',
+            'faculty_name': 'Faculty of Science',
+            'points': 380,
+            'position': 'Champion'
+        },
+        {
+            'sport_name': 'Football',
+            'faculty_name': 'Faculty of Arts',
+            'points': 420,
+            'position': 'Champion'
+        },
+        {
+            'sport_name': 'Volleyball',
+            'faculty_name': 'Faculty of Medicine',
+            'points': 350,
+            'position': 'Champion'
+        }
+    ]
+    
+    generated = generator.generate_all_winners(
+        template_path="templates/winner_template.png",
+        winners_data=winners_data
+    )
+    
+    print(f"\n🎉 Successfully generated {len(generated)} winner posts!")
