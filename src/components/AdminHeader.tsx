@@ -13,12 +13,12 @@ export function AdminHeader() {
         <div className="flex items-center gap-4">
           <img src="/logos/uoc-logo.png" alt="logo" className="h-10 w-10 object-contain" />
           <div>
-            <div className="text-xs text-gray-400">Admin Console</div>
-            <div className="text-lg font-bold text-white">Freshers' Meet — Admin</div>
+            <div className="text-xs text-gray-400">UOC Freshers' 25</div>
+            <div className="text-lg font-bold text-white">Admin Dashboard</div>
           </div>
         </div>
 
-        <nav className="hidden sm:flex items-center gap-2">
+        {/* <nav className="hidden sm:flex items-center gap-2">
           <Link to="/admin" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
             <Home className="w-4 h-4" />
             <span>Dashboard</span>
@@ -39,7 +39,7 @@ export function AdminHeader() {
             <Settings className="w-4 h-4" />
             <span>Settings</span>
           </Link>
-        </nav>
+        </nav> */}
 
         <div className="flex items-center gap-3">
           <Badge className="bg-red-600/20 text-red-400">Admin</Badge>

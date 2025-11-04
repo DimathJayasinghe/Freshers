@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { AdminHeader } from '@/components/AdminHeader';
 import { fetchSports, fetchFacultiesList, fetchActiveSeriesBySport, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, applySeriesResultsToPointsAndResults, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries } from '@/lib/api';
@@ -22,6 +22,9 @@ const AdminDashboardPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [savingMatchIds, setSavingMatchIds] = useState<number[]>([]);
   const [savedMatchIds, setSavedMatchIds] = useState<number[]>([]);
+  const [pushingCommentIds, setPushingCommentIds] = useState<number[]>([]);
+  const [pushedCommentIds, setPushedCommentIds] = useState<number[]>([]);
+  const enterCountsRef = useRef<Record<number, { count: number; timer: any }>>({});
   const [liveSports, setLiveSports] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => {
     (async () => {
@@ -127,6 +130,9 @@ const AdminDashboardPage: React.FC = () => {
         faculty1_score: m.faculty1_score ?? '',
         faculty2_score: m.faculty2_score ?? '',
         winner_faculty_id: m.winner_faculty_id ?? null,
+        status_text: m.status_text ?? null,
+        // Save commentary if present (new feature)
+        commentary: (m as any).commentary ?? null,
       });
       setSavedMatchIds((arr) => (arr.includes(id) ? arr : [...arr, id]));
       setTimeout(() => {
@@ -147,6 +153,21 @@ const AdminDashboardPage: React.FC = () => {
   function markWinner(idx: number, winnerId: string) {
     // Only update local state; actual persistence happens when clicking Save
     setMatches((arr) => arr.map((x, i) => (i === idx ? { ...x, winner_faculty_id: winnerId || null } : x)));
+  }
+
+  async function pushCommentary(idx: number) {
+    const m = matches[idx];
+    const id = m.id as number;
+    const commentary = (m as any).commentary ?? '';
+    setPushingCommentIds((arr) => (arr.includes(id) ? arr : [...arr, id]));
+    try {
+      await updateLiveMatch(id, { commentary });
+      setPushedCommentIds((arr) => (arr.includes(id) ? arr : [...arr, id]));
+      setTimeout(() => setPushedCommentIds((arr) => arr.filter((x) => x !== id)), 1200);
+      setRefreshKey((k) => k + 1);
+    } finally {
+      setPushingCommentIds((arr) => arr.filter((x) => x !== id));
+    }
   }
 
   // Finalization UI state
@@ -241,7 +262,7 @@ const AdminDashboardPage: React.FC = () => {
                       <input name="venue" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="Court 1" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm">Stage</label>
                       <select name="stage" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2">
@@ -253,8 +274,8 @@ const AdminDashboardPage: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm">Status text</label>
-                      <input name="status_text" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="QF1" />
+                        <label className="block text-sm">Status text</label>
+                        <input name="status_text" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="QF1" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -295,7 +316,7 @@ const AdminDashboardPage: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   {matches.map((m, idx) => (
-                    <div key={m.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-black/40 border border-zinc-800 rounded-lg p-3 overflow-hidden">
+                    <div key={m.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start bg-black/40 border border-zinc-800 rounded-lg p-3 overflow-hidden">
                       <div className="md:col-span-4 min-w-0">
                         <div className="text-xs text-gray-400">Match #{m.match_order} — {m.stage || 'stage'}</div>
                         <div className="text-sm text-gray-300">{m.venue || 'venue'}</div>
@@ -334,10 +355,56 @@ const AdminDashboardPage: React.FC = () => {
                       <div className="md:col-span-2 min-w-0">
                         <label className="block text-xs text-gray-500">Winner</label>
                         <select className="bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm w-full focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition" value={m.winner_faculty_id ?? ''} onChange={(e) => markWinner(idx, e.target.value)}>
-                          <option value="">Set winner…</option>
+                          <option value="">TBA — Not decided</option>
                           <option value={m.faculty1_id}>Team 1 — {facultyNameById[m.faculty1_id] || 'Unknown'}</option>
                           <option value={m.faculty2_id}>Team 2 — {facultyNameById[m.faculty2_id] || 'Unknown'}</option>
                         </select>
+                        <div className="text-[10px] text-zinc-500 mt-1">Choose and click Save to publish or reset to TBA.</div>
+                      </div>
+                      {/* Commentary input spanning full width below */}
+                      <div className="md:col-span-12">
+                        <label className="block text-xs text-gray-500">Commentary / Message (shown to audience)</label>
+                        <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-end">
+                          <textarea
+                            rows={2}
+                            placeholder="e.g., Thrilling rally! Score now 18-16."
+                            value={(m as any).commentary ?? ''}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setMatches((arr) => arr.map((x, i) => (i === idx ? { ...x, commentary: v } : x)));
+                            }}
+                            onKeyDown={(e) => {
+                              const id = m.id as number;
+                              if (e.key === 'Enter') {
+                                e.stopPropagation();
+                                const rec = enterCountsRef.current[id] || { count: 0, timer: null };
+                                if (rec.timer) clearTimeout(rec.timer);
+                                rec.count += 1;
+                                rec.timer = setTimeout(() => {
+                                  enterCountsRef.current[id] = { count: 0, timer: null } as any;
+                                }, 600);
+                                enterCountsRef.current[id] = rec as any;
+                                if (rec.count >= 2) {
+                                  e.preventDefault();
+                                  enterCountsRef.current[id] = { count: 0, timer: null } as any;
+                                  pushCommentary(idx);
+                                }
+                              } else {
+                                enterCountsRef.current[m.id] = { count: 0, timer: null } as any;
+                              }
+                            }}
+                            className="w-full bg-black border border-zinc-700 rounded-md px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => pushCommentary(idx)}
+                            disabled={pushingCommentIds.includes(m.id)}
+                            className={`px-3 py-2 rounded-md text-sm border transition-colors whitespace-nowrap ${pushingCommentIds.includes(m.id) ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-red-700/80 hover:bg-red-600 border-red-600 text-white'}`}
+                          >
+                            {pushingCommentIds.includes(m.id) ? 'Pushing…' : pushedCommentIds.includes(m.id) ? 'Pushed!' : 'Push comment (press Enter twice)'}
+                          </button>
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-1">This message appears under the scores until you update it again. Tip: press Enter twice to push instantly.</div>
                       </div>
                     </div>
                   ))}

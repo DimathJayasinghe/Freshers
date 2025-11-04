@@ -458,13 +458,14 @@ export type LiveSeriesMatchView = {
   team2_score: string | null;
   is_finished: boolean;
   winner_name: string | null;
+  commentary?: string | null;
 };
 
 export async function fetchLiveSeriesMatchesBySport(sportId: string): Promise<LiveSeriesMatchView[]> {
   if (!hasSupabaseEnv || !supabase) return [];
   const { data, error } = await supabase
     .from('live_series_matches_view')
-    .select('id,series_id,sport_id,sport_name,gender,match_order,venue,stage,status,status_text,team1,team2,team1_score,team2_score,is_finished,winner_name')
+    .select('id,series_id,sport_id,sport_name,gender,match_order,venue,stage,status,status_text,team1,team2,team1_score,team2_score,is_finished,winner_name,commentary')
     .eq('sport_id', sportId)
     .order('match_order', { ascending: true })
     .order('id', { ascending: true });
@@ -843,19 +844,19 @@ export async function fetchActiveSeriesBySport(sport_id: string): Promise<AdminL
 
 export type AdminLiveMatch = {
   id: number; series_id: number; match_order: number; venue: string | null; stage: 'round_of_16' | 'quarter_final' | 'semi_final' | 'final' | null;
-  faculty1_id: string; faculty2_id: string; faculty1_score: string | null; faculty2_score: string | null; status: string; status_text: string | null; is_finished: boolean; winner_faculty_id: string | null;
+  faculty1_id: string; faculty2_id: string; faculty1_score: string | null; faculty2_score: string | null; status: string; status_text: string | null; is_finished: boolean; winner_faculty_id: string | null; commentary: string | null;
 };
 export async function addLiveMatch(payload: Omit<AdminLiveMatch, 'id' | 'status' | 'is_finished' | 'winner_faculty_id'> & { status?: string; is_finished?: boolean; winner_faculty_id?: string | null }) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const { id, ...rest } = (payload as any);
-  const { data, error } = await supabase.from('live_series_matches').insert([rest]).select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id').single();
+  const { data, error } = await supabase.from('live_series_matches').insert([rest]).select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id,commentary').single();
   if (error) { console.error('[API] addLiveMatch error', error); throw error; }
   return data as AdminLiveMatch;
 }
 
-export async function updateLiveMatch(id: number, patch: Partial<Pick<AdminLiveMatch, 'venue'|'stage'|'faculty1_score'|'faculty2_score'|'status'|'status_text'|'is_finished'|'winner_faculty_id'>>) {
+export async function updateLiveMatch(id: number, patch: Partial<Pick<AdminLiveMatch, 'venue'|'stage'|'faculty1_score'|'faculty2_score'|'status'|'status_text'|'is_finished'|'winner_faculty_id'|'commentary'>>) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.from('live_series_matches').update(patch).eq('id', id).select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id').single();
+  const { data, error } = await supabase.from('live_series_matches').update(patch).eq('id', id).select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id,commentary').single();
   if (error) { console.error('[API] updateLiveMatch error', error); throw error; }
   return data as AdminLiveMatch;
 }
@@ -963,7 +964,7 @@ export async function fetchMatchesBySeries(series_id: number) {
   }>;
   const { data, error } = await supabase
     .from('live_series_matches')
-    .select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id')
+    .select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id,commentary')
     .eq('series_id', series_id)
     .order('match_order', { ascending: true })
     .order('id', { ascending: true });

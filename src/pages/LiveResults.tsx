@@ -15,8 +15,9 @@ export function LiveResults() {
   const [loadingSports, setLoadingSports] = useState<boolean>(true);
   const [loadingFixtures, setLoadingFixtures] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  // Track last scores to animate when numbers change
+  // Track last scores/winner to animate when numbers or winner change
   const lastScoresRef = useRef<Record<string, { s1: string | null; s2: string | null }>>({});
+  const lastWinnerRef = useRef<Record<string, string | null>>({});
   const [flashKeys, setFlashKeys] = useState<Record<string, number>>({});
 
   // Load ongoing sports on mount
@@ -80,6 +81,8 @@ export function LiveResults() {
           const prev = lastScoresRef.current[String(r.id)];
           const cur1 = (r as any).team1_score ?? null;
           const cur2 = (r as any).team2_score ?? null;
+          const prevWinner = lastWinnerRef.current[String(r.id)];
+          const curWinner = (r as any).winner_name ?? null;
           if (prev) {
             if (prev.s1 !== cur1) {
               const key = `${r.id}-1`;
@@ -102,7 +105,18 @@ export function LiveResults() {
               }, 700);
             }
           }
+          if (prevWinner !== curWinner) {
+            const key = `${r.id}-w`;
+            setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+            setTimeout(() => {
+              setFlashKeys((fk) => {
+                const { [key]: _omit, ...rest } = fk;
+                return rest;
+              });
+            }, 900);
+          }
           newLast[String(r.id)] = { s1: cur1, s2: cur2 };
+          lastWinnerRef.current[String(r.id)] = curWinner;
         });
         lastScoresRef.current = newLast;
         setFixtures(rows);
@@ -131,6 +145,8 @@ export function LiveResults() {
               const prev = lastScoresRef.current[String(r.id)];
               const cur1 = (r as any).team1_score ?? null;
               const cur2 = (r as any).team2_score ?? null;
+              const prevWinner = lastWinnerRef.current[String(r.id)];
+              const curWinner = (r as any).winner_name ?? null;
               if (prev) {
                 if (prev.s1 !== cur1) {
                   const key = `${r.id}-1`;
@@ -153,7 +169,18 @@ export function LiveResults() {
                   }, 700);
                 }
               }
+              if (prevWinner !== curWinner) {
+                const key = `${r.id}-w`;
+                setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+                setTimeout(() => {
+                  setFlashKeys((fk) => {
+                    const { [key]: _omit, ...rest } = fk;
+                    return rest;
+                  });
+                }, 900);
+              }
               newLast[String(r.id)] = { s1: cur1, s2: cur2 };
+              lastWinnerRef.current[String(r.id)] = curWinner;
             });
             lastScoresRef.current = newLast;
             setFixtures(rows);
@@ -170,6 +197,8 @@ export function LiveResults() {
               const prev = lastScoresRef.current[String(r.id)];
               const cur1 = (r as any).team1_score ?? null;
               const cur2 = (r as any).team2_score ?? null;
+              const prevWinner = lastWinnerRef.current[String(r.id)];
+              const curWinner = (r as any).winner_name ?? null;
               if (prev) {
                 if (prev.s1 !== cur1) {
                   const key = `${r.id}-1`;
@@ -192,7 +221,18 @@ export function LiveResults() {
                   }, 700);
                 }
               }
+              if (prevWinner !== curWinner) {
+                const key = `${r.id}-w`;
+                setFlashKeys((fk) => ({ ...fk, [key]: Date.now() }));
+                setTimeout(() => {
+                  setFlashKeys((fk) => {
+                    const { [key]: _omit, ...rest } = fk;
+                    return rest;
+                  });
+                }, 900);
+              }
               newLast[String(r.id)] = { s1: cur1, s2: cur2 };
+              lastWinnerRef.current[String(r.id)] = curWinner;
             });
             lastScoresRef.current = newLast;
             setFixtures(rows);
@@ -434,12 +474,26 @@ export function LiveResults() {
                           );
                         })()}
                       </div>
+                      {Boolean((m as any).commentary) && (
+                        <div className="mt-3 flex justify-center">
+                          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-200 text-xs">
+                            <svg aria-hidden className="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+                            <span>{(m as any).commentary}</span>
+                          </div>
+                        </div>
+                      )}
                       {m.winner_name && (
                         <div className="mt-3 flex justify-center">
-                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-400/30 text-green-300 text-xs font-semibold shadow-[0_0_12px_rgba(34,197,94,0.25)]">
+                          {(() => {
+                            const keyW = `${m.id}-w`;
+                            const winnerFlash = Boolean((flashKeys as any)?.[keyW]);
+                            return (
+                              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold transition-all duration-500 ${winnerFlash ? 'bg-green-400/20 border-green-400/60 text-green-200 shadow-[0_0_18px_rgba(34,197,94,0.45)] scale-[1.03]' : 'bg-green-500/10 border-green-400/30 text-green-300 shadow-[0_0_12px_rgba(34,197,94,0.25)]'}`}>
                             <svg aria-hidden className="w-4 h-4 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 8h10l1 4a4 4 0 1 1-7.9 1h0A4 4 0 1 1 6 12l1-4Z"/></svg>
                             <span>Winner: {m.winner_name}</span>
-                          </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
                       {m.status_text && (
