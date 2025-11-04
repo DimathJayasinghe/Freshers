@@ -10,7 +10,7 @@ export const AdminLayout: React.FC<{ title?: string; children: React.ReactNode }
             <div className="absolute bottom-24 left-24 w-72 h-72 bg-yellow-500/8 rounded-full blur-3xl animate-pulse delay-1000"></div>
           </div>
 
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+          {/* <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
             <div className="flex items-center gap-4">
               <img src="/logos/uoc-logo.png" alt="logo" className="h-20 w-20 object-contain drop-shadow-2xl" />
               <div>
@@ -19,7 +19,7 @@ export const AdminLayout: React.FC<{ title?: string; children: React.ReactNode }
                 <p className="text-sm text-gray-300 mt-1">Manage sports, faculties, results and the points system.</p>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </section>
 
