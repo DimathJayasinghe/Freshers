@@ -127,22 +127,44 @@ export function FacultyDetail() {
     );
   }
 
-  // Map textual positions to ordinal ranking
+  // Helper to format ordinal suffixes (1st, 2nd, 3rd, 4th, ...)
+  const ordinal = (n: number): string => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+
+  // Map textual positions to a numeric rank; unknown becomes 99 (Participation)
   const toRank = (pos: string): number => {
     const p = pos.toLowerCase();
-    if (/(^1st|champ|gold|winner)/.test(p)) return 1;
-    if (/(^2nd|runner|silver)/.test(p)) return 2;
-    if (/(^3rd|third|bronze)/.test(p)) return 3;
-    if (/(^4th|fourth)/.test(p)) return 4;
+    if (/(^|\b)(1st|champ|champion|gold|winner)(\b|$)/.test(p)) return 1;
+    if (/(^|\b)(2nd|runner|runner-up|silver)(\b|$)/.test(p)) return 2;
+    if (/(^|\b)(3rd|third|bronze)(\b|$)/.test(p)) return 3;
+    if (/(^|\b)(4th|fourth)(\b|$)/.test(p)) return 4;
+    // Try to extract an explicit number like 5th, 6th, etc.
+    const numMatch = p.match(/\b(\d+)\b/);
+    if (numMatch) {
+      const n = parseInt(numMatch[1], 10);
+      if (!Number.isNaN(n)) return n;
+    }
     return 99; // participation/other
   };
 
   // Build achievements list from either DB detail or fallback
-  const facultyAchievements = (faculty.achievements || []).map(a => ({
-    sport: a.sport,
-    position: toRank(a.position),
-    date: a.year ? String(a.year) : "",
-  }));
+  const facultyAchievements = (faculty.achievements || []).map(a => {
+    // Prefer explicit year; else try to parse a 4-digit year from text
+    let yearText = a.year ? String(a.year) : "";
+    if (!yearText) {
+      const yearMatch = (a.position + " " + a.sport).match(/\b(19|20)\d{2}\b/);
+      if (yearMatch) yearText = yearMatch[0];
+    }
+    return {
+      sport: a.sport,
+      position: toRank(a.position),
+      positionText: a.position,
+      date: yearText,
+    };
+  });
 
   // Categorize achievements
   const firstPlaces = facultyAchievements.filter(a => a.position === 1);
@@ -192,7 +214,8 @@ export function FacultyDetail() {
           color: "text-green-500",
           bgColor: "bg-green-500/10",
           borderColor: "border-green-500/50",
-          label: `${position}th Place`,
+          // If position is our sentinel (99), show Participation; else show proper ordinal place
+          label: position === 99 ? "Participation" : `${ordinal(position)} Place`,
         };
     }
   };
@@ -480,6 +503,9 @@ export function FacultyDetail() {
               {participation.map((achievement, index) => {
                 const config = getMedalConfig(achievement.position);
                 const Icon = config.icon;
+                const labelText = achievement.position === 99 && achievement.positionText
+                  ? achievement.positionText
+                  : config.label;
                 return (
                   <Card
                     key={index}
@@ -493,7 +519,7 @@ export function FacultyDetail() {
                             {achievement.sport}
                           </CardTitle>
                           <Badge className={`${config.bgColor} ${config.color} ${config.borderColor} border`}>
-                            {config.label}
+                            {labelText}
                           </Badge>
                         </div>
                       </div>

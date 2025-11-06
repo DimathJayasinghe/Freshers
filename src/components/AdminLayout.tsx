@@ -1,6 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 export const AdminLayout: React.FC<{ title?: string; children: React.ReactNode }> = ({ title, children }) => {
+  useEffect(() => {
+    if (title) {
+      document.title = `${title} | Admin`;
+    }
+    return () => {
+      // Optionally reset title on unmount; keep simple for now
+    };
+  }, [title]);
   return (
     <div className="min-h-screen">
       <section className="relative overflow-hidden pt-4 md:pt-6 pb-[48px] md:pb-0">

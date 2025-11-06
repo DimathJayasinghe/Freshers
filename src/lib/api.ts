@@ -258,12 +258,14 @@ export type FacultyDetailData = {
 
 export async function fetchFacultyDetail(facultyId: string): Promise<FacultyDetailData | null> {
   if (!hasSupabaseEnv || !supabase) return null;
-  const [fRes, pRes, fsRes, achRes, tmRes] = await Promise.all([
+  const [fRes, pRes, fsRes, achRes, tmRes, posRes] = await Promise.all([
     supabase.from('faculties').select('id,name,short_name,primary_color,secondary_color,logo_url').eq('id', facultyId).single(),
     supabase.from('faculty_points').select('mens_points,womens_points,total_points').eq('faculty_id', facultyId).single(),
     supabase.from('faculty_sports').select('sports(name)').eq('faculty_id', facultyId),
     supabase.from('faculty_achievements').select('position,year,sports(name)').eq('faculty_id', facultyId).order('year', { ascending: false }),
     supabase.from('faculty_team_members').select('name,role,sports(name)').eq('faculty_id', facultyId),
+    // placements from results to derive accurate event year per sport/place
+    supabase.from('result_positions').select('place,results(event_date,sports(name))').eq('faculty_id', facultyId),
   ]);
 
   if (fRes.error) { console.error('[API] faculty error', fRes.error); throw fRes.error; }
@@ -274,12 +276,75 @@ export async function fetchFacultyDetail(facultyId: string): Promise<FacultyDeta
   if (fsRes.error) { console.error('[API] fs error', fsRes.error); throw fsRes.error; }
   if (achRes.error) { console.error('[API] ach error', achRes.error); throw achRes.error; }
   if (tmRes.error) { console.error('[API] team error', tmRes.error); throw tmRes.error; }
+  if (posRes.error) { console.error('[API] placements error', posRes.error); throw posRes.error; }
 
   const sports = ((fsRes.data || []) as { sports?: { name: string } | { name: string }[] | null }[])
     .map((r) => (Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name : (r.sports as { name: string } | null | undefined)?.name))
     .filter(Boolean) as string[];
-  const achievements = ((achRes.data || []) as { position: string; year: number | null; sports?: { name: string } | { name: string }[] | null }[])
-    .map((r) => ({ sport: (Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name : (r.sports as { name: string } | null | undefined)?.name) ?? null, position: r.position, year: r.year ?? null }));
+  // Build a map of latest event year by (sport, place) from results/positions join
+  const placements = ((posRes.data || []) as { place: number; results?: { event_date: string; sports?: { name: string } | { name: string }[] | null } | { event_date: string; sports?: { name: string } | { name: string }[] | null }[] | null }[])
+    .map((r) => {
+      const res = Array.isArray(r.results) ? (r.results as any[])[0] : (r.results as any);
+      const sportName = res ? (Array.isArray(res.sports) ? (res.sports as { name: string }[])[0]?.name : (res.sports as { name: string } | null | undefined)?.name) : null;
+      const year = res?.event_date ? new Date(res.event_date).getFullYear() : null;
+      return { sport: sportName as string | null, place: r.place, year: year as number | null };
+    })
+    .filter(p => !!p.sport && !!p.place) as { sport: string; place: number; year: number | null }[];
+  const latestYearBySportPlace = new Map<string, number>();
+  placements.forEach((p) => {
+    const key = `${p.sport}|${p.place}`;
+    const prev = latestYearBySportPlace.get(key) ?? 0;
+    const y = p.year ?? 0;
+    if (y > prev) latestYearBySportPlace.set(key, y);
+  });
+
+  // Map textual position label to numeric place
+  const labelToPlace = (txt: string): number | null => {
+    const p = txt.toLowerCase();
+    if (/second\s*runner/.test(p)) return 3; // check before generic runner-up
+    if (/third\s*runner/.test(p)) return 4;
+    if (/(^|\b)(1st|champ|champion|gold|winner)(\b|$)/.test(p)) return 1;
+    if (/(^|\b)(2nd|runner-up|runner up|runner|silver)(\b|$)/.test(p)) return 2;
+    if (/(^|\b)(3rd|third|bronze)(\b|$)/.test(p)) return 3;
+    if (/(^|\b)(4th|fourth)(\b|$)/.test(p)) return 4;
+    return null;
+  };
+
+  const dbAchievements = ((achRes.data || []) as { position: string; year: number | null; sports?: { name: string } | { name: string }[] | null }[])
+    .map((r) => {
+      const sportName = (Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name : (r.sports as { name: string } | null | undefined)?.name) ?? null;
+      const label = r.position;
+      const place = labelToPlace(label);
+      let year: number | null = r.year ?? null;
+      if (sportName && place) {
+        const key = `${sportName}|${place}`;
+        const fromResults = latestYearBySportPlace.get(key);
+        if (fromResults) year = fromResults; // prefer authoritative results year
+      }
+      return { sport: sportName, position: label, year };
+    });
+
+  // Build achievements directly from placements in results (ensures champions show even if achievements table wasn't populated)
+  const placeToLabel = (place: number): string => {
+    switch (place) {
+      case 1: return 'Champion';
+      case 2: return 'Runner-up';
+      case 3: return 'Third place';
+      case 4: return 'Fourth place';
+      default: return `${place}`; // fallback label; UI will still categorize by place
+    }
+  };
+  const resAchievements = placements
+    .filter(p => p.sport && p.place)
+    .map(p => ({ sport: p.sport, position: placeToLabel(p.place), year: p.year })) as { sport: string | null; position: string; year: number | null }[];
+
+  // Merge DB and results achievements, dedupe by sport|position|year
+  const mergedMap = new Map<string, { sport: string | null; position: string; year: number | null }>();
+  [...dbAchievements, ...resAchievements].forEach((a) => {
+    const key = `${a.sport ?? ''}|${(a.position || '').toLowerCase()}|${a.year ?? ''}`;
+    if (!mergedMap.has(key)) mergedMap.set(key, a);
+  });
+  const achievements = Array.from(mergedMap.values());
   const team = ((tmRes.data || []) as { name: string; role: string; sports?: { name: string } | { name: string }[] | null }[])
     .map((r) => ({ name: r.name, role: r.role, sport: (Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name : (r.sports as { name: string } | null | undefined)?.name) ?? null }));
 
