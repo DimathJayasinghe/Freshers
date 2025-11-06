@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { AdminHeader } from '@/components/AdminHeader';
-import { fetchSports, fetchFacultiesList, fetchActiveSeriesBySport, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries, applyCustomSeriesResultsAndPoints } from '@/lib/api';
+import { fetchSports, fetchFacultiesList, fetchActiveSeriesBySport, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries, applyCustomSeriesResultsAndPoints, deleteLiveMatch } from '@/lib/api';
 import { Check, Loader2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 
@@ -91,10 +91,18 @@ const AdminDashboardPage: React.FC = () => {
     const form = new FormData(formEl);
     const match_order = Number(form.get('match_order') || matchOrder || 1);
     const venue = String(form.get('venue') || '');
-    const stage = (String(form.get('stage') || '')) as any;
-    const faculty1_id = String(form.get('faculty1_id'));
-    const faculty2_id = String(form.get('faculty2_id'));
-    const status_text = String(form.get('status_text') || null);
+    const stageVal = String(form.get('stage') || '');
+    const stage = (stageVal ? stageVal : null) as any;
+    const f1 = form.get('faculty1_id');
+    const f2 = form.get('faculty2_id');
+    const faculty1_id = f1 ? String(f1) : '';
+    const faculty2_id = f2 ? String(f2) : '';
+    const st = form.get('status_text');
+    const status_text = st ? String(st) : null;
+
+    if (!faculty1_id || !faculty2_id) { setFormError('Please select both teams'); return; }
+    if (faculty1_id === faculty2_id) { setFormError('Teams must be different'); return; }
+    if (!match_order || match_order < 1) { setFormError('Order must be 1 or higher'); return; }
     try {
       await addLiveMatch({
         series_id: activeSeries.id,
@@ -115,7 +123,13 @@ const AdminDashboardPage: React.FC = () => {
       formEl.reset();
     } catch (err: any) {
       console.error('add match failed', err);
-      setFormError(err?.message || 'Failed to add match');
+      // Friendly message for common DB check constraint
+      const msg: string = err?.message || 'Failed to add match';
+      if (/check constraint/i.test(msg) || /live_series_matches_check/i.test(msg)) {
+        setFormError('Invalid match setup. Ensure different teams and valid stage.');
+      } else {
+        setFormError(msg);
+      }
     }
   }
 
@@ -187,6 +201,10 @@ const AdminDashboardPage: React.FC = () => {
   const [confirmSaveLoading, setConfirmSaveLoading] = useState(false);
   const [confirmFinalizeOpen, setConfirmFinalizeOpen] = useState(false);
   const [confirmFinalizeLoading, setConfirmFinalizeLoading] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [confirmDeleteLoading, setConfirmDeleteLoading] = useState(false);
+  const [confirmDeleteSeriesOpen, setConfirmDeleteSeriesOpen] = useState(false);
+  const [confirmDeleteSeriesLoading, setConfirmDeleteSeriesLoading] = useState(false);
 
   async function onFinalizeSeries() {
     if (!activeSeries?.id || !selectedSportId) return;
@@ -246,7 +264,16 @@ const AdminDashboardPage: React.FC = () => {
                 </div>
               )}
               {activeSeries ? (
-                <div className="text-green-300 text-sm">Active series: #{activeSeries.id} {activeSeries.title ? `— ${activeSeries.title}` : ''} {activeSeries?.gender ? `· ${activeSeries.gender === 'male' ? 'Men' : activeSeries.gender === 'female' ? 'Women' : 'Mixed'}` : ''}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-green-300 text-sm">Active series: #{activeSeries.id} {activeSeries.title ? `— ${activeSeries.title}` : ''} {activeSeries?.gender ? `· ${activeSeries.gender === 'male' ? 'Men' : activeSeries.gender === 'female' ? 'Women' : 'Mixed'}` : ''}</div>
+                  <button
+                    type="button"
+                    className="px-3 py-1.5 rounded-md border border-red-700 bg-red-900/30 text-red-300 hover:bg-red-800/40"
+                    onClick={() => setConfirmDeleteSeriesOpen(true)}
+                  >
+                    Remove series
+                  </button>
+                </div>
               ) : (
                 <form onSubmit={handleCreateSeries} className="mt-2 space-y-2">
                   <label className="block text-sm">Series title (optional)</label>
@@ -378,6 +405,14 @@ const AdminDashboardPage: React.FC = () => {
                           <option value={m.faculty2_id}>Team 2 — {facultyNameById[m.faculty2_id] || 'Unknown'}</option>
                         </select>
                         <div className="text-[10px] text-zinc-500 mt-1">Choose and click Save to publish or reset to TBA.</div>
+                        <button
+                          type="button"
+                          className="mt-2 w-full px-3 py-1.5 rounded-md border border-red-700 bg-red-900/30 text-red-300 hover:bg-red-800/40 disabled:opacity-50"
+                          onClick={() => setConfirmDeleteId(m.id)}
+                          disabled={savingMatchIds.includes(m.id) || pushingCommentIds.includes(m.id)}
+                        >
+                          Remove match
+                        </button>
                       </div>
                       {/* Commentary input spanning full width below */}
                       <div className="md:col-span-12">
@@ -563,6 +598,68 @@ const AdminDashboardPage: React.FC = () => {
           }
         }}
         onCancel={() => setConfirmFinalizeOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Remove match?"
+        description={(() => {
+          const m = matches.find(x => x.id === confirmDeleteId);
+          if (!m) return null as any;
+          const t1 = facultyNameById[m.faculty1_id] || 'Team 1';
+          const t2 = facultyNameById[m.faculty2_id] || 'Team 2';
+          return (
+            <div>
+              <div className="text-sm text-zinc-300">Match #{m.match_order} — {m.stage || 'stage'}</div>
+              <div className="mt-1 text-zinc-400">{t1} vs {t2} @ {m.venue || 'venue'}</div>
+              <div className="pt-2 text-xs text-zinc-500">This cannot be undone. Any in-progress viewers will stop seeing this match.</div>
+            </div>
+          );
+        })()}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        loading={confirmDeleteLoading}
+        onConfirm={async () => {
+          if (!confirmDeleteId) return;
+          setConfirmDeleteLoading(true);
+          try {
+            await deleteLiveMatch(confirmDeleteId);
+            setMatches(arr => arr.filter(m => m.id !== confirmDeleteId));
+            setRefreshKey(k=>k+1);
+            setConfirmDeleteId(null);
+          } finally {
+            setConfirmDeleteLoading(false);
+          }
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteSeriesOpen}
+        title="Remove entire series?"
+        description={(
+          <div className="space-y-1">
+            <div className="text-sm text-zinc-300">This will delete the active live series and ALL its matches.</div>
+            <div className="pt-2 text-xs text-zinc-500">This cannot be undone.</div>
+          </div>
+        )}
+        confirmLabel="Remove series"
+        cancelLabel="Cancel"
+        loading={confirmDeleteSeriesLoading}
+        onConfirm={async () => {
+          if (!activeSeries?.id) return;
+          setConfirmDeleteSeriesLoading(true);
+          try {
+            await deleteLiveSeries(activeSeries.id);
+            setActiveSeries(null);
+            setMatches([]);
+            setRefreshKey(k=>k+1);
+            setConfirmDeleteSeriesOpen(false);
+          } finally {
+            setConfirmDeleteSeriesLoading(false);
+          }
+        }}
+        onCancel={() => setConfirmDeleteSeriesOpen(false)}
       />
     </div>
   );

@@ -849,16 +849,47 @@ export type AdminLiveMatch = {
 export async function addLiveMatch(payload: Omit<AdminLiveMatch, 'id' | 'status' | 'is_finished' | 'winner_faculty_id'> & { status?: string; is_finished?: boolean; winner_faculty_id?: string | null }) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const { id, ...rest } = (payload as any);
-  const { data, error } = await supabase.from('live_series_matches').insert([rest]).select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id,commentary').single();
+  // Client-side guardrails to avoid DB check constraint violations
+  if (rest.faculty1_id && rest.faculty2_id && rest.faculty1_id === rest.faculty2_id) {
+    throw new Error('Teams must be different (Team 1 and Team 2 cannot be the same)');
+  }
+  const insertRow = {
+    ...rest,
+    // Ensure stage is null if unset, not empty string
+    stage: rest.stage || null,
+    // Ensure status_text nulls instead of empty/undefined
+    status_text: rest.status_text ?? null,
+  };
+  const { data, error } = await supabase
+    .from('live_series_matches')
+    .insert([insertRow])
+    .select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id,commentary')
+    .single();
   if (error) { console.error('[API] addLiveMatch error', error); throw error; }
   return data as AdminLiveMatch;
 }
 
 export async function updateLiveMatch(id: number, patch: Partial<Pick<AdminLiveMatch, 'venue'|'stage'|'faculty1_score'|'faculty2_score'|'status'|'status_text'|'is_finished'|'winner_faculty_id'|'commentary'>>) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.from('live_series_matches').update(patch).eq('id', id).select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id,commentary').single();
+  const normalized: any = { ...patch };
+  if (Object.prototype.hasOwnProperty.call(normalized, 'stage') && normalized.stage === '') normalized.stage = null;
+  if (Object.prototype.hasOwnProperty.call(normalized, 'status_text') && (normalized.status_text === undefined)) normalized.status_text = null;
+  const { data, error } = await supabase
+    .from('live_series_matches')
+    .update(normalized)
+    .eq('id', id)
+    .select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id,commentary')
+    .single();
   if (error) { console.error('[API] updateLiveMatch error', error); throw error; }
   return data as AdminLiveMatch;
+}
+
+// Delete a specific live match
+export async function deleteLiveMatch(id: number) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.from('live_series_matches').delete().eq('id', id);
+  if (error) { console.error('[API] deleteLiveMatch error', error); throw error; }
+  return true;
 }
 
 export async function finishSeries(series_id: number, podium: { champion: string; runner_up: string; third: string }) {
