@@ -62,6 +62,69 @@ export async function deleteSport(id: string) {
   return data;
 }
 
+// -----------------------
+// Dangerous cascading helpers for deleting a sport and all references
+// Use with caution in admin-only flows.
+// -----------------------
+
+export async function deleteScheduledEventsBySport(sportId: string) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.from('scheduled_events').delete().eq('sport_id', sportId);
+  if (error) { console.error('[API] deleteScheduledEventsBySport error', error); throw error; }
+}
+
+export async function fetchLiveSeriesIdsBySport(sportId: string): Promise<number[]> {
+  if (!hasSupabaseEnv || !supabase) return [];
+  const { data, error } = await supabase.from('live_sport_series').select('id').eq('sport_id', sportId);
+  if (error) { console.error('[API] fetchLiveSeriesIdsBySport error', error); throw error; }
+  return (data || []).map((r: any) => r.id as number);
+}
+
+export async function fetchResultIdsBySport(sportId: string): Promise<number[]> {
+  const rows = await fetchResultsBySport(sportId);
+  return (rows || []).map((r: any) => r.id as number);
+}
+
+export async function deleteAllResultsBySport(sportId: string) {
+  const ids = await fetchResultIdsBySport(sportId);
+  for (const id of ids) {
+    await deleteResult(id);
+  }
+}
+
+export async function deleteFacultySportsBySport(sportId: string) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.from('faculty_sports').delete().eq('sport_id', sportId);
+  if (error) { console.error('[API] deleteFacultySportsBySport error', error); throw error; }
+}
+
+export async function deleteFacultyAchievementsBySport(sportId: string) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.from('faculty_achievements').delete().eq('sport_id', sportId);
+  if (error) { console.error('[API] deleteFacultyAchievementsBySport error', error); throw error; }
+}
+
+// Attempt to fully remove a sport and all linked data that reference it.
+// Order: schedule -> live series -> results (with positions/points) -> faculty_* -> sport
+export async function deleteSportWithCascade(sportId: string) {
+  // 1) Scheduled events
+  try { await deleteScheduledEventsBySport(sportId); } catch (e) { console.warn('[API] cascade: schedule', e); }
+  // 2) Live series (deletes matches via existing helper)
+  try {
+    const seriesIds = await fetchLiveSeriesIdsBySport(sportId);
+    for (const sid of seriesIds) {
+      try { await deleteLiveSeries(sid); } catch (e) { console.warn('[API] cascade: live series', sid, e); }
+    }
+  } catch (e) { console.warn('[API] cascade: fetch live series', e); }
+  // 3) Results and positions (removes/reverses points via deleteResult)
+  try { await deleteAllResultsBySport(sportId); } catch (e) { console.warn('[API] cascade: results', e); }
+  // 4) Faculty participation/achievements rows for this sport
+  try { await deleteFacultySportsBySport(sportId); } catch (e) { console.warn('[API] cascade: faculty_sports', e); }
+  try { await deleteFacultyAchievementsBySport(sportId); } catch (e) { console.warn('[API] cascade: faculty_achievements', e); }
+  // 5) Finally, delete the sport row
+  return deleteSport(sportId);
+}
+
 // Faculties overview
 export type FacultyOverview = {
   id: string;
@@ -785,6 +848,42 @@ export async function deleteResult(resultId: number) {
   const { data, error } = await supabase.from('results').delete().eq('id', resultId).select();
   if (error) { console.error('[API] deleteResult error', error); throw error; }
   return data;
+}
+
+// Update a result row's metadata
+export async function updateResultRow(resultId: number, payload: Partial<{ event: string | null; category: 'Team Sport' | 'Individual Sport' | 'Athletics' | 'Swimming'; gender: "Men's" | "Women's" | 'Mixed'; event_date: string; event_time: string }>) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const patch: any = { ...payload };
+  if (Object.prototype.hasOwnProperty.call(patch, 'event') && patch.event === '') patch.event = null;
+  const { data, error } = await supabase.from('results').update(patch).eq('id', resultId).select('id,event,category,gender,event_date,event_time').single();
+  if (error) { console.error('[API] updateResultRow error', error); throw error; }
+  return data as { id: number; event: string | null; category: string; gender: string; event_date: string; event_time: string };
+}
+
+// Replace positions for a result and re-apply leaderboard points for overall-style results
+export async function replaceResultPositionsAndReapply(resultId: number, positions: Array<{ place: number; faculty_id: string }>) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  // Reverse any previously applied points (only for overall-style)
+  try {
+    await removePointsForResult(resultId);
+  } catch (e) {
+    console.warn('[API] replaceResultPositions: remove points warn', e);
+  }
+  // Replace positions
+  const { error: delErr } = await supabase.from('result_positions').delete().eq('result_id', resultId);
+  if (delErr) { console.error('[API] replaceResultPositions delete error', delErr); throw delErr; }
+  const rows = (positions || []).filter(p => p.faculty_id && Number(p.place) > 0).map(p => ({ result_id: resultId, place: Number(p.place), faculty_id: p.faculty_id }));
+  if (rows.length > 0) {
+    const { error: insErr } = await supabase.from('result_positions').insert(rows);
+    if (insErr) { console.error('[API] replaceResultPositions insert error', insErr); throw insErr; }
+  }
+  // Re-apply based on new positions
+  try {
+    await applyPointsForResult(resultId);
+  } catch (e) {
+    console.warn('[API] replaceResultPositions: apply points warn', e);
+  }
+  return true;
 }
 
 // =======================

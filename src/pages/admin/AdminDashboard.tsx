@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { AdminHeader } from '@/components/AdminHeader';
-import { fetchSports, fetchFacultiesList, fetchActiveSeriesBySport, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries, applyCustomSeriesResultsAndPoints, deleteLiveMatch } from '@/lib/api';
+import { fetchSports, fetchFacultiesList, fetchActiveSeriesBySport, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries, applyCustomSeriesResultsAndPoints, deleteLiveMatch, fetchResultsBySport, fetchResultPositions, updateResultRow, replaceResultPositionsAndReapply, fetchScheduledEvents, createScheduledEvent, updateScheduledEvent, deleteScheduledEvent } from '@/lib/api';
 import { Check, Loader2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 
@@ -26,6 +26,21 @@ const AdminDashboardPage: React.FC = () => {
   const [pushedCommentIds, setPushedCommentIds] = useState<number[]>([]);
   const enterCountsRef = useRef<Record<number, { count: number; timer: any }>>({});
   const [liveSports, setLiveSports] = useState<{ id: string; name: string }[]>([]);
+  // Results manager state
+  const [results, setResults] = useState<Array<{ id: number; event: string | null; category: string; gender: string; event_date: string; event_time: string }>>([]);
+  const [resultsRefreshKey, setResultsRefreshKey] = useState(0);
+  const [editingResultId, setEditingResultId] = useState<number | null>(null);
+  const [editingResultMeta, setEditingResultMeta] = useState<Partial<{ event: string | null; category: 'Team Sport' | 'Individual Sport' | 'Athletics' | 'Swimming'; gender: "Men's" | "Women's" | 'Mixed'; event_date: string; event_time: string }>>({});
+  const [editingPositions, setEditingPositions] = useState<Array<{ place: number; faculty_id: string }>>([]);
+  const [resultsError, setResultsError] = useState<string | null>(null);
+  const [resultsSaving, setResultsSaving] = useState(false);
+  // Schedule manager state
+  const [schedule, setSchedule] = useState<Array<{ id: number; event_date: string; sport_id: string | null; sport_label: string | null; time_range: string | null; start_time: string | null; end_time: string | null; venue: string }>>([]);
+  const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [newSched, setNewSched] = useState<{ event_date: string; sport_id: string | null; sport_label: string | null; start_time: string | null; end_time: string | null; venue: string }>({ event_date: '', sport_id: null, sport_label: null, start_time: null, end_time: null, venue: '' });
+  const [editingSchedId, setEditingSchedId] = useState<number | null>(null);
+  const [editingSched, setEditingSched] = useState<{ event_date?: string; sport_label?: string | null; start_time?: string | null; end_time?: string | null; venue?: string }>({});
   useEffect(() => {
     (async () => {
       try {
@@ -37,6 +52,32 @@ const AdminDashboardPage: React.FC = () => {
       }
     })();
   }, [refreshKey]);
+
+  // Load results for selected sport
+  useEffect(() => {
+    (async () => {
+      setResultsError(null);
+      if (!selectedSportId) { setResults([]); return; }
+      try {
+        const rs = await fetchResultsBySport(selectedSportId);
+        setResults(rs as any);
+      } catch (e: any) {
+        setResultsError(e?.message || 'Failed to load results');
+      }
+    })();
+  }, [selectedSportId, resultsRefreshKey]);
+
+  // Load schedule
+  useEffect(() => {
+    (async () => {
+      try {
+        const rows = await fetchScheduledEvents();
+        setSchedule(rows as any);
+      } catch (e) {
+        console.warn('schedule fetch failed', e);
+      }
+    })();
+  }, [scheduleRefreshKey]);
 
   // Controlled match order to avoid unique constraint collisions
   const suggestedOrder = useMemo(() => (matches.length ? Math.max(...matches.map(m => Number(m.match_order) || 0)) + 1 : 1), [matches]);
@@ -235,6 +276,77 @@ const AdminDashboardPage: React.FC = () => {
   }
 
   // finalizeSeries removed from UI for now per request
+
+  // Results editor helpers
+  async function openEditResult(rid: number) {
+    setResultsError(null);
+    setEditingResultId(rid);
+    try {
+      const meta = results.find(r => r.id === rid);
+      if (meta) setEditingResultMeta({ event: meta.event ?? '', category: meta.category as any, gender: meta.gender as any, event_date: meta.event_date, event_time: meta.event_time });
+      const pos = await fetchResultPositions(rid);
+      const rows = (pos as any[]).map(p => ({ place: Number(p.place), faculty_id: String(p.faculty_id) })).sort((a,b)=>a.place-b.place);
+      setEditingPositions(rows.length ? rows : [{ place: 1, faculty_id: '' }]);
+    } catch (e: any) {
+      setResultsError(e?.message || 'Failed to open result for editing');
+    }
+  }
+
+  function addPositionRow() { setEditingPositions(arr => [...arr, { place: Math.max(1, (arr[arr.length-1]?.place||0)+1), faculty_id: '' }]); }
+  function removePositionRow(i: number) { setEditingPositions(arr => arr.filter((_,idx)=>idx!==i)); }
+
+  async function saveEditedResult() {
+    if (!editingResultId) return;
+    setResultsSaving(true);
+    setResultsError(null);
+    try {
+      if (Object.keys(editingResultMeta).length) {
+        await updateResultRow(editingResultId, editingResultMeta as any);
+      }
+      await replaceResultPositionsAndReapply(editingResultId, editingPositions.filter(p=>p.faculty_id));
+      setEditingResultId(null);
+      setResultsRefreshKey(k=>k+1);
+    } catch (e: any) {
+      setResultsError(e?.message || 'Failed to save result');
+    } finally {
+      setResultsSaving(false);
+    }
+  }
+
+  // Schedule CRUD helpers
+  async function addScheduleItem(e: React.FormEvent) {
+    e.preventDefault();
+    setScheduleError(null);
+    try {
+      if (!newSched.event_date || !newSched.venue) { setScheduleError('Date and venue are required'); return; }
+      if (!newSched.sport_id && !(newSched.sport_label && newSched.sport_label.trim())) { setScheduleError('Provide a sport selection or a label'); return; }
+      if (!(newSched.start_time && newSched.start_time.trim())) { setScheduleError('Start time is required'); return; }
+      await createScheduledEvent({
+        event_date: newSched.event_date,
+        sport_id: newSched.sport_id || null,
+        sport_label: newSched.sport_label || null,
+        time_range: null,
+        start_time: newSched.start_time || null,
+        end_time: newSched.end_time || null,
+        venue: newSched.venue,
+      });
+      setNewSched({ event_date: '', sport_id: null, sport_label: null, start_time: null, end_time: null, venue: '' });
+      setScheduleRefreshKey(k=>k+1);
+    } catch (e: any) {
+      setScheduleError(e?.message || 'Failed to add schedule');
+    }
+  }
+
+  async function saveScheduleItem(id: number) {
+    try {
+      await updateScheduledEvent(id, editingSched);
+      setEditingSchedId(null);
+      setEditingSched({});
+      setScheduleRefreshKey(k=>k+1);
+    } catch (e) {
+      console.error('schedule update failed', e);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -661,6 +773,188 @@ const AdminDashboardPage: React.FC = () => {
         }}
         onCancel={() => setConfirmDeleteSeriesOpen(false)}
       />
+
+      {/* 5) Manage previous results */}
+      <div className="max-w-6xl mx-auto mt-6 px-4">
+        <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
+          <h3 className="font-semibold mb-2">5) Manage previous results</h3>
+          {!selectedSportId ? (
+            <div className="text-sm text-gray-400">Select a sport at the top to view results.</div>
+          ) : (
+            <div className="space-y-3">
+              {results.length === 0 ? (
+                <div className="text-sm text-gray-400">No results yet for this sport.</div>
+              ) : (
+                results.map(r => (
+                  <div key={r.id} className="border border-zinc-800 rounded-lg p-3 bg-black/40">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm text-gray-300">
+                        <div className="font-medium">{r.event || 'Overall'}</div>
+                        <div className="text-xs text-gray-500">{r.gender} • {r.category} • {r.event_date} {r.event_time}</div>
+                      </div>
+                      {editingResultId === r.id ? (
+                        <div className="text-xs text-red-300">Editing…</div>
+                      ) : (
+                        <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={() => openEditResult(r.id)}>Edit</button>
+                      )}
+                    </div>
+                    {editingResultId === r.id && (
+                      <div className="mt-3 grid grid-cols-1 md:grid-cols-12 gap-3">
+                        <div className="md:col-span-3">
+                          <label className="block text-xs text-gray-500">Event</label>
+                          <input value={(editingResultMeta.event ?? '') as string} onChange={e=>setEditingResultMeta(m=>({ ...m, event: e.target.value }))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                        </div>
+                        <div className="md:col-span-3">
+                          <label className="block text-xs text-gray-500">Category</label>
+                          <select value={(editingResultMeta.category as any) || r.category} onChange={e=>setEditingResultMeta(m=>({ ...m, category: e.target.value as any }))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm">
+                            <option value="Team Sport">Team Sport</option>
+                            <option value="Individual Sport">Individual Sport</option>
+                            <option value="Athletics">Athletics</option>
+                            <option value="Swimming">Swimming</option>
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs text-gray-500">Gender</label>
+                          <select value={(editingResultMeta.gender as any) || r.gender} onChange={e=>setEditingResultMeta(m=>({ ...m, gender: e.target.value as any }))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm">
+                            <option value="Men's">Men's</option>
+                            <option value="Women's">Women's</option>
+                            <option value="Mixed">Mixed</option>
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs text-gray-500">Date</label>
+                          <input type="date" value={editingResultMeta.event_date || r.event_date} onChange={e=>setEditingResultMeta(m=>({ ...m, event_date: e.target.value }))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs text-gray-500">Time</label>
+                          <input type="time" value={(editingResultMeta.event_time || (r.event_time || '')).slice(0,5)} onChange={e=>setEditingResultMeta(m=>({ ...m, event_time: (e.target.value.length===5? e.target.value+':00' : e.target.value) }))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                        </div>
+                        <div className="md:col-span-12">
+                          <div className="text-sm font-medium text-zinc-300 mb-1">Positions</div>
+                          {editingPositions.map((p, i) => (
+                            <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end mb-2">
+                              <div className="md:col-span-2">
+                                <label className="block text-xs text-gray-500">Place</label>
+                                <input type="number" min={1} value={p.place} onChange={e=>setEditingPositions(arr=>arr.map((x,idx)=>idx===i?{...x, place: Number(e.target.value||1)}:x))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                              </div>
+                              <div className="md:col-span-8">
+                                <label className="block text-xs text-gray-500">Faculty</label>
+                                <select value={p.faculty_id} onChange={e=>setEditingPositions(arr=>arr.map((x,idx)=>idx===i?{...x, faculty_id: e.target.value}:x))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm">
+                                  <option value="">-- choose --</option>
+                                  {faculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                </select>
+                              </div>
+                              <div className="md:col-span-2">
+                                <button type="button" className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded-md" onClick={()=>removePositionRow(i)}>Remove</button>
+                              </div>
+                            </div>
+                          ))}
+                          <button type="button" className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={addPositionRow}>Add position</button>
+                        </div>
+                        {resultsError && <div className="md:col-span-12 text-red-400 text-sm">{resultsError}</div>}
+                        <div className="md:col-span-12 flex gap-2 justify-end">
+                          <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={()=>setEditingResultId(null)}>Cancel</button>
+                          <button className={`px-3 py-1.5 rounded-md ${resultsSaving? 'bg-green-900/50 cursor-wait' : 'bg-green-700 hover:bg-green-600'}`} onClick={saveEditedResult} disabled={resultsSaving}>{resultsSaving ? 'Saving…' : 'Save'}</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+  {/* 6) Manage schedule (lineup) */}
+  <div id="config-lineup" className="max-w-6xl mx-auto mt-6 mb-10 px-4">
+        <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
+          <h3 className="font-semibold mb-2">6) Manage schedule (lineup)</h3>
+          <form onSubmit={addScheduleItem} className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-3">
+            <div className="md:col-span-3">
+              <label className="block text-xs text-gray-500">Date</label>
+              <input type="date" value={newSched.event_date} onChange={e=>setNewSched(s=>({...s, event_date: e.target.value}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs text-gray-500">Sport</label>
+              <select value={newSched.sport_id ?? ''} onChange={e=>setNewSched(s=>({...s, sport_id: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm">
+                <option value="">— none —</option>
+                {sports.map(s=> <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs text-gray-500">Label (event)</label>
+              <input value={newSched.sport_label ?? ''} onChange={e=>setNewSched(s=>({...s, sport_label: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" placeholder="e.g., Football" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-gray-500">Start time</label>
+              <input type="time" value={newSched.start_time ?? ''} onChange={e=>setNewSched(s=>({...s, start_time: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-gray-500">End time</label>
+              <input type="time" value={newSched.end_time ?? ''} onChange={e=>setNewSched(s=>({...s, end_time: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+            </div>
+            <div className="md:col-span-4">
+              <label className="block text-xs text-gray-500">Venue</label>
+              <input value={newSched.venue} onChange={e=>setNewSched(s=>({...s, venue: e.target.value}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" placeholder="Main Ground" />
+            </div>
+            <div className="md:col-span-2 flex items-end">
+              <button className="w-full px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500">Add</button>
+            </div>
+          </form>
+          <div className="text-xs text-gray-500 mb-2">Tip: Provide either Sport or Label. Start time is required; End time is optional.</div>
+          {scheduleError && <div className="text-red-400 text-sm mb-2">{scheduleError}</div>}
+          <div className="space-y-2">
+            {schedule.map(item => (
+              <div key={item.id} className="border border-zinc-800 rounded-lg p-3 bg-black/40">
+                {editingSchedId === item.id ? (
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                    <div className="md:col-span-3">
+                      <label className="block text-xs text-gray-500">Date</label>
+                      <input type="date" defaultValue={item.event_date} onChange={e=>setEditingSched(s=>({...s, event_date: e.target.value}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                    </div>
+                    <div className="md:col-span-3">
+                      <label className="block text-xs text-gray-500">Label</label>
+                      <input defaultValue={item.sport_label ?? ''} onChange={e=>setEditingSched(s=>({...s, sport_label: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                    </div>
+                    <div className="md:col-span-3">
+                      <label className="block text-xs text-gray-500">Time range</label>
+                      <input defaultValue={item.time_range ?? ''} onChange={e=>setEditingSched(s=>({...s, time_range: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs text-gray-500">Start time</label>
+                      <input type="time" defaultValue={item.start_time ? item.start_time.slice(0,5) : ''} onChange={e=>setEditingSched(s=>({...s, start_time: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs text-gray-500">End time</label>
+                      <input type="time" defaultValue={item.end_time ? item.end_time.slice(0,5) : ''} onChange={e=>setEditingSched(s=>({...s, end_time: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                    </div>
+                    <div className="md:col-span-4">
+                      <label className="block text-xs text-gray-500">Venue</label>
+                      <input defaultValue={item.venue} onChange={e=>setEditingSched(s=>({...s, venue: e.target.value}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                    </div>
+                    <div className="md:col-span-12 flex justify-end gap-2">
+                      <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={()=>{ setEditingSchedId(null); setEditingSched({}); }}>Cancel</button>
+                      <button className="px-3 py-1.5 rounded-md bg-green-700 hover:bg-green-600" onClick={()=>saveScheduleItem(item.id)}>Save</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm text-gray-300">
+                      <div className="font-medium">{item.sport_label || 'Event'}</div>
+                      <div className="text-xs text-gray-500">{item.event_date} • {(item.time_range || ((item.start_time || item.end_time) ? `${(item.start_time||'').slice(0,5)}${item.end_time ? `–${item.end_time.slice(0,5)}` : ''}` : ''))} • {item.venue}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={()=>{ setEditingSchedId(item.id); setEditingSched({}); }}>Edit</button>
+                      <button className="px-3 py-1.5 rounded-md border border-red-700 bg-red-900/30 text-red-300 hover:bg-red-800/40" onClick={async()=>{ if(!confirm('Delete this schedule item? This cannot be undone.')) return; await deleteScheduledEvent(item.id); setScheduleRefreshKey(k=>k+1); }}>Delete</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

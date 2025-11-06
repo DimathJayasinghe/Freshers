@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Home, Settings, Users, Trophy, Calendar } from "lucide-react";
+import { LogOut, Calendar } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -18,28 +18,15 @@ export function AdminHeader() {
           </div>
         </div>
 
-        {/* <nav className="hidden sm:flex items-center gap-2">
-          <Link to="/admin" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
-            <Home className="w-4 h-4" />
-            <span>Dashboard</span>
-          </Link>
-          <Link to="/admin/faculties" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
-            <Users className="w-4 h-4" />
-            <span>Faculties</span>
-          </Link>
+        <nav className="hidden md:flex items-center gap-2">
           <Link to="/admin/sports" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
-            <Trophy className="w-4 h-4" />
-            <span>Sports</span>
+            <span>Manage Sports</span>
           </Link>
           <Link to="/admin/lineup" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
             <Calendar className="w-4 h-4" />
-            <span>Lineup</span>
+            <span>Config Lineup</span>
           </Link>
-          <Link to="/admin/settings" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
-            <Settings className="w-4 h-4" />
-            <span>Settings</span>
-          </Link>
-        </nav> */}
+        </nav>
 
         <div className="flex items-center gap-3">
           <Badge className="bg-red-600/20 text-red-400">Admin</Badge>
