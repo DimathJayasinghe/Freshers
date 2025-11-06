@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { AdminHeader } from '@/components/AdminHeader';
-import { fetchSports, fetchFacultiesList, fetchActiveSeriesBySport, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, applySeriesResultsToPointsAndResults, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries } from '@/lib/api';
+import { fetchSports, fetchFacultiesList, fetchActiveSeriesBySport, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries, applyCustomSeriesResultsAndPoints } from '@/lib/api';
 import { Check, Loader2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 
@@ -171,9 +171,16 @@ const AdminDashboardPage: React.FC = () => {
   }
 
   // Finalization UI state
-  const [champion, setChampion] = useState<string>('');
-  const [runnerUp, setRunnerUp] = useState<string>('');
-  const [third, setThird] = useState<string>('');
+  // Custom placements and participants
+  type Placement = { faculty_id: string; label: 'champion' | 'runner_up' | 'second_runner_up' | 'third_runner_up'; points: number };
+  type Participant = { faculty_id: string; points: number };
+  const [placements, setPlacements] = useState<Placement[]>([
+    { faculty_id: '', label: 'champion', points: 7 },
+    { faculty_id: '', label: 'runner_up', points: 5 },
+    { faculty_id: '', label: 'second_runner_up', points: 3 },
+    { faculty_id: '', label: 'third_runner_up', points: 2 },
+  ]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
   const [finalizeOk, setFinalizeOk] = useState<string | null>(null);
   const [confirmSaveIdx, setConfirmSaveIdx] = useState<number | null>(null);
@@ -185,11 +192,22 @@ const AdminDashboardPage: React.FC = () => {
     if (!activeSeries?.id || !selectedSportId) return;
     setFinalizeError(null);
     setFinalizeOk(null);
-    if (!champion || !runnerUp || !third) { setFinalizeError('Please select champion, runner-up and third place'); return; }
+    const validPlacements = placements.filter(p => p.faculty_id && p.points >= 0);
+    if (validPlacements.length === 0) { setFinalizeError('Add at least one placement with a faculty and points'); return; }
     try {
-  await finishSeries(activeSeries.id, { champion, runner_up: runnerUp, third });
+  // Mark series finished (store winners if available from the placements)
+  const champId = validPlacements.find(p => p.label === 'champion')?.faculty_id || '';
+  const runId = validPlacements.find(p => p.label === 'runner_up')?.faculty_id || '';
+  const thirdId = validPlacements.find(p => p.label === 'second_runner_up')?.faculty_id || '';
+  await finishSeries(activeSeries.id, { champion: champId, runner_up: runId, third: thirdId });
   const gLabel: "Men's" | "Women's" | 'Mixed' = activeSeries?.gender === 'female' ? "Women's" : activeSeries?.gender === 'mixed' ? 'Mixed' : "Men's";
-  await applySeriesResultsToPointsAndResults(selectedSportId, { champion, runner_up: runnerUp, third }, gLabel, activeSeries.id);
+  await applyCustomSeriesResultsAndPoints({
+    sport_id: selectedSportId,
+    gender: gLabel,
+    placements: validPlacements,
+    participants: participants.filter(p => p.faculty_id).map(p => ({ faculty_id: p.faculty_id, points: Number(p.points || 1) })),
+    series_id: activeSeries.id,
+  });
       setFinalizeOk('Series finalized and points applied');
       setRefreshKey((k) => k + 1);
     } catch (err: any) {
@@ -419,50 +437,64 @@ const AdminDashboardPage: React.FC = () => {
                 <div className="text-sm text-gray-400">Select a sport and create/continue a series first.</div>
               ) : (
                 <div className="space-y-3">
-                  <div>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700 mb-2"
-                      onClick={() => {
-                        // Try to auto-fill podium from matches
-                        const finalMatch = matches.find(m => m.stage === 'final' && (m.winner_faculty_id || (m.faculty1_score || m.faculty2_score)));
-                        if (finalMatch) {
-                          const champ = finalMatch.winner_faculty_id || '';
-                          const run = champ ? (champ === finalMatch.faculty1_id ? finalMatch.faculty2_id : finalMatch.faculty1_id) : '';
-                          setChampion(champ);
-                          setRunnerUp(run);
-                        }
-                        // Attempt to infer third from any match with status_text containing 'third'
-                        const thirdMatch = matches.find(m => (m.status_text || '').toLowerCase().includes('third'));
-                        if (thirdMatch && thirdMatch.winner_faculty_id) {
-                          setThird(thirdMatch.winner_faculty_id);
-                        }
-                      }}
-                    >
-                      Auto-fill podium from matches
-                    </button>
+                  {/* Placements section */}
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-zinc-200">Placements and points</div>
+                    {placements.map((p, i) => (
+                      <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+                        <div className="md:col-span-6">
+                          <label className="block text-xs text-gray-500">Faculty</label>
+                          <select value={p.faculty_id} onChange={(e) => setPlacements(arr => arr.map((x, idx) => idx===i ? { ...x, faculty_id: e.target.value } : x))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2">
+                            <option value="">-- choose --</option>
+                            {faculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                          </select>
+                        </div>
+                        <div className="md:col-span-3">
+                          <label className="block text-xs text-gray-500">Winning status</label>
+                          <select value={p.label} onChange={(e) => setPlacements(arr => arr.map((x, idx) => idx===i ? { ...x, label: e.target.value as any } : x))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2">
+                            <option value="champion">Champion</option>
+                            <option value="runner_up">Runner-up</option>
+                            <option value="second_runner_up">Second runner-up</option>
+                            <option value="third_runner_up">Third runner-up</option>
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs text-gray-500">Points</label>
+                          <input type="number" min={0} value={p.points} onChange={(e) => setPlacements(arr => arr.map((x, idx) => idx===i ? { ...x, points: Number(e.target.value||0) } : x))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" />
+                        </div>
+                        <div className="md:col-span-1">
+                          <button type="button" className="w-full px-2 py-2 bg-zinc-800 border border-zinc-700 rounded-md" onClick={() => setPlacements(arr => arr.filter((_, idx) => idx !== i))}>Remove</button>
+                        </div>
+                      </div>
+                    ))}
+                    <div>
+                      <button type="button" className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={() => setPlacements(arr => [...arr, { faculty_id: '', label: 'third_runner_up', points: 1 }])}>Add placement</button>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+                  {/* Participants section */}
+                  <div className="space-y-2 pt-2">
+                    <div className="text-sm font-medium text-zinc-200">Participants (default 1 point)</div>
+                    {participants.map((p, i) => (
+                      <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+                        <div className="md:col-span-9">
+                          <label className="block text-xs text-gray-500">Faculty</label>
+                          <select value={p.faculty_id} onChange={(e) => setParticipants(arr => arr.map((x, idx) => idx===i ? { ...x, faculty_id: e.target.value } : x))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2">
+                            <option value="">-- choose --</option>
+                            {faculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs text-gray-500">Points</label>
+                          <input type="number" min={0} value={p.points} onChange={(e) => setParticipants(arr => arr.map((x, idx) => idx===i ? { ...x, points: Number(e.target.value||1) } : x))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" />
+                        </div>
+                        <div className="md:col-span-1">
+                          <button type="button" className="w-full px-2 py-2 bg-zinc-800 border border-zinc-700 rounded-md" onClick={() => setParticipants(arr => arr.filter((_, idx) => idx !== i))}>Remove</button>
+                        </div>
+                      </div>
+                    ))}
                     <div>
-                      <label className="block text-sm">Champion</label>
-                      <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={champion} onChange={(e) => setChampion(e.target.value)}>
-                        <option value="">-- choose --</option>
-                        {faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm">Runner-up</label>
-                      <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={runnerUp} onChange={(e) => setRunnerUp(e.target.value)}>
-                        <option value="">-- choose --</option>
-                        {faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm">Third place</label>
-                      <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={third} onChange={(e) => setThird(e.target.value)}>
-                        <option value="">-- choose --</option>
-                        {faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                      </select>
+                      <button type="button" className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={() => setParticipants(arr => [...arr, { faculty_id: '', points: 1 }])}>Add participant</button>
                     </div>
                   </div>
                   {finalizeError && <div className="text-red-400 text-sm">{finalizeError}</div>}
@@ -507,10 +539,8 @@ const AdminDashboardPage: React.FC = () => {
         title="Finalize series?"
         description={(
           <div className="space-y-1">
-            <div><span className="text-zinc-400">Champion:</span> <span className="text-white">{facultyNameById[champion] || '—'}</span></div>
-            <div><span className="text-zinc-400">Runner-up:</span> <span className="text-white">{facultyNameById[runnerUp] || '—'}</span></div>
-            <div><span className="text-zinc-400">Third:</span> <span className="text-white">{facultyNameById[third] || '—'}</span></div>
-            <div className="pt-2 text-xs text-zinc-500">This will apply points and remove the live series.</div>
+            <div className="text-zinc-400 text-sm">Placements: {placements.filter(p=>p.faculty_id).length} • Participants: {participants.filter(p=>p.faculty_id).length}</div>
+            <div className="pt-2 text-xs text-zinc-500">This will apply points as configured and remove the live series.</div>
           </div>
         )}
         confirmLabel="Finalize"
