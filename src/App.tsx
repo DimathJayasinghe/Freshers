@@ -17,6 +17,7 @@ import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import ConfigLineup from "@/pages/admin/ConfigLineup";
 import ManageSports from "@/pages/admin/ManageSports";
+import ManageResults from "@/pages/admin/ManageResults";
 import RequireAdmin from "@/pages/admin/RequireAdmin";
 import './App.css';
 
@@ -52,6 +53,7 @@ function App() {
             <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
             <Route path="/admin/lineup" element={<RequireAdmin><ConfigLineup /></RequireAdmin>} />
             <Route path="/admin/sports" element={<RequireAdmin><ManageSports /></RequireAdmin>} />
+            <Route path="/admin/results" element={<RequireAdmin><ManageResults /></RequireAdmin>} />
           </Routes>
         </main>
         {/* Don't show normal footer on admin pages */}

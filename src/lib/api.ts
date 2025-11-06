@@ -791,7 +791,8 @@ export async function fetchResultPositions(resultId: number) {
 // -----------------------
 // Points allocation helpers
 // -----------------------
-function scoreForPlace(place: number) {
+function scoreForPlace(place: number, custom?: Record<number, number>) {
+  if (custom && Number.isFinite(custom[place])) return Number(custom[place]);
   if (place === 1) return 7;
   if (place === 2) return 5;
   if (place === 3) return 3;
@@ -800,7 +801,11 @@ function scoreForPlace(place: number) {
 }
 
 // Apply points for an overall result (adds to faculty_points mens_points/womens_points)
-export async function applyPointsForResult(resultId: number) {
+export async function applyPointsForResult(
+  resultId: number,
+  customPoints?: Record<number, number>,
+  mode: 'overall-only' | 'always' = 'overall-only'
+) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
 
   // fetch result and positions
@@ -809,13 +814,10 @@ export async function applyPointsForResult(resultId: number) {
   const result = rRes.data as { id: number; event: string | null; gender: string | null } | null;
   if (!result) throw new Error('Result not found');
 
-  // Only apply for 'overall' style events. Heuristic: event name includes 'overall' (case-insensitive) OR event is null/empty.
+  // Apply only for 'overall' results unless forced to always
   const name = (result.event || '').toLowerCase();
   const isOverall = name.includes('overall') || name.trim() === '';
-  if (!isOverall) {
-    // nothing to do for non-overall events
-    return null;
-  }
+  if (mode === 'overall-only' && !isOverall) return null;
 
   const pos = await fetchResultPositions(resultId);
   if (!pos || pos.length === 0) return null;
@@ -823,7 +825,7 @@ export async function applyPointsForResult(resultId: number) {
   // accumulate deltas per faculty
   const deltas = new Map<string, number>();
   pos.forEach((p) => {
-    const pts = scoreForPlace(p.place);
+    const pts = scoreForPlace(p.place, customPoints);
     deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + pts);
   });
 
@@ -859,7 +861,11 @@ export async function applyPointsForResult(resultId: number) {
 }
 
 // Remove points previously applied for a result (reverse the allocation). This is used before deleting a result.
-export async function removePointsForResult(resultId: number) {
+export async function removePointsForResult(
+  resultId: number,
+  customPoints?: Record<number, number>,
+  mode: 'overall-only' | 'always' = 'overall-only'
+) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const rRes = await supabase.from('results').select('id,event,gender').eq('id', resultId).single();
   if (rRes.error) { console.error('[API] removePointsForResult result fetch error', rRes.error); throw rRes.error; }
@@ -867,14 +873,14 @@ export async function removePointsForResult(resultId: number) {
   if (!result) return null;
   const name = (result.event || '').toLowerCase();
   const isOverall = name.includes('overall') || name.trim() === '';
-  if (!isOverall) return null;
+  if (mode === 'overall-only' && !isOverall) return null;
 
   const pos = await fetchResultPositions(resultId);
   if (!pos || pos.length === 0) return null;
 
   const deltas = new Map<string, number>();
   pos.forEach((p) => {
-    const pts = scoreForPlace(p.place);
+    const pts = scoreForPlace(p.place, customPoints);
     deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + pts);
   });
 
@@ -902,7 +908,7 @@ export async function deleteResult(resultId: number) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   // reverse points first
   try {
-    await removePointsForResult(resultId);
+  await removePointsForResult(resultId);
   } catch (err) {
     console.error('[API] deleteResult: removePoints failed', err);
   }
@@ -926,11 +932,17 @@ export async function updateResultRow(resultId: number, payload: Partial<{ event
 }
 
 // Replace positions for a result and re-apply leaderboard points for overall-style results
-export async function replaceResultPositionsAndReapply(resultId: number, positions: Array<{ place: number; faculty_id: string }>) {
+export async function replaceResultPositionsAndReapply(
+  resultId: number,
+  positions: Array<{ place: number; faculty_id: string }>,
+  customPoints?: Record<number, number>,
+  participants?: Array<{ faculty_id: string; points?: number }>,
+  applyMode: 'overall-only' | 'always' = 'overall-only'
+) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   // Reverse any previously applied points (only for overall-style)
   try {
-    await removePointsForResult(resultId);
+  await removePointsForResult(resultId, customPoints, applyMode);
   } catch (e) {
     console.warn('[API] replaceResultPositions: remove points warn', e);
   }
@@ -944,9 +956,52 @@ export async function replaceResultPositionsAndReapply(resultId: number, positio
   }
   // Re-apply based on new positions
   try {
-    await applyPointsForResult(resultId);
+  await applyPointsForResult(resultId, customPoints, applyMode);
   } catch (e) {
     console.warn('[API] replaceResultPositions: apply points warn', e);
+  }
+
+  // Apply participant points (for faculties not in placements) if provided
+  try {
+    const part = (participants || []).filter(p => p.faculty_id);
+    if (part.length > 0) {
+      // Remove any participants that are already in placements
+      const placedIds = new Set<string>(positions.map(p => p.faculty_id));
+      const filtered = part.filter(p => !placedIds.has(p.faculty_id));
+      if (filtered.length > 0) {
+        // Fetch result gender to decide which points column to adjust
+        const rRes = await supabase!.from('results').select('gender').eq('id', resultId).single();
+        const gender = (rRes.data?.gender as string | null) ?? '';
+        const isMens = /men/i.test(gender || '');
+        const isWomens = /women/i.test(gender || '');
+
+        // Accumulate deltas per faculty
+        const deltas = new Map<string, number>();
+        filtered.forEach(p => {
+          const pts = Number.isFinite(p.points as number) ? Number(p.points) : 1;
+          deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + pts);
+        });
+        const facIds = Array.from(deltas.keys());
+        const { data: existingRows } = await supabase!.from('faculty_points').select('faculty_id,mens_points,womens_points').in('faculty_id', facIds as string[]);
+        const existingMap = new Map<string, { mens_points: number | null; womens_points: number | null }>();
+        (existingRows || []).forEach((r: any) => existingMap.set(r.faculty_id, { mens_points: r.mens_points ?? 0, womens_points: r.womens_points ?? 0 }));
+
+        for (const [faculty_id, delta] of deltas.entries()) {
+          const current = existingMap.get(faculty_id);
+          if (current) {
+            const newMens = (current.mens_points ?? 0) + (isMens ? delta : 0) + (!isMens && !isWomens ? delta : 0);
+            const newWomens = (current.womens_points ?? 0) + (isWomens ? delta : 0);
+            await supabase!.from('faculty_points').update({ mens_points: newMens, womens_points: newWomens, updated_at: new Date().toISOString() }).eq('faculty_id', faculty_id);
+          } else {
+            const mens = isMens ? delta : (!isMens && !isWomens ? delta : 0);
+            const womens = isWomens ? delta : 0;
+            await supabase!.from('faculty_points').insert([{ faculty_id, mens_points: mens, womens_points: womens, updated_at: new Date().toISOString() }]);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[API] replaceResultPositions: participant points warn', e);
   }
   return true;
 }
