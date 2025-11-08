@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Trophy, Medal, ArrowRight } from "lucide-react";
+import { CheckCircle2, Trophy, Medal, ArrowRight, Share2 } from "lucide-react";
 import type { CompletedEvent } from "@/data/resultsData";
 import { getFacultyIdByName } from "@/data/facultiesData";
 import { useNavigate } from "react-router-dom";
@@ -68,39 +68,55 @@ export function Results() {
     }
   };
 
-  // Share current event/post by requesting backend to generate post text
+  // Share current event/post using external Post Generator API (env: VITE_POST_GENERATOR_API)
+  // Sends: { sport, faculties: [first, second, third] } where index = place - 1
   const handleShare = async (e: React.MouseEvent, event: CompletedEvent) => {
     e.stopPropagation();
     try {
-      const backendOrigin = `${window.location.protocol}//${window.location.hostname}:5174`;
-      const url = `${backendOrigin}/api/generate-post`;
+      const endpoint = (import.meta as any).env?.VITE_POST_GENERATOR_API as
+        | string
+        | undefined;
 
-      const payload = {
-        sport: event.sport,
-        gender: event.gender,
-        event: event.event,
-        positions: (event.positions || [])
-          .slice(0, 3)
-          .map((p) => ({ place: p.place, faculty: p.faculty })),
-      };
-
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      // Build ordered faculties array by place
+      const faculties: string[] = [];
+      (event.positions || []).slice(0, 3).forEach((p) => {
+        faculties[p.place - 1] = p.faculty;
       });
 
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        console.error("[Results] generate-post failed", err);
-        window.alert("Unable to generate post.");
-        return;
-      } else {
-        window.alert("Generating post...");
+      const sport = event.sport;
+      const API_URL = "http://localhost:3000/api/generate";
+
+      let generated = "";
+      if (API_URL) {
+        try {
+          const resp = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sport, faculties }),
+          });
+          const body = await resp.json().catch(() => ({}));
+          const success = body.success === undefined ? resp.ok : !!body.success;
+          if (!success) {
+            console.error("[Results] generator API failed", body);
+          } else {
+            generated = String(
+              body.post ?? body.text ?? body.message ?? body.result ?? ""
+            );
+          }
+        } catch (apiErr) {
+          console.error("[Results] generator API unreachable", apiErr);
+        }
       }
 
-      const body = await resp.json();
-      const generated = body && body.post ? String(body.post) : "";
+      // Fallback text if API is not configured or returned empty
+      if (!generated) {
+        const top3 = faculties
+          .map((f, idx) => `${idx + 1}. ${f || "—"}`)
+          .join("  •  ");
+        generated = top3
+          ? `Top positions: ${top3}`
+          : "See full results and standings.";
+      }
 
       const shareUrl = `${window.location.origin}/sport/${event.sport
         .toLowerCase()
@@ -116,13 +132,11 @@ export function Results() {
           url: shareUrl,
         });
       } else {
-        // fallback: copy generated text or link
-        const toCopy = generated || shareUrl;
+        const toCopy = generated ? `${generated}\n\n${shareUrl}` : shareUrl;
         try {
           await navigator.clipboard.writeText(toCopy);
           window.alert("Generated post copied to clipboard");
         } catch (copyErr) {
-          // As a last resort, open WhatsApp web with prefilled text (desktop)
           const waText = encodeURIComponent(
             generated || `${title} ${shareUrl}`
           );
@@ -344,17 +358,7 @@ export function Results() {
                     onClick={(e) => handleShare(e, event)}
                     className="flex items-center gap-1 py-2 px-3 rounded-lg text-xs text-gray-400 hover:text-red-400 transition-colors cursor-pointer group border border-transparent hover:border-red-800/50"
                   >
-                    {/* WhatsApp-style icon (inline SVG) */}
-                    <svg
-                      className="w-3 h-3"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      xmlns="http://www.w3.org/2000/svg"
-                      aria-hidden
-                    >
-                      <path d="M20.52 3.48A11.87 11.87 0 0012.04.2 11.96 11.96 0 001.55 9.7c0 2.09.55 4.14 1.6 6l-1.05 3.86 3.95-1.04a11.88 11.88 0 005.36 1.37h.01c6.58 0 11.98-5.32 11.98-11.9 0-3.18-1.24-6.17-3.4-8.26zM12.04 20.54c-1.7 0-3.36-.46-4.8-1.33l-.34-.2-2.35.62.63-2.29-.22-.36A8.11 8.11 0 013 10.9c0-4.53 3.67-8.2 8.19-8.2 2.18 0 4.23.86 5.77 2.42a8.14 8.14 0 012.4 5.78c0 4.52-3.68 8.2-8.19 8.2z" />
-                      <path d="M17.56 14.35c-.27-.14-1.6-.79-1.85-.88-.25-.09-.43-.14-.61.14-.17.27-.64.88-.78 1.06-.14.18-.28.2-.55.07-.27-.13-1.12-.41-2.13-1.31-.79-.71-1.32-1.59-1.48-1.86-.15-.27-.02-.42.12-.56.12-.12.27-.31.41-.47.14-.16.18-.27.27-.45.09-.18.05-.34-.02-.48-.07-.14-.61-1.48-.84-2.03-.22-.53-.45-.46-.61-.47-.16-.01-.35-.01-.54-.01-.18 0-.48.07-.73.35-.25.28-.96.94-.96 2.29 0 1.34.98 2.64 1.12 2.82.14.18 1.94 3.06 4.7 4.29 3.26 1.43 3.26 0 3.84-.04.58-.04 1.88-.76 2.14-1.49.26-.74.26-1.37.18-1.5-.08-.12-.29-.18-.56-.32z" />
-                    </svg>
+                    <Share2 className="w-3 h-3" />
                     <span>Share post</span>
                   </button>
                   <div
