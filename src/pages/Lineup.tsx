@@ -12,6 +12,7 @@ export function Lineup() {
   const navigate = useNavigate();
   const [days, setDays] = useState<ScheduleDay[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [includePast, setIncludePast] = useState<boolean>(false);
 
   useEffect(() => {
     let mounted = true;
@@ -34,7 +35,13 @@ export function Lineup() {
     }
   };
 
-  const dayList = days;
+  // Compute filtered list: by default show only upcoming (today or later)
+  const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
+  const dayList = (includePast ? days : days.filter(d => {
+    const dDate = new Date(d.date);
+    dDate.setHours(0,0,0,0);
+    return dDate.getTime() >= todayMidnight.getTime();
+  }));
   const totalEvents = dayList.reduce((sum, day) => sum + day.events.length, 0);
 
   return (
@@ -77,6 +84,15 @@ export function Lineup() {
                   <Clock className="w-4 h-4 mr-2 inline" />
                   {totalEvents} Events
                 </Badge>
+              )}
+              {!loading && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIncludePast(v => !v)}
+                  className="border-white/20 text-gray-200 hover:bg-white/10"
+                >
+                  {includePast ? 'Hide past days' : 'Include past days'}
+                </Button>
               )}
             </div>
           </div>

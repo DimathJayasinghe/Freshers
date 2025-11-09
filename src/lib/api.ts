@@ -62,6 +62,69 @@ export async function deleteSport(id: string) {
   return data;
 }
 
+// -----------------------
+// Dangerous cascading helpers for deleting a sport and all references
+// Use with caution in admin-only flows.
+// -----------------------
+
+export async function deleteScheduledEventsBySport(sportId: string) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.from('scheduled_events').delete().eq('sport_id', sportId);
+  if (error) { console.error('[API] deleteScheduledEventsBySport error', error); throw error; }
+}
+
+export async function fetchLiveSeriesIdsBySport(sportId: string): Promise<number[]> {
+  if (!hasSupabaseEnv || !supabase) return [];
+  const { data, error } = await supabase.from('live_sport_series').select('id').eq('sport_id', sportId);
+  if (error) { console.error('[API] fetchLiveSeriesIdsBySport error', error); throw error; }
+  return (data || []).map((r: any) => r.id as number);
+}
+
+export async function fetchResultIdsBySport(sportId: string): Promise<number[]> {
+  const rows = await fetchResultsBySport(sportId);
+  return (rows || []).map((r: any) => r.id as number);
+}
+
+export async function deleteAllResultsBySport(sportId: string) {
+  const ids = await fetchResultIdsBySport(sportId);
+  for (const id of ids) {
+    await deleteResult(id);
+  }
+}
+
+export async function deleteFacultySportsBySport(sportId: string) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.from('faculty_sports').delete().eq('sport_id', sportId);
+  if (error) { console.error('[API] deleteFacultySportsBySport error', error); throw error; }
+}
+
+export async function deleteFacultyAchievementsBySport(sportId: string) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.from('faculty_achievements').delete().eq('sport_id', sportId);
+  if (error) { console.error('[API] deleteFacultyAchievementsBySport error', error); throw error; }
+}
+
+// Attempt to fully remove a sport and all linked data that reference it.
+// Order: schedule -> live series -> results (with positions/points) -> faculty_* -> sport
+export async function deleteSportWithCascade(sportId: string) {
+  // 1) Scheduled events
+  try { await deleteScheduledEventsBySport(sportId); } catch (e) { console.warn('[API] cascade: schedule', e); }
+  // 2) Live series (deletes matches via existing helper)
+  try {
+    const seriesIds = await fetchLiveSeriesIdsBySport(sportId);
+    for (const sid of seriesIds) {
+      try { await deleteLiveSeries(sid); } catch (e) { console.warn('[API] cascade: live series', sid, e); }
+    }
+  } catch (e) { console.warn('[API] cascade: fetch live series', e); }
+  // 3) Results and positions (removes/reverses points via deleteResult)
+  try { await deleteAllResultsBySport(sportId); } catch (e) { console.warn('[API] cascade: results', e); }
+  // 4) Faculty participation/achievements rows for this sport
+  try { await deleteFacultySportsBySport(sportId); } catch (e) { console.warn('[API] cascade: faculty_sports', e); }
+  try { await deleteFacultyAchievementsBySport(sportId); } catch (e) { console.warn('[API] cascade: faculty_achievements', e); }
+  // 5) Finally, delete the sport row
+  return deleteSport(sportId);
+}
+
 // Faculties overview
 export type FacultyOverview = {
   id: string;
@@ -195,12 +258,14 @@ export type FacultyDetailData = {
 
 export async function fetchFacultyDetail(facultyId: string): Promise<FacultyDetailData | null> {
   if (!hasSupabaseEnv || !supabase) return null;
-  const [fRes, pRes, fsRes, achRes, tmRes] = await Promise.all([
+  const [fRes, pRes, fsRes, achRes, tmRes, posRes] = await Promise.all([
     supabase.from('faculties').select('id,name,short_name,primary_color,secondary_color,logo_url').eq('id', facultyId).single(),
     supabase.from('faculty_points').select('mens_points,womens_points,total_points').eq('faculty_id', facultyId).single(),
     supabase.from('faculty_sports').select('sports(name)').eq('faculty_id', facultyId),
     supabase.from('faculty_achievements').select('position,year,sports(name)').eq('faculty_id', facultyId).order('year', { ascending: false }),
     supabase.from('faculty_team_members').select('name,role,sports(name)').eq('faculty_id', facultyId),
+    // placements from results to derive accurate event year per sport/place
+    supabase.from('result_positions').select('place,results(event_date,sports(name))').eq('faculty_id', facultyId),
   ]);
 
   if (fRes.error) { console.error('[API] faculty error', fRes.error); throw fRes.error; }
@@ -211,12 +276,75 @@ export async function fetchFacultyDetail(facultyId: string): Promise<FacultyDeta
   if (fsRes.error) { console.error('[API] fs error', fsRes.error); throw fsRes.error; }
   if (achRes.error) { console.error('[API] ach error', achRes.error); throw achRes.error; }
   if (tmRes.error) { console.error('[API] team error', tmRes.error); throw tmRes.error; }
+  if (posRes.error) { console.error('[API] placements error', posRes.error); throw posRes.error; }
 
   const sports = ((fsRes.data || []) as { sports?: { name: string } | { name: string }[] | null }[])
     .map((r) => (Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name : (r.sports as { name: string } | null | undefined)?.name))
     .filter(Boolean) as string[];
-  const achievements = ((achRes.data || []) as { position: string; year: number | null; sports?: { name: string } | { name: string }[] | null }[])
-    .map((r) => ({ sport: (Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name : (r.sports as { name: string } | null | undefined)?.name) ?? null, position: r.position, year: r.year ?? null }));
+  // Build a map of latest event year by (sport, place) from results/positions join
+  const placements = ((posRes.data || []) as { place: number; results?: { event_date: string; sports?: { name: string } | { name: string }[] | null } | { event_date: string; sports?: { name: string } | { name: string }[] | null }[] | null }[])
+    .map((r) => {
+      const res = Array.isArray(r.results) ? (r.results as any[])[0] : (r.results as any);
+      const sportName = res ? (Array.isArray(res.sports) ? (res.sports as { name: string }[])[0]?.name : (res.sports as { name: string } | null | undefined)?.name) : null;
+      const year = res?.event_date ? new Date(res.event_date).getFullYear() : null;
+      return { sport: sportName as string | null, place: r.place, year: year as number | null };
+    })
+    .filter(p => !!p.sport && !!p.place) as { sport: string; place: number; year: number | null }[];
+  const latestYearBySportPlace = new Map<string, number>();
+  placements.forEach((p) => {
+    const key = `${p.sport}|${p.place}`;
+    const prev = latestYearBySportPlace.get(key) ?? 0;
+    const y = p.year ?? 0;
+    if (y > prev) latestYearBySportPlace.set(key, y);
+  });
+
+  // Map textual position label to numeric place
+  const labelToPlace = (txt: string): number | null => {
+    const p = txt.toLowerCase();
+    if (/second\s*runner/.test(p)) return 3; // check before generic runner-up
+    if (/third\s*runner/.test(p)) return 4;
+    if (/(^|\b)(1st|champ|champion|gold|winner)(\b|$)/.test(p)) return 1;
+    if (/(^|\b)(2nd|runner-up|runner up|runner|silver)(\b|$)/.test(p)) return 2;
+    if (/(^|\b)(3rd|third|bronze)(\b|$)/.test(p)) return 3;
+    if (/(^|\b)(4th|fourth)(\b|$)/.test(p)) return 4;
+    return null;
+  };
+
+  const dbAchievements = ((achRes.data || []) as { position: string; year: number | null; sports?: { name: string } | { name: string }[] | null }[])
+    .map((r) => {
+      const sportName = (Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name : (r.sports as { name: string } | null | undefined)?.name) ?? null;
+      const label = r.position;
+      const place = labelToPlace(label);
+      let year: number | null = r.year ?? null;
+      if (sportName && place) {
+        const key = `${sportName}|${place}`;
+        const fromResults = latestYearBySportPlace.get(key);
+        if (fromResults) year = fromResults; // prefer authoritative results year
+      }
+      return { sport: sportName, position: label, year };
+    });
+
+  // Build achievements directly from placements in results (ensures champions show even if achievements table wasn't populated)
+  const placeToLabel = (place: number): string => {
+    switch (place) {
+      case 1: return 'Champion';
+      case 2: return 'Runner-up';
+      case 3: return 'Third place';
+      case 4: return 'Fourth place';
+      default: return `${place}`; // fallback label; UI will still categorize by place
+    }
+  };
+  const resAchievements = placements
+    .filter(p => p.sport && p.place)
+    .map(p => ({ sport: p.sport, position: placeToLabel(p.place), year: p.year })) as { sport: string | null; position: string; year: number | null }[];
+
+  // Merge DB and results achievements, dedupe by sport|position|year
+  const mergedMap = new Map<string, { sport: string | null; position: string; year: number | null }>();
+  [...dbAchievements, ...resAchievements].forEach((a) => {
+    const key = `${a.sport ?? ''}|${(a.position || '').toLowerCase()}|${a.year ?? ''}`;
+    if (!mergedMap.has(key)) mergedMap.set(key, a);
+  });
+  const achievements = Array.from(mergedMap.values());
   const team = ((tmRes.data || []) as { name: string; role: string; sports?: { name: string } | { name: string }[] | null }[])
     .map((r) => ({ name: r.name, role: r.role, sport: (Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name : (r.sports as { name: string } | null | undefined)?.name) ?? null }));
 
@@ -458,13 +586,14 @@ export type LiveSeriesMatchView = {
   team2_score: string | null;
   is_finished: boolean;
   winner_name: string | null;
+  commentary?: string | null;
 };
 
 export async function fetchLiveSeriesMatchesBySport(sportId: string): Promise<LiveSeriesMatchView[]> {
   if (!hasSupabaseEnv || !supabase) return [];
   const { data, error } = await supabase
     .from('live_series_matches_view')
-    .select('id,series_id,sport_id,sport_name,gender,match_order,venue,stage,status,status_text,team1,team2,team1_score,team2_score,is_finished,winner_name')
+    .select('id,series_id,sport_id,sport_name,gender,match_order,venue,stage,status,status_text,team1,team2,team1_score,team2_score,is_finished,winner_name,commentary')
     .eq('sport_id', sportId)
     .order('match_order', { ascending: true })
     .order('id', { ascending: true });
@@ -662,7 +791,8 @@ export async function fetchResultPositions(resultId: number) {
 // -----------------------
 // Points allocation helpers
 // -----------------------
-function scoreForPlace(place: number) {
+function scoreForPlace(place: number, custom?: Record<number, number>) {
+  if (custom && Number.isFinite(custom[place])) return Number(custom[place]);
   if (place === 1) return 7;
   if (place === 2) return 5;
   if (place === 3) return 3;
@@ -671,7 +801,11 @@ function scoreForPlace(place: number) {
 }
 
 // Apply points for an overall result (adds to faculty_points mens_points/womens_points)
-export async function applyPointsForResult(resultId: number) {
+export async function applyPointsForResult(
+  resultId: number,
+  customPoints?: Record<number, number>,
+  mode: 'overall-only' | 'always' = 'overall-only'
+) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
 
   // fetch result and positions
@@ -680,13 +814,10 @@ export async function applyPointsForResult(resultId: number) {
   const result = rRes.data as { id: number; event: string | null; gender: string | null } | null;
   if (!result) throw new Error('Result not found');
 
-  // Only apply for 'overall' style events. Heuristic: event name includes 'overall' (case-insensitive) OR event is null/empty.
+  // Apply only for 'overall' results unless forced to always
   const name = (result.event || '').toLowerCase();
   const isOverall = name.includes('overall') || name.trim() === '';
-  if (!isOverall) {
-    // nothing to do for non-overall events
-    return null;
-  }
+  if (mode === 'overall-only' && !isOverall) return null;
 
   const pos = await fetchResultPositions(resultId);
   if (!pos || pos.length === 0) return null;
@@ -694,7 +825,7 @@ export async function applyPointsForResult(resultId: number) {
   // accumulate deltas per faculty
   const deltas = new Map<string, number>();
   pos.forEach((p) => {
-    const pts = scoreForPlace(p.place);
+    const pts = scoreForPlace(p.place, customPoints);
     deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + pts);
   });
 
@@ -730,7 +861,11 @@ export async function applyPointsForResult(resultId: number) {
 }
 
 // Remove points previously applied for a result (reverse the allocation). This is used before deleting a result.
-export async function removePointsForResult(resultId: number) {
+export async function removePointsForResult(
+  resultId: number,
+  customPoints?: Record<number, number>,
+  mode: 'overall-only' | 'always' = 'overall-only'
+) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const rRes = await supabase.from('results').select('id,event,gender').eq('id', resultId).single();
   if (rRes.error) { console.error('[API] removePointsForResult result fetch error', rRes.error); throw rRes.error; }
@@ -738,14 +873,14 @@ export async function removePointsForResult(resultId: number) {
   if (!result) return null;
   const name = (result.event || '').toLowerCase();
   const isOverall = name.includes('overall') || name.trim() === '';
-  if (!isOverall) return null;
+  if (mode === 'overall-only' && !isOverall) return null;
 
   const pos = await fetchResultPositions(resultId);
   if (!pos || pos.length === 0) return null;
 
   const deltas = new Map<string, number>();
   pos.forEach((p) => {
-    const pts = scoreForPlace(p.place);
+    const pts = scoreForPlace(p.place, customPoints);
     deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + pts);
   });
 
@@ -773,7 +908,7 @@ export async function deleteResult(resultId: number) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   // reverse points first
   try {
-    await removePointsForResult(resultId);
+  await removePointsForResult(resultId);
   } catch (err) {
     console.error('[API] deleteResult: removePoints failed', err);
   }
@@ -784,6 +919,91 @@ export async function deleteResult(resultId: number) {
   const { data, error } = await supabase.from('results').delete().eq('id', resultId).select();
   if (error) { console.error('[API] deleteResult error', error); throw error; }
   return data;
+}
+
+// Update a result row's metadata
+export async function updateResultRow(resultId: number, payload: Partial<{ event: string | null; category: 'Team Sport' | 'Individual Sport' | 'Athletics' | 'Swimming'; gender: "Men's" | "Women's" | 'Mixed'; event_date: string; event_time: string }>) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const patch: any = { ...payload };
+  if (Object.prototype.hasOwnProperty.call(patch, 'event') && patch.event === '') patch.event = null;
+  const { data, error } = await supabase.from('results').update(patch).eq('id', resultId).select('id,event,category,gender,event_date,event_time').single();
+  if (error) { console.error('[API] updateResultRow error', error); throw error; }
+  return data as { id: number; event: string | null; category: string; gender: string; event_date: string; event_time: string };
+}
+
+// Replace positions for a result and re-apply leaderboard points for overall-style results
+export async function replaceResultPositionsAndReapply(
+  resultId: number,
+  positions: Array<{ place: number; faculty_id: string }>,
+  customPoints?: Record<number, number>,
+  participants?: Array<{ faculty_id: string; points?: number }>,
+  applyMode: 'overall-only' | 'always' = 'overall-only'
+) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  // Reverse any previously applied points (only for overall-style)
+  try {
+  await removePointsForResult(resultId, customPoints, applyMode);
+  } catch (e) {
+    console.warn('[API] replaceResultPositions: remove points warn', e);
+  }
+  // Replace positions
+  const { error: delErr } = await supabase.from('result_positions').delete().eq('result_id', resultId);
+  if (delErr) { console.error('[API] replaceResultPositions delete error', delErr); throw delErr; }
+  const rows = (positions || []).filter(p => p.faculty_id && Number(p.place) > 0).map(p => ({ result_id: resultId, place: Number(p.place), faculty_id: p.faculty_id }));
+  if (rows.length > 0) {
+    const { error: insErr } = await supabase.from('result_positions').insert(rows);
+    if (insErr) { console.error('[API] replaceResultPositions insert error', insErr); throw insErr; }
+  }
+  // Re-apply based on new positions
+  try {
+  await applyPointsForResult(resultId, customPoints, applyMode);
+  } catch (e) {
+    console.warn('[API] replaceResultPositions: apply points warn', e);
+  }
+
+  // Apply participant points (for faculties not in placements) if provided
+  try {
+    const part = (participants || []).filter(p => p.faculty_id);
+    if (part.length > 0) {
+      // Remove any participants that are already in placements
+      const placedIds = new Set<string>(positions.map(p => p.faculty_id));
+      const filtered = part.filter(p => !placedIds.has(p.faculty_id));
+      if (filtered.length > 0) {
+        // Fetch result gender to decide which points column to adjust
+        const rRes = await supabase!.from('results').select('gender').eq('id', resultId).single();
+        const gender = (rRes.data?.gender as string | null) ?? '';
+        const isMens = /men/i.test(gender || '');
+        const isWomens = /women/i.test(gender || '');
+
+        // Accumulate deltas per faculty
+        const deltas = new Map<string, number>();
+        filtered.forEach(p => {
+          const pts = Number.isFinite(p.points as number) ? Number(p.points) : 1;
+          deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + pts);
+        });
+        const facIds = Array.from(deltas.keys());
+        const { data: existingRows } = await supabase!.from('faculty_points').select('faculty_id,mens_points,womens_points').in('faculty_id', facIds as string[]);
+        const existingMap = new Map<string, { mens_points: number | null; womens_points: number | null }>();
+        (existingRows || []).forEach((r: any) => existingMap.set(r.faculty_id, { mens_points: r.mens_points ?? 0, womens_points: r.womens_points ?? 0 }));
+
+        for (const [faculty_id, delta] of deltas.entries()) {
+          const current = existingMap.get(faculty_id);
+          if (current) {
+            const newMens = (current.mens_points ?? 0) + (isMens ? delta : 0) + (!isMens && !isWomens ? delta : 0);
+            const newWomens = (current.womens_points ?? 0) + (isWomens ? delta : 0);
+            await supabase!.from('faculty_points').update({ mens_points: newMens, womens_points: newWomens, updated_at: new Date().toISOString() }).eq('faculty_id', faculty_id);
+          } else {
+            const mens = isMens ? delta : (!isMens && !isWomens ? delta : 0);
+            const womens = isWomens ? delta : 0;
+            await supabase!.from('faculty_points').insert([{ faculty_id, mens_points: mens, womens_points: womens, updated_at: new Date().toISOString() }]);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[API] replaceResultPositions: participant points warn', e);
+  }
+  return true;
 }
 
 // =======================
@@ -843,21 +1063,52 @@ export async function fetchActiveSeriesBySport(sport_id: string): Promise<AdminL
 
 export type AdminLiveMatch = {
   id: number; series_id: number; match_order: number; venue: string | null; stage: 'round_of_16' | 'quarter_final' | 'semi_final' | 'final' | null;
-  faculty1_id: string; faculty2_id: string; faculty1_score: string | null; faculty2_score: string | null; status: string; status_text: string | null; is_finished: boolean; winner_faculty_id: string | null;
+  faculty1_id: string; faculty2_id: string; faculty1_score: string | null; faculty2_score: string | null; status: string; status_text: string | null; is_finished: boolean; winner_faculty_id: string | null; commentary: string | null;
 };
 export async function addLiveMatch(payload: Omit<AdminLiveMatch, 'id' | 'status' | 'is_finished' | 'winner_faculty_id'> & { status?: string; is_finished?: boolean; winner_faculty_id?: string | null }) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const { id, ...rest } = (payload as any);
-  const { data, error } = await supabase.from('live_series_matches').insert([rest]).select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id').single();
+  // Client-side guardrails to avoid DB check constraint violations
+  if (rest.faculty1_id && rest.faculty2_id && rest.faculty1_id === rest.faculty2_id) {
+    throw new Error('Teams must be different (Team 1 and Team 2 cannot be the same)');
+  }
+  const insertRow = {
+    ...rest,
+    // Ensure stage is null if unset, not empty string
+    stage: rest.stage || null,
+    // Ensure status_text nulls instead of empty/undefined
+    status_text: rest.status_text ?? null,
+  };
+  const { data, error } = await supabase
+    .from('live_series_matches')
+    .insert([insertRow])
+    .select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id,commentary')
+    .single();
   if (error) { console.error('[API] addLiveMatch error', error); throw error; }
   return data as AdminLiveMatch;
 }
 
-export async function updateLiveMatch(id: number, patch: Partial<Pick<AdminLiveMatch, 'venue'|'stage'|'faculty1_score'|'faculty2_score'|'status'|'status_text'|'is_finished'|'winner_faculty_id'>>) {
+export async function updateLiveMatch(id: number, patch: Partial<Pick<AdminLiveMatch, 'venue'|'stage'|'faculty1_score'|'faculty2_score'|'status'|'status_text'|'is_finished'|'winner_faculty_id'|'commentary'>>) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.from('live_series_matches').update(patch).eq('id', id).select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id').single();
+  const normalized: any = { ...patch };
+  if (Object.prototype.hasOwnProperty.call(normalized, 'stage') && normalized.stage === '') normalized.stage = null;
+  if (Object.prototype.hasOwnProperty.call(normalized, 'status_text') && (normalized.status_text === undefined)) normalized.status_text = null;
+  const { data, error } = await supabase
+    .from('live_series_matches')
+    .update(normalized)
+    .eq('id', id)
+    .select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id,commentary')
+    .single();
   if (error) { console.error('[API] updateLiveMatch error', error); throw error; }
   return data as AdminLiveMatch;
+}
+
+// Delete a specific live match
+export async function deleteLiveMatch(id: number) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.from('live_series_matches').delete().eq('id', id);
+  if (error) { console.error('[API] deleteLiveMatch error', error); throw error; }
+  return true;
 }
 
 export async function finishSeries(series_id: number, podium: { champion: string; runner_up: string; third: string }) {
@@ -956,6 +1207,111 @@ export async function applySeriesResultsToPointsAndResults(
   return { resultId };
 }
 
+// Customizable placements and participation points for a series
+export async function applyCustomSeriesResultsAndPoints(args: {
+  sport_id: string;
+  gender: "Men's" | "Women's" | 'Mixed';
+  placements: Array<{ faculty_id: string; label: 'champion' | 'runner_up' | 'second_runner_up' | 'third_runner_up'; points: number }>;
+  participants?: Array<{ faculty_id: string; points?: number }>;
+  series_id?: number;
+}) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { sport_id, gender, placements, participants = [], series_id } = args;
+
+  // 1) Create a result row (overall standings)
+  const { data: resRow, error: resErr } = await supabase
+    .from('results')
+    .insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date: new Date().toISOString().slice(0,10), event_time: '00:00:00' }])
+    .select('id')
+    .single();
+  if (resErr) { console.error('[API] applyCustom: results insert error', resErr); throw resErr; }
+  const resultId = resRow?.id as number;
+
+  // 2) Insert placements into result_positions with numeric place mapping
+  const placeMap: Record<'champion' | 'runner_up' | 'second_runner_up' | 'third_runner_up', number> = {
+    champion: 1,
+    runner_up: 2,
+    second_runner_up: 3,
+    third_runner_up: 4,
+  };
+  const positionsRows = placements
+    .filter(p => p.faculty_id)
+    .map(p => ({ result_id: resultId, place: placeMap[p.label], faculty_id: p.faculty_id }));
+  if (positionsRows.length > 0) {
+    const { error: posErr } = await supabase.from('result_positions').insert(positionsRows);
+    if (posErr) { console.error('[API] applyCustom: positions insert error', posErr); }
+  }
+
+  // 3) Points aggregation (placements + participants)
+  const deltas = new Map<string, number>();
+  placements.forEach(p => {
+    const pts = Number.isFinite(p.points) ? Number(p.points) : 0;
+    deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + pts);
+  });
+  participants.forEach(pp => {
+    const pts = Number.isFinite(pp.points as number) ? Number(pp.points) : 1;
+    if (pp.faculty_id) deltas.set(pp.faculty_id, (deltas.get(pp.faculty_id) || 0) + pts);
+  });
+
+  // 4) Update faculty_points by gender
+  const facIds = Array.from(deltas.keys());
+  if (facIds.length > 0) {
+    const { data: existingRows } = await supabase.from('faculty_points').select('faculty_id,mens_points,womens_points').in('faculty_id', facIds);
+    const existingMap = new Map<string, { mens_points: number | null; womens_points: number | null }>();
+    (existingRows || []).forEach((r: any) => existingMap.set(r.faculty_id, { mens_points: r.mens_points ?? 0, womens_points: r.womens_points ?? 0 }));
+
+    const isMens = /men/i.test(gender);
+    const isWomens = /women/i.test(gender);
+
+    for (const [faculty_id, delta] of deltas.entries()) {
+      const current = existingMap.get(faculty_id);
+      if (current) {
+        const newMens = (current.mens_points ?? 0) + (isMens ? delta : 0) + (!isMens && !isWomens ? delta : 0);
+        const newWomens = (current.womens_points ?? 0) + (isWomens ? delta : 0);
+        await supabase.from('faculty_points').update({ mens_points: newMens, womens_points: newWomens, updated_at: new Date().toISOString() }).eq('faculty_id', faculty_id);
+      } else {
+        const mens = isMens ? delta : (!isMens && !isWomens ? delta : 0);
+        const womens = isWomens ? delta : 0;
+        await supabase.from('faculty_points').insert([{ faculty_id, mens_points: mens, womens_points: womens, updated_at: new Date().toISOString() }]);
+      }
+    }
+  }
+
+  // 5) faculty_sports upsert (placements + participants + matches by series)
+  try {
+    let ids = new Set<string>([...placements.map(p => p.faculty_id), ...participants.map(p => p.faculty_id)].filter(Boolean) as string[]);
+    if (series_id) {
+      const { data: matches } = await supabase.from('live_series_matches').select('faculty1_id,faculty2_id').eq('series_id', series_id);
+      (matches || []).forEach((m: any) => { if (m.faculty1_id) ids.add(m.faculty1_id); if (m.faculty2_id) ids.add(m.faculty2_id); });
+    }
+    const upsertRows = Array.from(ids).map(fid => ({ faculty_id: fid, sport_id }));
+    if (upsertRows.length > 0) {
+      await supabase.from('faculty_sports').upsert(upsertRows as any, { onConflict: 'faculty_id,sport_id', ignoreDuplicates: true } as any);
+    }
+  } catch (e) {
+    console.warn('[API] applyCustom: faculty_sports upsert warn', e);
+  }
+
+  // 6) achievements for placements with labels
+  try {
+    const year = new Date().getFullYear();
+    const labelToPosition: Record<string, string> = {
+      champion: 'Champions',
+      runner_up: 'Runner-up',
+      second_runner_up: 'Second runner-up',
+      third_runner_up: 'Third runner-up',
+    };
+    const achRows = placements
+      .filter(p => p.faculty_id)
+      .map(p => ({ faculty_id: p.faculty_id, sport_id, position: labelToPosition[p.label] || 'Placement', year }));
+    if (achRows.length > 0) await supabase.from('faculty_achievements').insert(achRows);
+  } catch (e) {
+    console.warn('[API] applyCustom: achievements insert warn', e);
+  }
+
+  return { resultId };
+}
+
 // Fetch matches for a series (admin view)
 export async function fetchMatchesBySeries(series_id: number) {
   if (!hasSupabaseEnv || !supabase) return [] as Array<{
@@ -963,7 +1319,7 @@ export async function fetchMatchesBySeries(series_id: number) {
   }>;
   const { data, error } = await supabase
     .from('live_series_matches')
-    .select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id')
+    .select('id,series_id,match_order,venue,stage,faculty1_id,faculty2_id,faculty1_score,faculty2_score,status,status_text,is_finished,winner_faculty_id,commentary')
     .eq('series_id', series_id)
     .order('match_order', { ascending: true })
     .order('id', { ascending: true });

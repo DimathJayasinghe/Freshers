@@ -1,11 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Home, Settings, Users, Trophy, Calendar } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { LogOut, Calendar } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 
 export function AdminHeader() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const p = location.pathname;
+  const isAdminRoot = p === '/admin' || p === '/admin/';
+  const isSports = p.startsWith('/admin/sports');
+  const isResults = p.startsWith('/admin/results');
+  const isLineup = p.startsWith('/admin/lineup');
+
+  const baseLink = "flex items-center gap-2 px-3 py-1 rounded-md transition-colors";
+  const idle = "text-gray-300 hover:text-white hover:bg-white/5";
+  const active = "text-white bg-white/10 border border-white/20";
 
   return (
   <header className="w-full border-b border-red-500/30 bg-black/80 text-white sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/60">
@@ -13,31 +24,24 @@ export function AdminHeader() {
         <div className="flex items-center gap-4">
           <img src="/logos/uoc-logo.png" alt="logo" className="h-10 w-10 object-contain" />
           <div>
-            <div className="text-xs text-gray-400">Admin Console</div>
-            <div className="text-lg font-bold text-white">Freshers' Meet — Admin</div>
+            <div className="text-xs text-gray-400">UOC Freshers' 25</div>
+            <div className="text-lg font-bold text-white">Admin Dashboard</div>
           </div>
         </div>
 
-        <nav className="hidden sm:flex items-center gap-2">
-          <Link to="/admin" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
-            <Home className="w-4 h-4" />
-            <span>Dashboard</span>
+        <nav className="hidden md:flex items-center gap-2">
+          <Link to="/admin" className={`${baseLink} ${isAdminRoot ? active : idle}`}>
+            <span>Update Results</span>
           </Link>
-          <Link to="/admin/faculties" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
-            <Users className="w-4 h-4" />
-            <span>Faculties</span>
+          <Link to="/admin/sports" className={`${baseLink} ${isSports ? active : idle}`}>
+            <span>Manage Sports</span>
           </Link>
-          <Link to="/admin/sports" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
-            <Trophy className="w-4 h-4" />
-            <span>Sports</span>
+          <Link to="/admin/results" className={`${baseLink} ${isResults ? active : idle}`}>
+            <span>Edit Results</span>
           </Link>
-          <Link to="/admin/lineup" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
+          <Link to="/admin/lineup" className={`${baseLink} ${isLineup ? active : idle}`}>
             <Calendar className="w-4 h-4" />
-            <span>Lineup</span>
-          </Link>
-          <Link to="/admin/settings" className="text-gray-300 hover:text-white flex items-center gap-2 px-3 py-1 rounded-md">
-            <Settings className="w-4 h-4" />
-            <span>Settings</span>
+            <span>Config Lineup</span>
           </Link>
         </nav>
 
