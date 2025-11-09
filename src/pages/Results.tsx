@@ -68,14 +68,70 @@ export function Results() {
     }
   };
 
+  // Display error feedback (can be replaced with a toast later)
+  const showError = (msg: string) => {
+    window.alert(msg);
+  };
+
+  // SUCCESS: attempt to share generated image via Web Share API; fall back to WhatsApp text
+  const showSuccess = (
+    data: {
+      imageBase64?: string;
+      post?: string;
+      text?: string;
+      message?: string;
+      imageUrl?: string;
+    },
+    opts?: { caption?: string; shareUrl?: string }
+  ) => {
+    const base64 = data.imageBase64;
+    if (!base64) {
+      showError("No image returned");
+      return;
+    }
+    // Normalize base64 (may or may not contain data URL prefix)
+    const hasPrefix = base64.startsWith("data:");
+    const mime = hasPrefix
+      ? base64.substring(5, base64.indexOf(";"))
+      : "image/png";
+    const raw = hasPrefix ? base64.split(",")[1] : base64;
+    try {
+      const byteChars = atob(raw);
+      const byteNumbers = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++)
+        byteNumbers[i] = byteChars.charCodeAt(i);
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: mime });
+      const fileName = `results-${Date.now()}.png`;
+      const file = new File([blob], fileName, { type: mime });
+      let shareText = "Event results";
+      if (opts?.shareUrl) {
+        shareText = `${shareText}\n\n${opts.shareUrl}`;
+      }
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator
+          .share({ files: [file], title: "Event Results", text: shareText })
+          .catch((err) => console.error("[Results] Image share failed", err));
+      } else {
+        // Fallback: WhatsApp text with public image URL if provided, otherwise just the caption
+        const link = data.imageUrl ? `\n${data.imageUrl}` : "";
+        const waText = encodeURIComponent(`${shareText}${link}`);
+        window.open(`https://wa.me/?text=${waText}`, "_blank");
+      }
+    } catch (err) {
+      console.error("[Results] showSuccess image processing failed", err);
+      showError("Failed to prepare image for sharing");
+    }
+  };
+
   // Share current event/post using external Post Generator API (env: VITE_POST_GENERATOR_API)
   // Sends: { sport, faculties: [first, second, third] } where index = place - 1
   const handleShare = async (e: React.MouseEvent, event: CompletedEvent) => {
     e.stopPropagation();
     try {
-      const endpoint = (import.meta as any).env?.VITE_POST_GENERATOR_API as
-        | string
-        | undefined;
+      // External generator endpoint (currently unused in this branch; remove if not needed)
+      // const endpoint = (import.meta as any).env?.VITE_POST_GENERATOR_API as string | undefined;
 
       // Build ordered faculties array by place
       const faculties: string[] = [];
@@ -94,14 +150,13 @@ export function Results() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ sport, faculties }),
           });
-          const body = await resp.json().catch(() => ({}));
-          const success = body.success === undefined ? resp.ok : !!body.success;
-          if (!success) {
-            console.error("[Results] generator API failed", body);
+          const data = await resp.json();
+          if (data.success) {
+            showSuccess(data);
+            // Image share attempted; stop further sharing to avoid double share and false errors
+            return;
           } else {
-            generated = String(
-              body.post ?? body.text ?? body.message ?? body.result ?? ""
-            );
+            showError(data.error || "Failed to generate post");
           }
         } catch (apiErr) {
           console.error("[Results] generator API unreachable", apiErr);
@@ -126,11 +181,24 @@ export function Results() {
       } Results`;
 
       if (navigator.share) {
-        await navigator.share({
-          title,
-          text: generated || title,
-          url: shareUrl,
-        });
+        try {
+          await navigator.share({
+            title,
+            text: generated || title,
+            url: shareUrl,
+          });
+        } catch (shareErr: any) {
+          // Ignore user-cancelled shares; otherwise show error
+          if (
+            shareErr &&
+            (shareErr.name === "AbortError" ||
+              shareErr.name === "NotAllowedError")
+          ) {
+            return;
+          }
+          console.error("[Results] Web Share failed", shareErr);
+          window.alert("Unable to share right now.");
+        }
       } else {
         const toCopy = generated ? `${generated}\n\n${shareUrl}` : shareUrl;
         try {
