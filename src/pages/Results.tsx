@@ -5,6 +5,7 @@ import { getFacultyIdByName } from "@/data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { fetchResults } from "@/lib/api";
+import { generatePostImage } from "@/lib/postGenerator";
 
 export function Results() {
   const navigate = useNavigate();
@@ -130,37 +131,26 @@ export function Results() {
   const handleShare = async (e: React.MouseEvent, event: CompletedEvent) => {
     e.stopPropagation();
     try {
-      // External generator endpoint (currently unused in this branch; remove if not needed)
-      // const endpoint = (import.meta as any).env?.VITE_POST_GENERATOR_API as string | undefined;
-
-      // Build ordered faculties array by place
+      // Build ordered faculties array by place (top 3)
       const faculties: string[] = [];
       (event.positions || []).slice(0, 3).forEach((p) => {
         faculties[p.place - 1] = p.faculty;
       });
 
       const sport = event.sport;
-      const API_URL = "http://localhost:3000/api/generate";
-
       let generated = "";
-      if (API_URL) {
-        try {
-          const resp = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sport, faculties }),
-          });
-          const data = await resp.json();
-          if (data.success) {
-            showSuccess(data);
-            // Image share attempted; stop further sharing to avoid double share and false errors
-            return;
-          } else {
-            showError(data.error || "Failed to generate post");
-          }
-        } catch (apiErr) {
-          console.error("[Results] generator API unreachable", apiErr);
+
+      // Attempt local in-browser generation (template expected at /templates/post_template.png)
+      try {
+        const local = await generatePostImage(sport, faculties);
+        if ((local as any).success) {
+          showSuccess({ imageBase64: (local as any).imageBase64 });
+          return; // successful image share path already handled
+        } else {
+          console.warn("[Results] Local generator error:", (local as any).error);
         }
+      } catch (genErr) {
+        console.error("[Results] Local post generation failed", genErr);
       }
 
       // Fallback text if API is not configured or returned empty
