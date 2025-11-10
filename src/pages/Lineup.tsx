@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, MapPin, CalendarDays, Sparkles, ChevronRight } from "lucide-react";
+import { Calendar, Clock, MapPin, CalendarDays, Sparkles } from "lucide-react";
 // no local fallbacks; rely on Supabase only
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -22,18 +22,6 @@ export function Lineup() {
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
-
-  const handleSportClick = (sport: string) => {
-
-
-    // Generate a slug from the sport label for routing
-    const sportId = sport.toLowerCase().replace(/\s+/g, '-').replace(/[()&']/g, '');
-    if (sportId === 'closing-ceremony') {
-      navigate('/closing-ceremony');
-    } else {
-      navigate(`/sport/${sportId}`);
-    }
-  };
 
   // Compute filtered list: by default show only upcoming (today or later)
   const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
@@ -176,16 +164,14 @@ export function Lineup() {
                       {day.events.map((event, eventIndex) => (
                         <div key={eventIndex}>
                           <div
-                            onClick={() => handleSportClick(event.sport)}
-                            className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-gradient-to-r from-white/5 to-transparent backdrop-blur-sm rounded-lg border border-white/10 hover:border-red-500/50 hover:bg-white/10 hover:shadow-lg hover:shadow-red-500/10 transition-all cursor-pointer group/event"
+                            className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-gradient-to-r from-white/5 to-transparent backdrop-blur-sm rounded-lg border border-white/10 transition-all"
                           >
                             {/* Sport Name */}
                             <div className="md:col-span-5 flex items-center gap-3">
-                              <div className="w-1 h-full min-h-[40px] bg-gradient-to-b from-red-600 to-yellow-500 rounded group-hover/event:from-yellow-500 group-hover/event:to-red-600 transition-all"></div>
+                              <div className="w-1 h-full min-h-[40px] bg-gradient-to-b from-red-600 to-yellow-500 rounded"></div>
                               <div className="flex-1">
-                                <p className="text-white font-semibold text-sm md:text-base group-hover/event:text-yellow-400 transition-colors flex items-center gap-2">
+                                <p className="text-white font-semibold text-sm md:text-base">
                                   {event.sport}
-                                  <ChevronRight className="w-4 h-4 opacity-0 group-hover/event:opacity-100 group-hover/event:translate-x-1 transition-all" />
                                 </p>
                                 <p className="text-gray-500 text-xs mt-0.5 md:hidden flex items-center gap-1">
                                   <Clock className="w-3 h-3" /> {event.time}

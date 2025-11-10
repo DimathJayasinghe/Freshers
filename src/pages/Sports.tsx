@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchSports } from "../lib/api";
+import { sportSlug } from "@/lib/utils";
 
 export function Sports() {
   const navigate = useNavigate();
@@ -23,8 +24,8 @@ export function Sports() {
     return () => { mounted = false; };
   }, []);
 
-  const handleSportClick = (sportId: string) => {
-    navigate(`/sport/${sportId}`);
+  const handleSportClick = (sportName: string) => {
+    navigate(`/sport/${sportSlug(sportName)}`);
   };
 
   const getCategoryIcon = (category: string) => {
@@ -175,7 +176,7 @@ export function Sports() {
           {filteredSports.map((sport) => (
             <Card
               key={sport.id}
-              onClick={() => handleSportClick(sport.id)}
+              onClick={() => handleSportClick(sport.name)}
               className="bg-black/40 backdrop-blur-xl border border-white/10 hover:border-red-500/50 transition-all duration-300 cursor-pointer group"
             >
               <CardContent className="p-6">

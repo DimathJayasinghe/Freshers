@@ -15,7 +15,8 @@ const AdminDashboardPage: React.FC = () => {
   const [selectedSportId, setSelectedSportId] = useState<string>('');
   const [seriesTitle, setSeriesTitle] = useState<string>('');
   const [seriesGender, setSeriesGender] = useState<'male'|'female'|'mixed'>('male');
-  const [activeSeries, setActiveSeries] = useState<{ id: number; sport_id: string; title: string | null; is_finished?: boolean; gender?: 'male'|'female'|'mixed' } | null>(null);
+  const [activeSeries, setActiveSeries] = useState<{ id: number; sport_id: string; title: string | null; is_finished?: boolean; gender?: 'male'|'female'|'mixed'; venue?: string | null } | null>(null);
+  const [seriesVenue, setSeriesVenue] = useState<string>('');
 
   const [matches, setMatches] = useState<any[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -119,8 +120,15 @@ const AdminDashboardPage: React.FC = () => {
   async function handleCreateSeries(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedSportId) return;
-    const s = await createLiveSeries(selectedSportId, seriesTitle || null, seriesGender);
-    setActiveSeries(s);
+    try {
+      const s = await createLiveSeries(selectedSportId, seriesTitle || null, seriesGender, seriesVenue || null);
+      setActiveSeries(s);
+      setSeriesVenue('');
+    } catch (err: any) {
+      // Show a friendly error. Common causes: DB migration not applied, RLS/admin not configured
+      const msg = (err?.message as string) || 'Failed to create series';
+      alert(msg.includes('venue') && msg.includes('column') ? `${msg}. Please run the latest dev/QA_EDITS.sql to add live_sport_series.venue` : msg);
+    }
   }
 
   async function handleAddMatch(e: React.FormEvent<HTMLFormElement>) {
@@ -266,6 +274,7 @@ const AdminDashboardPage: React.FC = () => {
     placements: validPlacements,
     participants: participants.filter(p => p.faculty_id).map(p => ({ faculty_id: p.faculty_id, points: Number(p.points || 1) })),
     series_id: activeSeries.id,
+    venue: activeSeries?.venue || seriesVenue || null,
   });
       setFinalizeOk('Series finalized and points applied');
       setRefreshKey((k) => k + 1);
@@ -377,7 +386,7 @@ const AdminDashboardPage: React.FC = () => {
               )}
               {activeSeries ? (
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-green-300 text-sm">Active series: #{activeSeries.id} {activeSeries.title ? `— ${activeSeries.title}` : ''} {activeSeries?.gender ? `· ${activeSeries.gender === 'male' ? 'Men' : activeSeries.gender === 'female' ? 'Women' : 'Mixed'}` : ''}</div>
+                  <div className="text-green-300 text-sm">Active series: #{activeSeries.id} {activeSeries.title ? `— ${activeSeries.title}` : ''} {activeSeries?.gender ? `· ${activeSeries.gender === 'male' ? 'Men' : activeSeries.gender === 'female' ? 'Women' : 'Mixed'}` : ''} {activeSeries?.venue ? `· ${activeSeries.venue}` : ''}</div>
                   <button
                     type="button"
                     className="px-3 py-1.5 rounded-md border border-red-700 bg-red-900/30 text-red-300 hover:bg-red-800/40"
@@ -398,6 +407,11 @@ const AdminDashboardPage: React.FC = () => {
                       <option value="mixed">Mixed</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-sm">Series venue (optional)</label>
+                    <input className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="e.g., Main Court" value={seriesVenue} onChange={(e) => setSeriesVenue(e.target.value)} />
+                    <div className="text-[10px] text-zinc-500 mt-1">Used as default venue when publishing results if individual match venues aren't suitable.</div>
+                  </div>
                   <button className="w-full bg-red-600 hover:bg-red-500 rounded-md py-2">Create series</button>
                 </form>
               )}
@@ -416,7 +430,7 @@ const AdminDashboardPage: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm">Venue</label>
-                      <input name="venue" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="Court 1" />
+                      <input name="venue" defaultValue={activeSeries?.venue || ''} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="Court 1" />
                     </div>
                   </div>
                     <div className="grid grid-cols-2 gap-3">

@@ -19,3 +19,8 @@ export function getSiteUrl(path: string = ''): string {
   if (path && !path.startsWith('/')) path = '/' + path;
   return base + (path || '');
 }
+
+// Shared helper: slug for sport routes (lowercase, spaces -> hyphens)
+export function sportSlug(name: string): string {
+  return (name || '').toLowerCase().trim().replace(/\s+/g, '-');
+}

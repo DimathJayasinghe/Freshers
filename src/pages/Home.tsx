@@ -49,41 +49,34 @@ export function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen">
-      {/* Hero/Banner Section - Full viewport height on mobile (accounting for a 64px header), auto on desktop */}
-      {/*
-        Behavior:
-        - Mobile (base): hero uses min-height: calc(100vh - 64px) so it fills the viewport without overlapping the header.
-        - Desktop (md+): hero height becomes auto so it won't force large whitespace.
-        - Add bottom padding on mobile to reserve space for the absolutely-positioned Stats bar so it doesn't overlap the main content below.
-      */}
-      <section className="relative overflow-hidden pb-[88px] md:pb-0">
-        <div className="bg-gradient-to-br from-red-950 via-black to-red-950 min-h-[calc(100vh-64px)] md:min-h-0">
+    <div>
+      {/* Hero/Banner Section - Full viewport height on mobile, auto on desktop */}
+      <section className="relative h-[100dvh] md:h-auto overflow-hidden">
+        <div className="bg-gradient-to-br from-red-950 via-black to-red-950 h-full flex flex-col">
           {/* Animated Background Elements */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-20 right-20 w-96 h-96 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
             <div className="absolute bottom-20 left-20 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
           </div>
-          <div className="flex flex-col justify-between items-center bg ">
-          {/*HOME */}
-          <div className="flex-1 relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="text-center space-y-4 sm:space-y-6 md:space-y-8">
+          {/*HOME CONTENT */}
+          <div className="flex-1 flex items-center justify-center relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-16 overflow-y-auto md:overflow-visible">
+            <div className="text-center space-y-2 sm:space-y-3 md:space-y-6 w-full pb-20 md:pb-0">
               {/* UOC Logo */}
-              <div className="flex justify-center mb-4 animate-fade-in">
+              <div className="flex justify-center mb-2 animate-fade-in">
               <img 
                 src="/logos/uoc-logo.png" 
                 alt="University of Colombo" 
-                className="h-24 w-24 sm:h-32 sm:w-32 md:h-40 md:w-40 lg:h-48 lg:w-48 object-contain drop-shadow-2xl"
+                className="h-16 w-16 sm:h-20 sm:w-20 md:h-28 md:w-28 lg:h-32 lg:w-32 object-contain drop-shadow-2xl"
               />
             </div>
             
-            <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/50 rounded-full px-3 py-1.5 sm:px-4 sm:py-2 backdrop-blur-sm animate-fade-in-up">
-              <Flame className="w-3 h-3 sm:w-4 sm:h-4 text-red-500 animate-pulse" />
-              <span className="text-red-400 text-xs sm:text-sm font-semibold">University of Colombo</span>
+            <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/50 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 backdrop-blur-sm animate-fade-in-up">
+              <Flame className="w-3 h-3 text-red-500 animate-pulse" />
+              <span className="text-red-400 text-xs font-semibold">University of Colombo</span>
             </div>
             
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold text-white leading-tight px-2 animate-fade-in-up delay-200">
-              <span className="block text-lg sm:text-xl md:text-2xl lg:text-4xl font-semibold mb-2 text-gray-300">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight px-2 animate-fade-in-up delay-200">
+              <span className="block text-sm sm:text-base md:text-lg lg:text-2xl font-semibold mb-1 text-gray-300">
                 Welcome to
               </span>
               <span className="block bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 bg-clip-text text-transparent">
@@ -91,15 +84,15 @@ export function Home() {
               </span>
             </h1>
             
-            <p className="text-gray-300 text-sm sm:text-base md:text-lg lg:text-xl max-w-2xl mx-auto px-4 animate-fade-in-up delay-300">
+            <p className="text-gray-300 text-xs sm:text-sm md:text-base lg:text-lg max-w-2xl mx-auto px-4 animate-fade-in-up delay-300">
               Experience the spirit of competition and camaraderie. Follow live matches, 
               check schedules, view leaderboards, and celebrate victories together.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center pt-2 sm:pt-4 px-4 animate-fade-in-up delay-400">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center pt-3 sm:pt-4 px-4 animate-fade-in-up delay-400">
               <Button 
                 onClick={() => navigate('/live')}
-                className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg rounded-full shadow-lg shadow-red-500/50 group"
+                className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 sm:px-8 py-4 sm:py-5 text-sm sm:text-base rounded-full shadow-lg shadow-red-500/50 group"
               >
                 View Live Matches
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -107,7 +100,7 @@ export function Home() {
               <Button 
                 onClick={() => navigate('/lineup')}
                 variant="outline" 
-                className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 hover:text-white px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg rounded-full backdrop-blur-sm"
+                className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 hover:text-white px-6 sm:px-8 py-4 sm:py-5 text-sm sm:text-base rounded-full backdrop-blur-sm"
               >
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Check Schedule
@@ -116,58 +109,58 @@ export function Home() {
           </div>
           </div>
           
-          {/* Stats/Highlights Bar */}
-          <div className="flex-1 border-t border-white/10 backdrop-blur-md bg-black/40 w-full">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-8">
+          {/* Stats/Highlights Bar - Fixed to bottom on mobile */}
+          <div className="absolute bottom-0 left-0 right-0 md:relative border-t border-white/10 backdrop-blur-md bg-black/70 w-full z-10">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-2.5 sm:py-3 md:py-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-8">
                 <div 
                   onClick={() => navigate('/sports')}
                   className="text-center cursor-pointer hover:scale-105 transition-transform group"
                 >
-                  <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
-                    <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 group-hover:scale-110 transition-transform" />
-                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">12+</div>
+                  <div className="flex items-center justify-center gap-1.5 mb-0.5 sm:mb-1">
+                    <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-yellow-500 group-hover:scale-110 transition-transform" />
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">12+</div>
                   </div>
-                  <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-yellow-400 transition-colors">Sports Events</div>
+                  <div className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 group-hover:text-yellow-400 transition-colors">Sports Events</div>
                 </div>
                 <div 
                   onClick={() => navigate('/faculties')}
                   className="text-center cursor-pointer hover:scale-105 transition-transform group"
                 >
-                  <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
-                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 group-hover:scale-110 transition-transform" />
-                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">11</div>
+                  <div className="flex items-center justify-center gap-1.5 mb-0.5 sm:mb-1">
+                    <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-blue-500 group-hover:scale-110 transition-transform" />
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">11</div>
                   </div>
-                  <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-blue-400 transition-colors">Faculties</div>
+                  <div className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 group-hover:text-blue-400 transition-colors">Faculties</div>
                 </div>
                 <div 
                   onClick={() => navigate('/live')}
                   className="text-center cursor-pointer hover:scale-105 transition-transform group"
                 >
-                  <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
-                    <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 group-hover:scale-110 transition-transform" />
-                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{liveSports.length}</div>
+                  <div className="flex items-center justify-center gap-1.5 mb-0.5 sm:mb-1">
+                    <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-red-500 group-hover:scale-110 transition-transform" />
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">{liveSports.length}</div>
                   </div>
-                  <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-red-400 transition-colors">Live Now</div>
+                  <div className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 group-hover:text-red-400 transition-colors">Live Now</div>
                 </div>
                 <div 
                   onClick={() => navigate('/lineup')}
                   className="text-center cursor-pointer hover:scale-105 transition-transform group"
                 >
-                  <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
-                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 group-hover:scale-110 transition-transform" />
-                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{today.length}</div>
+                  <div className="flex items-center justify-center gap-1.5 mb-0.5 sm:mb-1">
+                    <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-green-500 group-hover:scale-110 transition-transform" />
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">{today.length}</div>
                   </div>
-                  <div className="text-[10px] sm:text-xs md:text-sm text-gray-400 group-hover:text-green-400 transition-colors">Today's Matches</div>
+                  <div className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 group-hover:text-green-400 transition-colors">Today's Matches</div>
                 </div>
               </div>
             </div>
-          </div>
           </div>
         </div>
       </section>
 
       {/* Main Content */}
+      <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 md:space-y-12 py-8 md:py-12">
         {/* Live Results Section */}
         <section className="animate-fade-in-up">
@@ -555,6 +548,7 @@ export function Home() {
             </Card>
           </div>
         </section>
+      </div>
       </div>
     </div>
   );

@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Trophy, Medal, ArrowRight, Share2 } from "lucide-react";
 import type { CompletedEvent } from "@/data/resultsData";
-import { getFacultyIdByName } from "@/data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { fetchResults } from "@/lib/api";
+import { fetchResults, getFacultyIdByName } from "@/lib/api";
+import { sportSlug } from "@/lib/utils";
 import { generatePostImage } from "@/lib/postGenerator";
 
 export function Results() {
@@ -33,11 +33,15 @@ export function Results() {
   }, []);
 
   // Handle faculty name click
-  const handleFacultyClick = (e: React.MouseEvent, facultyName: string) => {
+  const handleFacultyClick = async (e: React.MouseEvent, facultyName: string) => {
     e.stopPropagation();
-    const facultyId = getFacultyIdByName(facultyName);
-    if (facultyId) {
-      navigate(`/faculty/${facultyId}`);
+    try {
+      const facultyId = await getFacultyIdByName(facultyName);
+      if (facultyId) {
+        navigate(`/faculty/${facultyId}`);
+      }
+    } catch (err) {
+      console.error("[Results] Failed to get faculty ID", err);
     }
   };
 
@@ -53,7 +57,7 @@ export function Results() {
   // Handle navigation based on category
   const handleCardClick = (event: CompletedEvent) => {
     // All sports go to their specific sport detail page
-    navigate(`/sport/${event.sport.toLowerCase().replace(/\s+/g, "-")}`);
+    navigate(`/sport/${sportSlug(event.sport)}`);
   };
 
   const getMedalIcon = (position: number) => {
@@ -163,9 +167,7 @@ export function Results() {
           : "See full results and standings.";
       }
 
-      const shareUrl = `${window.location.origin}/sport/${event.sport
-        .toLowerCase()
-        .replace(/\s+/g, "-")}`;
+      const shareUrl = `${window.location.origin}/sport/${sportSlug(event.sport)}`;
       const title = `${event.sport} ${event.gender}${
         event.event ? ` - ${event.event}` : ""
       } Results`;
@@ -335,11 +337,26 @@ export function Results() {
                     </div>
                   </div>
                   <div className="text-right text-xs">
-                    <div className="text-gray-500 mb-1">Updated</div>
-                    <div className="text-gray-300 font-medium animate-pulse">
-                      {event.date}
-                    </div>
-                    <div className="text-gray-400">{event.time}</div>
+                    {event.scheduled_date && (() => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const scheduledDate = new Date(event.scheduled_date);
+                      scheduledDate.setHours(0, 0, 0, 0);
+                      const isPast = scheduledDate < today;
+                      const label = isPast ? "Concluded" : "Scheduled";
+                      
+                      return (
+                        <>
+                          <div className="text-gray-500 mb-1">{label}</div>
+                          <div className="text-gray-300 font-medium">
+                            {event.scheduled_date && new Date(event.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                          {event.scheduled_time && (
+                            <div className="text-gray-400">{event.scheduled_time}</div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </CardHeader>

@@ -1,11 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, ArrowLeft, Users, Award, Calendar, Clock, MapPin } from "lucide-react";
+import { Trophy, ArrowLeft, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { fetchResults } from "@/lib/api";
-import { getShortFacultyName } from "@/data/tournamentData";
-import { getFacultyIdByName } from "@/data/facultiesData";
+import { fetchResults, getFacultyIdByName, fetchFacultiesList } from "@/lib/api";
+import { sportSlug } from "@/lib/utils";
 
 export function SportDetail() {
   const { sportName } = useParams<{ sportName: string }>();
@@ -14,31 +13,73 @@ export function SportDetail() {
   const [showWomens, setShowWomens] = useState(true);
   const [showMixed, setShowMixed] = useState(true);
   const [allResults, setAllResults] = useState([] as Awaited<ReturnType<typeof fetchResults>>);
+  const [facultyMap, setFacultyMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    fetchResults()
-      .then((rows) => { if (mounted) setAllResults(rows || []); })
-      .catch((e) => { console.error('[SportDetail] fetchResults error', e); if (mounted) setError('Failed to load results'); })
-      .finally(() => { if (mounted) setLoading(false); });
+    
+    // Fetch both results and faculty list
+    Promise.all([
+      fetchResults(),
+      fetchFacultiesList()
+    ])
+      .then(([resultsData, facultiesData]) => {
+        if (!mounted) return;
+        setAllResults(resultsData || []);
+        
+        // Create a map of full name -> short name
+        const map = new Map<string, string>();
+        (facultiesData || []).forEach(f => {
+          map.set(f.name, f.short_name);
+        });
+        setFacultyMap(map);
+      })
+      .catch((e) => {
+        console.error('[SportDetail] fetch error', e);
+        if (mounted) setError('Failed to load results');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    
     return () => { mounted = false; };
   }, []);
 
+  // Get short faculty name from map, fallback to acronym if not found
+  const getShortName = (fullName: string): string => {
+    const shortName = facultyMap.get(fullName);
+    if (shortName) return shortName;
+    
+    // Fallback: create acronym
+    if (!fullName) return '';
+    const words = fullName.trim().split(/\s+/);
+    if (words.length === 1) return words[0].slice(0, 3);
+    const acronym = words
+      .map((w) => (/[A-Za-z]/.test(w[0]) ? w[0] : ''))
+      .join('')
+      .slice(0, 4);
+    return acronym || fullName.slice(0, 4);
+  };
+
   // Handle faculty name click
-  const handleFacultyClick = (e: React.MouseEvent, facultyName: string) => {
+  const handleFacultyClick = async (e: React.MouseEvent, facultyName: string) => {
     e.stopPropagation();
-    const facultyId = getFacultyIdByName(facultyName);
-    if (facultyId) {
-      navigate(`/faculty/${facultyId}`);
+    try {
+      const facultyId = await getFacultyIdByName(facultyName);
+      if (facultyId) {
+        navigate(`/faculty/${facultyId}`);
+      }
+    } catch (err) {
+      console.error('[SportDetail] Failed to get faculty ID', err);
     }
   };
 
   // Filter results for this sport
   const sportResults = allResults.filter(
-    (event) => event.sport.toLowerCase().replace(/\s+/g, '-') === sportName
+    (event) => sportSlug(event.sport) === sportName
   );
 
   if (loading) {
@@ -74,17 +115,10 @@ export function SportDetail() {
   const sportName_display = sportResults[0].sport;
   const sportCategory = sportResults[0].category;
 
-  // Calculate insights
+  // Filter by gender
   const mensEvents = sportResults.filter(r => r.gender === "Men's");
   const womensEvents = sportResults.filter(r => r.gender === "Women's");
   const mixedEvents = sportResults.filter(r => r.gender === "Mixed");
-  
-  const totalTeams = new Set(
-    sportResults.flatMap(event => event.positions.map(p => p.faculty))
-  ).size;
-  
-  const totalEvents = sportResults.length;
-  const latestEvent = sportResults[0];
 
   return (
     <div className="min-h-screen">
@@ -131,64 +165,8 @@ export function SportDetail() {
         </div>
       </section>
 
-      {/* Insights Section */}
+      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {/* Total Teams */}
-          <Card className="border-2 border-red-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-red-600/20 rounded-lg">
-                <Users className="w-6 h-6 text-red-500" />
-              </div>
-              <div>
-                <div className="text-2xl font-black text-white">{totalTeams}</div>
-                <div className="text-xs text-gray-400">Total Teams</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Total Events */}
-          <Card className="border-2 border-blue-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-blue-600/20 rounded-lg">
-                <Trophy className="w-6 h-6 text-blue-500" />
-              </div>
-              <div>
-                <div className="text-2xl font-black text-white">{totalEvents}</div>
-                <div className="text-xs text-gray-400">Events Completed</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Latest Champion */}
-          <Card className="border-2 border-yellow-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-yellow-600/20 rounded-lg animate-pulse">
-                <Award className="w-6 h-6 text-yellow-500" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white truncate">
-                  {getShortFacultyName(latestEvent.positions[0].faculty)}
-                </div>
-                <div className="text-xs text-gray-400">Latest Champion</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Last Updated */}
-          <Card className="border-2 border-purple-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-purple-600/20 rounded-lg">
-                <Calendar className="w-6 h-6 text-purple-500" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white">{latestEvent.date}</div>
-                <div className="text-xs text-gray-400">Last Updated</div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Division Toggles */}
         <div className="flex flex-wrap gap-3 mb-6">
           {mensEvents.length > 0 && (
@@ -253,23 +231,33 @@ export function SportDetail() {
                             <h3 className="text-sm font-semibold text-blue-400 mb-1">{event.event}</h3>
                           )}
                           <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Scheduled: {event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{event.time}</span>
-                            </div>
+                            {event.scheduled_date && (() => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              const scheduledDate = new Date(event.scheduled_date);
+                              scheduledDate.setHours(0, 0, 0, 0);
+                              const isPast = scheduledDate < today;
+                              const label = isPast ? "Concluded" : "Scheduled";
+                              
+                              return (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>{label}: {new Date(event.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                  </div>
+                                  {event.scheduled_time && (
+                                    <div className="flex items-center gap-1">
+                                      <span>{event.scheduled_time}</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                             <div className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
-                              <span>Main Grounds</span>
+                              <span>{event.venue || 'TBA'}</span>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-gray-500">Updated: </span>
-                          <span className="text-green-400 font-semibold">{event.date} {event.time}</span>
                         </div>
                       </div>
                     </div>
@@ -318,7 +306,7 @@ export function SportDetail() {
                               className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
                               onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
-                              {getShortFacultyName(position.faculty)}
+                              {getShortName(position.faculty)}
                             </div>
                             <div 
                               className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
@@ -343,7 +331,7 @@ export function SportDetail() {
                             >
                               {position.place === 1 && '🥇 Champion'}
                               {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Third'}
+                              {position.place === 3 && '🥉 2nd Runner-up'}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
@@ -376,23 +364,33 @@ export function SportDetail() {
                             <h3 className="text-sm font-semibold text-pink-400 mb-1">{event.event}</h3>
                           )}
                           <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Scheduled: {event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{event.time}</span>
-                            </div>
+                            {event.scheduled_date && (() => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              const scheduledDate = new Date(event.scheduled_date);
+                              scheduledDate.setHours(0, 0, 0, 0);
+                              const isPast = scheduledDate < today;
+                              const label = isPast ? "Concluded" : "Scheduled";
+                              
+                              return (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>{label}: {new Date(event.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                  </div>
+                                  {event.scheduled_time && (
+                                    <div className="flex items-center gap-1">
+                                      <span>{event.scheduled_time}</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                             <div className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
-                              <span>Main Grounds</span>
+                              <span>{event.venue || 'TBA'}</span>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-gray-500">Updated: </span>
-                          <span className="text-green-400 font-semibold">{event.date} {event.time}</span>
                         </div>
                       </div>
                     </div>
@@ -441,7 +439,7 @@ export function SportDetail() {
                               className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
                               onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
-                              {getShortFacultyName(position.faculty)}
+                              {getShortName(position.faculty)}
                             </div>
                             <div 
                               className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
@@ -466,7 +464,7 @@ export function SportDetail() {
                             >
                               {position.place === 1 && '🥇 Champion'}
                               {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Third'}
+                              {position.place === 3 && '🥉 2nd Runner-up'}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
@@ -499,23 +497,33 @@ export function SportDetail() {
                             <h3 className="text-sm font-semibold text-purple-400 mb-1">{event.event}</h3>
                           )}
                           <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Scheduled: {event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{event.time}</span>
-                            </div>
+                            {event.scheduled_date && (() => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              const scheduledDate = new Date(event.scheduled_date);
+                              scheduledDate.setHours(0, 0, 0, 0);
+                              const isPast = scheduledDate < today;
+                              const label = isPast ? "Concluded" : "Scheduled";
+                              
+                              return (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>{label}: {new Date(event.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                  </div>
+                                  {event.scheduled_time && (
+                                    <div className="flex items-center gap-1">
+                                      <span>{event.scheduled_time}</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                             <div className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
-                              <span>Main Grounds</span>
+                              <span>{event.venue || 'TBA'}</span>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-gray-500">Updated: </span>
-                          <span className="text-green-400 font-semibold">{event.date} {event.time}</span>
                         </div>
                       </div>
                     </div>
@@ -564,7 +572,7 @@ export function SportDetail() {
                               className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
                               onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
-                              {getShortFacultyName(position.faculty)}
+                              {getShortName(position.faculty)}
                             </div>
                             <div 
                               className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
@@ -589,7 +597,7 @@ export function SportDetail() {
                             >
                               {position.place === 1 && '🥇 Champion'}
                               {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Third'}
+                              {position.place === 3 && '🥉 2nd Runner-up'}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
