@@ -5,6 +5,7 @@ import { getFacultyIdByName } from "@/data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { fetchResults } from "@/lib/api";
+import { sportSlug } from "@/lib/utils";
 import { generatePostImage } from "@/lib/postGenerator";
 
 export function Results() {
@@ -53,7 +54,7 @@ export function Results() {
   // Handle navigation based on category
   const handleCardClick = (event: CompletedEvent) => {
     // All sports go to their specific sport detail page
-    navigate(`/sport/${event.sport.toLowerCase().replace(/\s+/g, "-")}`);
+    navigate(`/sport/${sportSlug(event.sport)}`);
   };
 
   const getMedalIcon = (position: number) => {
@@ -163,9 +164,7 @@ export function Results() {
           : "See full results and standings.";
       }
 
-      const shareUrl = `${window.location.origin}/sport/${event.sport
-        .toLowerCase()
-        .replace(/\s+/g, "-")}`;
+      const shareUrl = `${window.location.origin}/sport/${sportSlug(event.sport)}`;
       const title = `${event.sport} ${event.gender}${
         event.event ? ` - ${event.event}` : ""
       } Results`;

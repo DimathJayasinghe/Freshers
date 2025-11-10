@@ -4,6 +4,7 @@ import { Trophy, ArrowLeft, Users, Award, Calendar, Clock, MapPin } from "lucide
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { fetchResults } from "@/lib/api";
+import { sportSlug } from "@/lib/utils";
 import { getShortFacultyName } from "@/data/tournamentData";
 import { getFacultyIdByName } from "@/data/facultiesData";
 
@@ -38,7 +39,7 @@ export function SportDetail() {
 
   // Filter results for this sport
   const sportResults = allResults.filter(
-    (event) => event.sport.toLowerCase().replace(/\s+/g, '-') === sportName
+    (event) => sportSlug(event.sport) === sportName
   );
 
   if (loading) {
