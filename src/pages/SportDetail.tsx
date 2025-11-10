@@ -3,9 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, ArrowLeft, Users, Award, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { fetchResults, getFacultyIdByName } from "@/lib/api";
+import { fetchResults, getFacultyIdByName, fetchFacultiesList } from "@/lib/api";
 import { sportSlug } from "@/lib/utils";
-import { getShortFacultyName } from "@/data/tournamentData";
 
 export function SportDetail() {
   const { sportName } = useParams<{ sportName: string }>();
@@ -14,18 +13,56 @@ export function SportDetail() {
   const [showWomens, setShowWomens] = useState(true);
   const [showMixed, setShowMixed] = useState(true);
   const [allResults, setAllResults] = useState([] as Awaited<ReturnType<typeof fetchResults>>);
+  const [facultyMap, setFacultyMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    fetchResults()
-      .then((rows) => { if (mounted) setAllResults(rows || []); })
-      .catch((e) => { console.error('[SportDetail] fetchResults error', e); if (mounted) setError('Failed to load results'); })
-      .finally(() => { if (mounted) setLoading(false); });
+    
+    // Fetch both results and faculty list
+    Promise.all([
+      fetchResults(),
+      fetchFacultiesList()
+    ])
+      .then(([resultsData, facultiesData]) => {
+        if (!mounted) return;
+        setAllResults(resultsData || []);
+        
+        // Create a map of full name -> short name
+        const map = new Map<string, string>();
+        (facultiesData || []).forEach(f => {
+          map.set(f.name, f.short_name);
+        });
+        setFacultyMap(map);
+      })
+      .catch((e) => {
+        console.error('[SportDetail] fetch error', e);
+        if (mounted) setError('Failed to load results');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    
     return () => { mounted = false; };
   }, []);
+
+  // Get short faculty name from map, fallback to acronym if not found
+  const getShortName = (fullName: string): string => {
+    const shortName = facultyMap.get(fullName);
+    if (shortName) return shortName;
+    
+    // Fallback: create acronym
+    if (!fullName) return '';
+    const words = fullName.trim().split(/\s+/);
+    if (words.length === 1) return words[0].slice(0, 3);
+    const acronym = words
+      .map((w) => (/[A-Za-z]/.test(w[0]) ? w[0] : ''))
+      .join('')
+      .slice(0, 4);
+    return acronym || fullName.slice(0, 4);
+  };
 
   // Handle faculty name click
   const handleFacultyClick = async (e: React.MouseEvent, facultyName: string) => {
@@ -172,7 +209,7 @@ export function SportDetail() {
               </div>
               <div>
                 <div className="text-sm font-bold text-white truncate">
-                  {getShortFacultyName(latestEvent.positions[0].faculty)}
+                  {getShortName(latestEvent.positions[0].faculty)}
                 </div>
                 <div className="text-xs text-gray-400">Latest Champion</div>
               </div>
@@ -332,7 +369,7 @@ export function SportDetail() {
                               className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
                               onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
-                              {getShortFacultyName(position.faculty)}
+                              {getShortName(position.faculty)}
                             </div>
                             <div 
                               className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
@@ -465,7 +502,7 @@ export function SportDetail() {
                               className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
                               onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
-                              {getShortFacultyName(position.faculty)}
+                              {getShortName(position.faculty)}
                             </div>
                             <div 
                               className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
@@ -598,7 +635,7 @@ export function SportDetail() {
                               className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
                               onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
-                              {getShortFacultyName(position.faculty)}
+                              {getShortName(position.faculty)}
                             </div>
                             <div 
                               className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
