@@ -412,6 +412,40 @@ export async function fetchScheduledEvents(): Promise<ScheduledEventRowFull[]> {
   if (error) throw error;
   return (data || []) as ScheduledEventRowFull[];
 }
+// Suggest an event date/time when publishing series results
+async function suggestEventDateTimeForSport(sport_id: string): Promise<{ event_date: string; event_time: string }> {
+  // Try to take the most recent scheduled event for this sport
+  try {
+    if (hasSupabaseEnv && supabase) {
+      const { data, error } = await supabase
+        .from('scheduled_events')
+        .select('event_date,start_time')
+        .eq('sport_id', sport_id)
+        .order('event_date', { ascending: false })
+        .order('start_time', { ascending: false, nullsFirst: false })
+        .limit(1);
+      if (error) throw error;
+      const row = (data || [])[0] as { event_date: string; start_time: string | null } | undefined;
+      if (row && row.event_date) {
+        const dateStr = row.event_date; // already YYYY-MM-DD
+        if (row.start_time) {
+          // start_time is a time value ('HH:MM:SS'), use as-is
+          return { event_date: dateStr, event_time: row.start_time };
+        }
+        // No explicit start time; fallback to noon to avoid 00:00 display
+        return { event_date: dateStr, event_time: '12:00:00' };
+      }
+    }
+  } catch (e) {
+    console.warn('suggestEventDateTimeForSport failed, falling back to now', e);
+  }
+  // Fallback: use current local date/time
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const event_date = now.toISOString().slice(0, 10);
+  const event_time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  return { event_date, event_time };
+}
 export async function createScheduledEvent(payload: { event_date: string; sport_id?: string | null; sport_label?: string | null; time_range?: string | null; start_time?: string | null; end_time?: string | null; venue: string }) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const { data, error } = await supabase.from('scheduled_events').insert([payload]).select();
@@ -625,7 +659,14 @@ export async function deleteLiveMatch(id: number) { if (!hasSupabaseEnv || !supa
 export async function finishSeries(series_id: number, podium: { champion: string; runner_up: string; third: string }) { if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured'); const { error } = await supabase.from('live_sport_series').update({ is_finished: true, winner_faculty_id: podium.champion, runner_up_faculty_id: podium.runner_up, third_place_faculty_id: podium.third }).eq('id', series_id); if (error) throw error; return true; }
 export async function applySeriesResultsToPointsAndResults(sport_id: string, podium: { champion: string; runner_up: string; third: string }, gender: "Men's" | "Women's" | 'Mixed' = "Men's", series_id?: number) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
-  const { data: resRow, error: resErr } = await supabase.from('results').insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date: new Date().toISOString().slice(0,10), event_time: '00:00:00' }]).select('id').single(); if (resErr) throw resErr;
+  // Prefer scheduled time for the sport; fall back to current time
+  const { event_date, event_time } = await suggestEventDateTimeForSport(sport_id);
+  const { data: resRow, error: resErr } = await supabase
+    .from('results')
+    .insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date, event_time }])
+    .select('id')
+    .single();
+  if (resErr) throw resErr;
   const resultId = resRow?.id as number;
   const pos = [ { result_id: resultId, place: 1, faculty_id: podium.champion }, { result_id: resultId, place: 2, faculty_id: podium.runner_up }, { result_id: resultId, place: 3, faculty_id: podium.third } ];
   const { error: posErr } = await supabase.from('result_positions').insert(pos); if (posErr) throw posErr;
@@ -661,7 +702,14 @@ export async function applySeriesResultsToPointsAndResults(sport_id: string, pod
 export async function applyCustomSeriesResultsAndPoints(args: { sport_id: string; gender: "Men's" | "Women's" | 'Mixed'; placements: Array<{ faculty_id: string; label: 'champion' | 'runner_up' | 'second_runner_up' | 'third_runner_up'; points: number }>; participants?: Array<{ faculty_id: string; points?: number }>; series_id?: number }) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const { sport_id, gender, placements, participants = [], series_id } = args;
-  const { data: resRow, error: resErr } = await supabase.from('results').insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date: new Date().toISOString().slice(0,10), event_time: '00:00:00' }]).select('id').single(); if (resErr) throw resErr;
+  // Prefer scheduled time for the sport; fall back to current time
+  const { event_date, event_time } = await suggestEventDateTimeForSport(sport_id);
+  const { data: resRow, error: resErr } = await supabase
+    .from('results')
+    .insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date, event_time }])
+    .select('id')
+    .single();
+  if (resErr) throw resErr;
   const resultId = resRow?.id as number;
   const placeMap: Record<'champion'|'runner_up'|'second_runner_up'|'third_runner_up', number> = { champion:1, runner_up:2, second_runner_up:3, third_runner_up:4 };
   const positionsRows = placements.filter(p=>p.faculty_id).map(p=>({ result_id: resultId, place: placeMap[p.label], faculty_id: p.faculty_id })); if (positionsRows.length) { const { error: posErr } = await supabase.from('result_positions').insert(positionsRows); if (posErr) console.error('positions insert error', posErr); }
