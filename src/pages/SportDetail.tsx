@@ -3,10 +3,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, ArrowLeft, Users, Award, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { fetchResults } from "@/lib/api";
+import { fetchResults, getFacultyIdByName } from "@/lib/api";
 import { sportSlug } from "@/lib/utils";
 import { getShortFacultyName } from "@/data/tournamentData";
-import { getFacultyIdByName } from "@/data/facultiesData";
 
 export function SportDetail() {
   const { sportName } = useParams<{ sportName: string }>();
@@ -29,11 +28,15 @@ export function SportDetail() {
   }, []);
 
   // Handle faculty name click
-  const handleFacultyClick = (e: React.MouseEvent, facultyName: string) => {
+  const handleFacultyClick = async (e: React.MouseEvent, facultyName: string) => {
     e.stopPropagation();
-    const facultyId = getFacultyIdByName(facultyName);
-    if (facultyId) {
-      navigate(`/faculty/${facultyId}`);
+    try {
+      const facultyId = await getFacultyIdByName(facultyName);
+      if (facultyId) {
+        navigate(`/faculty/${facultyId}`);
+      }
+    } catch (err) {
+      console.error('[SportDetail] Failed to get faculty ID', err);
     }
   };
 

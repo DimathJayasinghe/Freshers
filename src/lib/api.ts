@@ -301,15 +301,39 @@ export async function deleteFaculty(id: string) {
 export type ScheduleDay = { date: string; events: { sport: string; time: string; venue: string }[] };
 export async function fetchScheduleCalendar(): Promise<ScheduleDay[]> {
   if (!hasSupabaseEnv || !supabase) return [];
-  const { data, error } = await supabase.from('scheduled_events').select('event_date,sport_label,start_time,time_range,venue,sports(name)').order('event_date').order('start_time', { ascending: true, nullsFirst: false });
+  const { data, error } = await supabase.from('scheduled_events').select('event_date,sport_label,start_time,end_time,time_range,venue,sports(name)').order('event_date').order('start_time', { ascending: true, nullsFirst: false });
   if (error) throw error;
   const byDate = new Map<string, { sport: string; time: string; venue: string }[]>();
   (data || [] as any[]).forEach(r => {
     const date = r.event_date as string;
-    const time = r.time_range ?? (r.start_time ? formatTimeFromISO(`1970-01-01T${r.start_time}Z`) : '');
+    let time = r.time_range as string | null | undefined;
+    
+    // If time_range is not available, format from start_time and end_time
+    if (!time && r.start_time) {
+      const startTime = r.start_time as string; // PostgreSQL time comes as HH:MM:SS string
+      const endTime = r.end_time as string | null | undefined;
+      
+      // Parse and format start time
+      const [startHour, startMin] = startTime.split(':').map(Number);
+      const startPeriod = startHour >= 12 ? 'PM' : 'AM';
+      const startHour12 = startHour === 0 ? 12 : startHour > 12 ? startHour - 12 : startHour;
+      const formattedStart = `${startHour12}:${String(startMin).padStart(2, '0')} ${startPeriod}`;
+      
+      if (endTime) {
+        // Parse and format end time
+        const [endHour, endMin] = endTime.split(':').map(Number);
+        const endPeriod = endHour >= 12 ? 'PM' : 'AM';
+        const endHour12 = endHour === 0 ? 12 : endHour > 12 ? endHour - 12 : endHour;
+        const formattedEnd = `${endHour12}:${String(endMin).padStart(2, '0')} ${endPeriod}`;
+        time = `${formattedStart} - ${formattedEnd}`;
+      } else {
+        time = formattedStart;
+      }
+    }
+    
     const sportObj = Array.isArray(r.sports) ? (r.sports as any[])[0] : (r.sports as any | undefined);
     const sport = r.sport_label ?? (sportObj ? (sportObj as any).name : undefined) ?? 'Event';
-    const entry = { sport, time, venue: r.venue as string };
+    const entry = { sport, time: time || 'TBA', venue: r.venue as string };
     byDate.set(date, [...(byDate.get(date) || []), entry]);
   });
   return Array.from(byDate.entries()).map(([date, events]) => ({ date: new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), events }));
@@ -493,6 +517,19 @@ export async function fetchFacultiesList(): Promise<{ id: string; name: string; 
   const { data, error } = await supabase.from('faculties').select('id,name,short_name').order('name');
   if (error) throw error;
   return (data || []) as { id: string; name: string; short_name: string }[];
+}
+
+// Helper: Get faculty ID by name (searches both full name and short name)
+export async function getFacultyIdByName(name: string): Promise<string | null> {
+  if (!hasSupabaseEnv || !supabase || !name) return null;
+  const { data, error } = await supabase
+    .from('faculties')
+    .select('id')
+    .or(`name.eq.${name},short_name.eq.${name}`)
+    .limit(1)
+    .single();
+  if (error || !data) return null;
+  return data.id;
 }
 
 // --------------------------------------------------

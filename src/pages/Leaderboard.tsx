@@ -1,12 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award, Sparkles } from "lucide-react";
 import type { TeamData } from "../data/leaderboardData";
-import { getFacultyIdByName } from "../data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
-import { fetchLeaderboard } from "../lib/api";
+import { fetchLeaderboard, getFacultyIdByName } from "../lib/api";
 
 export function Leaderboard() {
   const navigate = useNavigate();
@@ -31,10 +30,14 @@ export function Leaderboard() {
   }, []);
 
   // Handle faculty name click
-  const handleFacultyClick = (facultyName: string) => {
-    const facultyId = getFacultyIdByName(facultyName);
-    if (facultyId) {
-      navigate(`/faculty/${facultyId}`);
+  const handleFacultyClick = async (facultyName: string) => {
+    try {
+      const facultyId = await getFacultyIdByName(facultyName);
+      if (facultyId) {
+        navigate(`/faculty/${facultyId}`);
+      }
+    } catch (err) {
+      console.error('[Leaderboard] Failed to get faculty ID', err);
     }
   };
 
