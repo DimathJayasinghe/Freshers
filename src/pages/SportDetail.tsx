@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, ArrowLeft, Users, Award, Calendar, MapPin } from "lucide-react";
+import { Trophy, ArrowLeft, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { fetchResults, getFacultyIdByName, fetchFacultiesList } from "@/lib/api";
@@ -115,17 +115,10 @@ export function SportDetail() {
   const sportName_display = sportResults[0].sport;
   const sportCategory = sportResults[0].category;
 
-  // Calculate insights
+  // Filter by gender
   const mensEvents = sportResults.filter(r => r.gender === "Men's");
   const womensEvents = sportResults.filter(r => r.gender === "Women's");
   const mixedEvents = sportResults.filter(r => r.gender === "Mixed");
-  
-  const totalTeams = new Set(
-    sportResults.flatMap(event => event.positions.map(p => p.faculty))
-  ).size;
-  
-  const totalEvents = sportResults.length;
-  const latestEvent = sportResults[0];
 
   return (
     <div className="min-h-screen">
@@ -172,64 +165,8 @@ export function SportDetail() {
         </div>
       </section>
 
-      {/* Insights Section */}
+      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {/* Total Teams */}
-          <Card className="border-2 border-red-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-red-600/20 rounded-lg">
-                <Users className="w-6 h-6 text-red-500" />
-              </div>
-              <div>
-                <div className="text-2xl font-black text-white">{totalTeams}</div>
-                <div className="text-xs text-gray-400">Total Teams</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Total Events */}
-          <Card className="border-2 border-blue-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-blue-600/20 rounded-lg">
-                <Trophy className="w-6 h-6 text-blue-500" />
-              </div>
-              <div>
-                <div className="text-2xl font-black text-white">{totalEvents}</div>
-                <div className="text-xs text-gray-400">Events Completed</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Latest Champion */}
-          <Card className="border-2 border-yellow-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-yellow-600/20 rounded-lg animate-pulse">
-                <Award className="w-6 h-6 text-yellow-500" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white truncate">
-                  {getShortName(latestEvent.positions[0].faculty)}
-                </div>
-                <div className="text-xs text-gray-400">Latest Champion</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Last Updated */}
-          <Card className="border-2 border-purple-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-purple-600/20 rounded-lg">
-                <Calendar className="w-6 h-6 text-purple-500" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white">{latestEvent.date}</div>
-                <div className="text-xs text-gray-400">Last Updated</div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Division Toggles */}
         <div className="flex flex-wrap gap-3 mb-6">
           {mensEvents.length > 0 && (
@@ -394,7 +331,7 @@ export function SportDetail() {
                             >
                               {position.place === 1 && '🥇 Champion'}
                               {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Third'}
+                              {position.place === 3 && '🥉 2nd Runner-up'}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
@@ -527,7 +464,7 @@ export function SportDetail() {
                             >
                               {position.place === 1 && '🥇 Champion'}
                               {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Third'}
+                              {position.place === 3 && '🥉 2nd Runner-up'}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
@@ -660,7 +597,7 @@ export function SportDetail() {
                             >
                               {position.place === 1 && '🥇 Champion'}
                               {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Third'}
+                              {position.place === 3 && '🥉 2nd Runner-up'}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>

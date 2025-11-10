@@ -199,7 +199,7 @@ export function FacultyDetail() {
           color: "text-orange-600",
           bgColor: "bg-orange-600/10",
           borderColor: "border-orange-600/50",
-          label: "3rd Place",
+          label: "2nd Runner-up",
         };
       case 4:
         return {
@@ -402,12 +402,12 @@ export function FacultyDetail() {
           </section>
         )}
 
-        {/* Third Place Section */}
+        {/* 2nd Runner-up Section */}
         {thirdPlaces.length > 0 && (
           <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
               <Award className="w-8 h-8 text-orange-600" />
-              <h2 className="text-3xl font-bold text-white">Third Place Finishes</h2>
+              <h2 className="text-3xl font-bold text-white">2nd Runner-up Finishes</h2>
               <Badge className="bg-orange-600/20 text-orange-600 border-orange-600/50">
                 {thirdPlaces.length} Bronze{thirdPlaces.length !== 1 ? 's' : ''}
               </Badge>
