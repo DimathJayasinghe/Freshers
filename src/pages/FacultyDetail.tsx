@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getFacultyById } from "@/data/facultiesData";
 import { useEffect, useMemo, useState } from "react";
 import { fetchFacultyDetail, type FacultyDetailData } from "@/lib/api";
+import { sportSlug } from "@/lib/utils";
 import { 
   Trophy, 
   Medal, 
@@ -52,7 +53,7 @@ export function FacultyDetail() {
         colors: detail.colors,
         logo: detail.logo,
         totalPoints: detail.points.total,
-        position: undefined as number | undefined, // rank not included in detail; could be added later
+        position: detail.rank ?? undefined,
         sportsParticipated: detail.sports,
         achievements: detail.achievements.map(a => ({ sport: a.sport ?? 'Event', position: a.position, year: a.year ?? undefined })),
       } as {
@@ -291,16 +292,16 @@ export function FacultyDetail() {
                   <div className="text-sm text-gray-400">Total Points</div>
                 </div>
                 <div className="bg-black/50 border border-gray-700 rounded-lg px-6 py-3">
-                  <div className="text-3xl font-bold text-white">{facultyAchievements.length}</div>
-                  <div className="text-sm text-gray-400">Total Events</div>
-                </div>
-                <div className="bg-black/50 border border-gray-700 rounded-lg px-6 py-3">
                   <div className="text-3xl font-bold text-yellow-500">{firstPlaces.length}</div>
                   <div className="text-sm text-gray-400">Championships</div>
                 </div>
                 <div className="bg-black/50 border border-gray-700 rounded-lg px-6 py-3">
                   <div className="text-3xl font-bold text-gray-400">{secondPlaces.length}</div>
                   <div className="text-sm text-gray-400">Runner-ups</div>
+                </div>
+                <div className="bg-black/50 border border-gray-700 rounded-lg px-6 py-3">
+                  <div className="text-3xl font-bold text-orange-600">{thirdPlaces.length}</div>
+                  <div className="text-sm text-gray-400">2nd Runner-ups</div>
                 </div>
               </div>
             </div>
@@ -329,12 +330,13 @@ export function FacultyDetail() {
                 return (
                   <Card
                     key={index}
-                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border-2 hover:scale-105 transition-transform duration-300`}
+                    onClick={() => navigate(`/sport/${sportSlug(achievement.sport)}`)}
+                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border-2 hover:scale-105 transition-transform duration-300 cursor-pointer`}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2">
+                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2 hover:text-yellow-400 transition-colors">
                             <Icon className={`w-5 h-5 ${config.color}`} />
                             {achievement.sport}
                           </CardTitle>
@@ -374,12 +376,13 @@ export function FacultyDetail() {
                 return (
                   <Card
                     key={index}
-                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border-2 hover:scale-105 transition-transform duration-300`}
+                    onClick={() => navigate(`/sport/${sportSlug(achievement.sport)}`)}
+                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border-2 hover:scale-105 transition-transform duration-300 cursor-pointer`}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2">
+                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2 hover:text-gray-300 transition-colors">
                             <Icon className={`w-5 h-5 ${config.color}`} />
                             {achievement.sport}
                           </CardTitle>
@@ -418,12 +421,13 @@ export function FacultyDetail() {
                 return (
                   <Card
                     key={index}
-                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border-2 hover:scale-105 transition-transform duration-300`}
+                    onClick={() => navigate(`/sport/${sportSlug(achievement.sport)}`)}
+                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border-2 hover:scale-105 transition-transform duration-300 cursor-pointer`}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2">
+                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2 hover:text-orange-400 transition-colors">
                             <Icon className={`w-5 h-5 ${config.color}`} />
                             {achievement.sport}
                           </CardTitle>
@@ -462,12 +466,13 @@ export function FacultyDetail() {
                 return (
                   <Card
                     key={index}
-                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border-2 hover:scale-105 transition-transform duration-300`}
+                    onClick={() => navigate(`/sport/${sportSlug(achievement.sport)}`)}
+                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border-2 hover:scale-105 transition-transform duration-300 cursor-pointer`}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2">
+                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2 hover:text-blue-400 transition-colors">
                             <Icon className={`w-5 h-5 ${config.color}`} />
                             {achievement.sport}
                           </CardTitle>
@@ -509,12 +514,13 @@ export function FacultyDetail() {
                 return (
                   <Card
                     key={index}
-                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border hover:scale-105 transition-transform duration-300`}
+                    onClick={() => navigate(`/sport/${sportSlug(achievement.sport)}`)}
+                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border hover:scale-105 transition-transform duration-300 cursor-pointer`}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2">
+                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2 hover:text-green-400 transition-colors">
                             <Icon className={`w-5 h-5 ${config.color}`} />
                             {achievement.sport}
                           </CardTitle>
@@ -562,7 +568,8 @@ export function FacultyDetail() {
             {faculty.sportsParticipated.map((sport) => (
               <Badge
                 key={sport}
-                className="px-4 py-2 text-base"
+                onClick={() => navigate(`/sport/${sportSlug(sport)}`)}
+                className="px-4 py-2 text-base cursor-pointer hover:opacity-80 transition-opacity"
                 style={{
                   backgroundColor: faculty.colors.primary + "20",
                   border: `2px solid ${faculty.colors.primary}50`,

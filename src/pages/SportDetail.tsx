@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, ArrowLeft, Users, Award, Calendar, Clock, MapPin } from "lucide-react";
+import { Trophy, ArrowLeft, Users, Award, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { fetchResults } from "@/lib/api";
@@ -254,23 +254,33 @@ export function SportDetail() {
                             <h3 className="text-sm font-semibold text-blue-400 mb-1">{event.event}</h3>
                           )}
                           <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Scheduled: {event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{event.time}</span>
-                            </div>
+                            {event.scheduled_date && (() => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              const scheduledDate = new Date(event.scheduled_date);
+                              scheduledDate.setHours(0, 0, 0, 0);
+                              const isPast = scheduledDate < today;
+                              const label = isPast ? "Concluded" : "Scheduled";
+                              
+                              return (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>{label}: {new Date(event.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                  </div>
+                                  {event.scheduled_time && (
+                                    <div className="flex items-center gap-1">
+                                      <span>{event.scheduled_time}</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                             <div className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
-                              <span>Main Grounds</span>
+                              <span>{event.venue || 'TBA'}</span>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-gray-500">Updated: </span>
-                          <span className="text-green-400 font-semibold">{event.date} {event.time}</span>
                         </div>
                       </div>
                     </div>
@@ -377,23 +387,33 @@ export function SportDetail() {
                             <h3 className="text-sm font-semibold text-pink-400 mb-1">{event.event}</h3>
                           )}
                           <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Scheduled: {event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{event.time}</span>
-                            </div>
+                            {event.scheduled_date && (() => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              const scheduledDate = new Date(event.scheduled_date);
+                              scheduledDate.setHours(0, 0, 0, 0);
+                              const isPast = scheduledDate < today;
+                              const label = isPast ? "Concluded" : "Scheduled";
+                              
+                              return (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>{label}: {new Date(event.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                  </div>
+                                  {event.scheduled_time && (
+                                    <div className="flex items-center gap-1">
+                                      <span>{event.scheduled_time}</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                             <div className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
-                              <span>Main Grounds</span>
+                              <span>{event.venue || 'TBA'}</span>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-gray-500">Updated: </span>
-                          <span className="text-green-400 font-semibold">{event.date} {event.time}</span>
                         </div>
                       </div>
                     </div>
@@ -500,23 +520,33 @@ export function SportDetail() {
                             <h3 className="text-sm font-semibold text-purple-400 mb-1">{event.event}</h3>
                           )}
                           <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Scheduled: {event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{event.time}</span>
-                            </div>
+                            {event.scheduled_date && (() => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              const scheduledDate = new Date(event.scheduled_date);
+                              scheduledDate.setHours(0, 0, 0, 0);
+                              const isPast = scheduledDate < today;
+                              const label = isPast ? "Concluded" : "Scheduled";
+                              
+                              return (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>{label}: {new Date(event.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                  </div>
+                                  {event.scheduled_time && (
+                                    <div className="flex items-center gap-1">
+                                      <span>{event.scheduled_time}</span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                             <div className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
-                              <span>Main Grounds</span>
+                              <span>{event.venue || 'TBA'}</span>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-gray-500">Updated: </span>
-                          <span className="text-green-400 font-semibold">{event.date} {event.time}</span>
                         </div>
                       </div>
                     </div>

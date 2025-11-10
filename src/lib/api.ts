@@ -122,26 +122,35 @@ export type FacultyOverview = {
 };
 
 type FacultyRow = { id: string; name: string; short_name: string; primary_color: string; secondary_color: string; logo_url: string };
-type FacultySportsRow = { faculty_id: string };
 type FacultyAchievementRow = { faculty_id: string; position: string; year: number | null; sports?: { name: string } | { name: string }[] | null };
 
 export async function fetchFacultiesOverview(): Promise<FacultyOverview[]> {
   if (!hasSupabaseEnv || !supabase) return [];
-  const [facRes, lbRes, fsRes, achRes] = await Promise.all([
+  const [facRes, lbRes, resultsRes, achRes] = await Promise.all([
     supabase.from('faculties').select('id,name,short_name,primary_color,secondary_color,logo_url'),
     supabase.from('leaderboard').select('name,rank,total_points'),
-    supabase.from('faculty_sports').select('faculty_id'),
+    supabase.from('result_positions').select('faculty_id,results(sport_id)'),
     supabase.from('faculty_achievements').select('faculty_id, position, year, sports(name)').order('year', { ascending: false })
   ]);
   if (facRes.error) throw facRes.error;
   if (lbRes.error) throw lbRes.error;
-  if (fsRes.error) throw fsRes.error;
+  if (resultsRes.error) throw resultsRes.error;
   if (achRes.error) throw achRes.error;
 
   const faculties = (facRes.data || []) as FacultyRow[];
   const leaderboard = (lbRes.data || []) as { name: string; rank: number; total_points: number }[];
-  const sportsCounts = new Map<string, number>();
-  (fsRes.data || [] as FacultySportsRow[]).forEach(r => sportsCounts.set(r.faculty_id, (sportsCounts.get(r.faculty_id) || 0) + 1));
+  
+  // Count distinct sports per faculty from result_positions
+  const sportsCounts = new Map<string, Set<string>>();
+  (resultsRes.data || []).forEach((r: any) => {
+    if (r.faculty_id && r.results?.sport_id) {
+      if (!sportsCounts.has(r.faculty_id)) {
+        sportsCounts.set(r.faculty_id, new Set());
+      }
+      sportsCounts.get(r.faculty_id)!.add(r.results.sport_id);
+    }
+  });
+  
   const latestByFaculty = new Map<string, { sport: string | null; position: string; year: number | null }>();
   (achRes.data || [] as FacultyAchievementRow[]).forEach(r => {
     const sportName = Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name ?? null : (r.sports as { name: string } | null | undefined)?.name ?? null;
@@ -157,7 +166,7 @@ export async function fetchFacultiesOverview(): Promise<FacultyOverview[]> {
       logo: f.logo_url,
       totalPoints: lb?.total_points ?? 0,
       rank: lb?.rank ?? null,
-      sportsCount: sportsCounts.get(f.id) || 0,
+      sportsCount: sportsCounts.get(f.id)?.size || 0,
       latestAchievement: latestByFaculty.get(f.id) || null
     } satisfies FacultyOverview;
   });
@@ -169,6 +178,7 @@ export type FacultyDetailData = {
   shortName: string;
   colors: { primary: string; secondary: string };
   logo: string;
+  rank: number | null;
   points: { mens: number; womens: number; total: number };
   sports: string[];
   achievements: { sport: string | null; position: string; year: number | null }[];
@@ -177,25 +187,34 @@ export type FacultyDetailData = {
 
 export async function fetchFacultyDetail(facultyId: string): Promise<FacultyDetailData | null> {
   if (!hasSupabaseEnv || !supabase) return null;
-  const [fRes, pRes, fsRes, achRes, tmRes, posRes] = await Promise.all([
+  const [fRes, pRes, lbRes, achRes, tmRes, posRes] = await Promise.all([
     supabase.from('faculties').select('id,name,short_name,primary_color,secondary_color,logo_url').eq('id', facultyId).single(),
     supabase.from('faculty_points').select('mens_points,womens_points,total_points').eq('faculty_id', facultyId).single(),
-    supabase.from('faculty_sports').select('sports(name)').eq('faculty_id', facultyId),
+    supabase.from('leaderboard').select('name,rank'),
     supabase.from('faculty_achievements').select('position,year,sports(name)').eq('faculty_id', facultyId).order('year', { ascending: false }),
     supabase.from('faculty_team_members').select('name,role,sports(name)').eq('faculty_id', facultyId),
-    supabase.from('result_positions').select('place,results(event_date,sports(name))').eq('faculty_id', facultyId)
+    supabase.from('result_positions').select('place,results(event_date,sport_id,sports(name))').eq('faculty_id', facultyId)
   ]);
   if (fRes.error) throw fRes.error;
   const f = fRes.data; if (!f) return null;
   if (pRes.error && pRes.error.code !== 'PGRST116') throw pRes.error;
-  if (fsRes.error) throw fsRes.error;
+  if (lbRes.error) throw lbRes.error;
   if (achRes.error) throw achRes.error;
   if (tmRes.error) throw tmRes.error;
   if (posRes.error) throw posRes.error;
 
-  const sports = ((fsRes.data || []) as { sports?: { name: string } | { name: string }[] | null }[])
-    .map(r => (Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name : (r.sports as { name: string } | null | undefined)?.name))
-    .filter(Boolean) as string[];
+  // Get rank from leaderboard
+  const lbEntry = (lbRes.data || []).find((r: any) => r.name === f.name);
+  const rank = lbEntry?.rank ?? null;
+
+  // Get distinct sports from result_positions
+  const sportsSet = new Set<string>();
+  (posRes.data || []).forEach((r: any) => {
+    const res = Array.isArray(r.results) ? r.results[0] : r.results;
+    const sportName = res ? (Array.isArray(res.sports) ? res.sports[0]?.name : res.sports?.name) : null;
+    if (sportName) sportsSet.add(sportName);
+  });
+  const sports = Array.from(sportsSet);
 
   const placements = ((posRes.data || []) as { place: number; results?: { event_date: string; sports?: { name: string } | { name: string }[] | null } | { event_date: string; sports?: { name: string } | { name: string }[] | null }[] | null }[])
     .map(r => {
@@ -244,6 +263,7 @@ export async function fetchFacultyDetail(facultyId: string): Promise<FacultyDeta
     shortName: f.short_name,
     colors: { primary: f.primary_color, secondary: f.secondary_color },
     logo: f.logo_url,
+    rank,
     points: { mens: pRes.data?.mens_points ?? 0, womens: pRes.data?.womens_points ?? 0, total: pRes.data?.total_points ?? 0 },
     sports,
     achievements,
@@ -300,10 +320,10 @@ export async function fetchScheduleCalendar(): Promise<ScheduleDay[]> {
 // --------------------------------------------------
 export async function fetchResults(): Promise<CompletedEvent[]> {
   if (!hasSupabaseEnv || !supabase) return [];
-  const { data, error } = await supabase.from('results_view').select('id,sport,event,category,gender,date,time,positions');
+  const { data, error } = await supabase.from('results_view').select('id,sport,event,category,gender,date,time,venue,scheduled_date,scheduled_time,positions');
   if (error) throw error;
-  const rows = (data || []) as { id: number; sport: string; event: string | null; category: CompletedEvent['category']; gender: CompletedEvent['gender']; date: string; time: string; positions: { place: number; faculty: string }[] }[];
-  return rows.map(r => ({ id: r.id, sport: r.sport, event: r.event ?? undefined, category: r.category, gender: r.gender, date: r.date, time: r.time, positions: Array.isArray(r.positions) ? r.positions : [] }));
+  const rows = (data || []) as { id: number; sport: string; event: string | null; category: CompletedEvent['category']; gender: CompletedEvent['gender']; date: string; time: string; venue?: string | null; scheduled_date?: string | null; scheduled_time?: string | null; positions: { place: number; faculty: string }[] }[];
+  return rows.map(r => ({ id: r.id, sport: r.sport, event: r.event ?? undefined, category: r.category, gender: r.gender, date: r.date, time: r.time, venue: r.venue ?? undefined, scheduled_date: r.scheduled_date ?? undefined, scheduled_time: r.scheduled_time ?? undefined, positions: Array.isArray(r.positions) ? r.positions : [] }));
 }
 
 // --------------------------------------------------
@@ -412,28 +432,28 @@ export async function fetchScheduledEvents(): Promise<ScheduledEventRowFull[]> {
   if (error) throw error;
   return (data || []) as ScheduledEventRowFull[];
 }
-// Suggest an event date/time when publishing series results
-async function suggestEventDateTimeForSport(sport_id: string): Promise<{ event_date: string; event_time: string }> {
+// Suggest an event date/time/venue when publishing series results
+async function suggestEventDateTimeForSport(sport_id: string): Promise<{ event_date: string; event_time: string; venue?: string | null }> {
   // Try to take the most recent scheduled event for this sport
   try {
     if (hasSupabaseEnv && supabase) {
       const { data, error } = await supabase
         .from('scheduled_events')
-        .select('event_date,start_time')
+        .select('event_date,start_time,venue')
         .eq('sport_id', sport_id)
         .order('event_date', { ascending: false })
         .order('start_time', { ascending: false, nullsFirst: false })
         .limit(1);
       if (error) throw error;
-      const row = (data || [])[0] as { event_date: string; start_time: string | null } | undefined;
+      const row = (data || [])[0] as { event_date: string; start_time: string | null; venue: string | null } | undefined;
       if (row && row.event_date) {
         const dateStr = row.event_date; // already YYYY-MM-DD
         if (row.start_time) {
           // start_time is a time value ('HH:MM:SS'), use as-is
-          return { event_date: dateStr, event_time: row.start_time };
+          return { event_date: dateStr, event_time: row.start_time, venue: row.venue ?? null };
         }
         // No explicit start time; fallback to noon to avoid 00:00 display
-        return { event_date: dateStr, event_time: '12:00:00' };
+        return { event_date: dateStr, event_time: '12:00:00', venue: row.venue ?? null };
       }
     }
   } catch (e) {
@@ -444,7 +464,7 @@ async function suggestEventDateTimeForSport(sport_id: string): Promise<{ event_d
   const pad = (n: number) => String(n).padStart(2, '0');
   const event_date = now.toISOString().slice(0, 10);
   const event_time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-  return { event_date, event_time };
+  return { event_date, event_time, venue: null };
 }
 export async function createScheduledEvent(payload: { event_date: string; sport_id?: string | null; sport_label?: string | null; time_range?: string | null; start_time?: string | null; end_time?: string | null; venue: string }) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
@@ -478,9 +498,9 @@ export async function fetchFacultiesList(): Promise<{ id: string; name: string; 
 // --------------------------------------------------
 // Results CRUD (admin)
 // --------------------------------------------------
-export async function createResult(payload: { sport_id: string; event?: string | null; category: 'Team Sport' | 'Individual Sport' | 'Athletics' | 'Swimming'; gender: "Men's" | "Women's" | 'Mixed'; event_date: string; event_time: string }) {
+export async function createResult(payload: { sport_id: string; event?: string | null; category: 'Team Sport' | 'Individual Sport' | 'Athletics' | 'Swimming'; gender: "Men's" | "Women's" | 'Mixed'; event_date: string; event_time: string; venue?: string | null }) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.from('results').insert([payload]).select();
+  const { data, error } = await supabase.from('results').insert([{ ...payload, venue: payload.venue ?? null }]).select();
   if (error) throw error;
   return data?.[0] as { id: number } | null;
 }
@@ -493,9 +513,9 @@ export async function addResultPositions(resultId: number, positions: Array<{ pl
 }
 export async function fetchResultsBySport(sportId: string) {
   if (!hasSupabaseEnv || !supabase) return [];
-  const { data, error } = await supabase.from('results').select('id,event,category,gender,event_date,event_time').eq('sport_id', sportId).order('event_date', { ascending: false });
+  const { data, error } = await supabase.from('results').select('id,event,category,gender,event_date,event_time,venue').eq('sport_id', sportId).order('event_date', { ascending: false });
   if (error) throw error;
-  return (data || []) as { id: number; event: string | null; category: string; gender: string; event_date: string; event_time: string }[];
+  return (data || []) as { id: number; event: string | null; category: string; gender: string; event_date: string; event_time: string; venue?: string | null }[];
 }
 export async function fetchResultPositions(resultId: number) {
   if (!hasSupabaseEnv || !supabase) return [];
@@ -561,10 +581,10 @@ export async function deleteResult(resultId: number) {
   const { error: posErr } = await supabase.from('result_positions').delete().eq('result_id', resultId); if (posErr) throw posErr;
   const { data, error } = await supabase.from('results').delete().eq('id', resultId).select(); if (error) throw error; return data;
 }
-export async function updateResultRow(resultId: number, payload: Partial<{ event: string | null; category: 'Team Sport' | 'Individual Sport' | 'Athletics' | 'Swimming'; gender: "Men's" | "Women's" | 'Mixed'; event_date: string; event_time: string }>) {
+export async function updateResultRow(resultId: number, payload: Partial<{ event: string | null; category: 'Team Sport' | 'Individual Sport' | 'Athletics' | 'Swimming'; gender: "Men's" | "Women's" | 'Mixed'; event_date: string; event_time: string; venue: string | null }>) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const patch: any = { ...payload }; if (patch.event === '') patch.event = null;
-  const { data, error } = await supabase.from('results').update(patch).eq('id', resultId).select('id,event,category,gender,event_date,event_time').single(); if (error) throw error; return data as any;
+  const { data, error } = await supabase.from('results').update(patch).eq('id', resultId).select('id,event,category,gender,event_date,event_time,venue').single(); if (error) throw error; return data as any;
 }
 export async function replaceResultPositionsAndReapply(resultId: number, positions: Array<{ place: number; faculty_id: string }>, customPoints?: Record<number, number>, participants?: Array<{ faculty_id: string; points?: number }>, applyMode: 'overall-only' | 'always' = 'overall-only') {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
@@ -630,16 +650,57 @@ export async function verifyAdminSession(): Promise<boolean> { return isCurrentU
 // --------------------------------------------------
 // Live series management
 // --------------------------------------------------
-export type AdminLiveSeries = { id: number; sport_id: string; title: string | null; is_finished: boolean; gender?: 'male' | 'female' | 'mixed' };
-export async function createLiveSeries(sport_id: string, title?: string | null, gender: 'male' | 'female' | 'mixed' = 'male') {
+export type AdminLiveSeries = { id: number; sport_id: string; title: string | null; is_finished: boolean; gender?: 'male' | 'female' | 'mixed'; venue?: string | null };
+export async function createLiveSeries(sport_id: string, title?: string | null, gender: 'male' | 'female' | 'mixed' = 'male', venue?: string | null) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.from('live_sport_series').insert([{ sport_id, title: title ?? null, gender }]).select('id,sport_id,title,is_finished,gender').single();
-  if (error) throw error; return data as AdminLiveSeries;
+  // Try with venue (new schema). If column doesn't exist, retry without.
+  try {
+    const { data, error } = await supabase
+      .from('live_sport_series')
+      .insert([{ sport_id, title: title ?? null, gender, venue: venue ?? null }])
+      .select('id,sport_id,title,is_finished,gender,venue')
+      .single();
+    if (error) throw error;
+    return data as AdminLiveSeries;
+  } catch (e: any) {
+    // Fallback: older DB without venue column
+    console.warn('createLiveSeries retrying without venue column', e?.message || e);
+    const { data, error } = await supabase
+      .from('live_sport_series')
+      .insert([{ sport_id, title: title ?? null, gender }])
+      .select('id,sport_id,title,is_finished,gender')
+      .single();
+    if (error) throw error;
+    return data as AdminLiveSeries;
+  }
 }
 export async function fetchActiveSeriesBySport(sport_id: string): Promise<AdminLiveSeries | null> {
   if (!hasSupabaseEnv || !supabase) return null;
-  const { data, error } = await supabase.from('live_sport_series').select('id,sport_id,title,is_finished,gender').eq('sport_id', sport_id).eq('is_finished', false).order('created_at', { ascending: false }).limit(1).maybeSingle();
-  if (error) throw error; return (data as AdminLiveSeries) ?? null;
+  try {
+    const { data, error } = await supabase
+      .from('live_sport_series')
+      .select('id,sport_id,title,is_finished,gender,venue')
+      .eq('sport_id', sport_id)
+      .eq('is_finished', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return (data as AdminLiveSeries) ?? null;
+  } catch (e: any) {
+    // Fallback selection without venue field
+    console.warn('fetchActiveSeriesBySport retrying without venue field', e?.message || e);
+    const { data, error } = await supabase
+      .from('live_sport_series')
+      .select('id,sport_id,title,is_finished,gender')
+      .eq('sport_id', sport_id)
+      .eq('is_finished', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return (data as AdminLiveSeries) ?? null;
+  }
 }
 export type AdminLiveMatch = { id: number; series_id: number; match_order: number; venue: string | null; stage: 'round_of_16' | 'quarter_final' | 'semi_final' | 'final' | null; faculty1_id: string; faculty2_id: string; faculty1_score: string | null; faculty2_score: string | null; status: string; status_text: string | null; is_finished: boolean; winner_faculty_id: string | null; commentary: string | null };
 export async function addLiveMatch(payload: Omit<AdminLiveMatch, 'id' | 'status' | 'is_finished' | 'winner_faculty_id'> & { status?: string; is_finished?: boolean; winner_faculty_id?: string | null }) {
@@ -657,13 +718,16 @@ export async function updateLiveMatch(id: number, patch: Partial<Pick<AdminLiveM
 }
 export async function deleteLiveMatch(id: number) { if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured'); const { error } = await supabase.from('live_series_matches').delete().eq('id', id); if (error) throw error; return true; }
 export async function finishSeries(series_id: number, podium: { champion: string; runner_up: string; third: string }) { if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured'); const { error } = await supabase.from('live_sport_series').update({ is_finished: true, winner_faculty_id: podium.champion, runner_up_faculty_id: podium.runner_up, third_place_faculty_id: podium.third }).eq('id', series_id); if (error) throw error; return true; }
-export async function applySeriesResultsToPointsAndResults(sport_id: string, podium: { champion: string; runner_up: string; third: string }, gender: "Men's" | "Women's" | 'Mixed' = "Men's", series_id?: number) {
+export async function applySeriesResultsToPointsAndResults(sport_id: string, podium: { champion: string; runner_up: string; third: string }, gender: "Men's" | "Women's" | 'Mixed' = "Men's", series_id?: number, venue?: string | null) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   // Prefer scheduled time for the sport; fall back to current time
-  const { event_date, event_time } = await suggestEventDateTimeForSport(sport_id);
+  const suggested = await suggestEventDateTimeForSport(sport_id);
+  const event_date = suggested.event_date;
+  const event_time = suggested.event_time;
+  const venueToUse = venue ?? suggested.venue ?? null;
   const { data: resRow, error: resErr } = await supabase
     .from('results')
-    .insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date, event_time }])
+    .insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date, event_time, venue: venueToUse }])
     .select('id')
     .single();
   if (resErr) throw resErr;
@@ -699,14 +763,17 @@ export async function applySeriesResultsToPointsAndResults(sport_id: string, pod
   } catch (e) { console.warn('series achievements warn', e); }
   return { resultId };
 }
-export async function applyCustomSeriesResultsAndPoints(args: { sport_id: string; gender: "Men's" | "Women's" | 'Mixed'; placements: Array<{ faculty_id: string; label: 'champion' | 'runner_up' | 'second_runner_up' | 'third_runner_up'; points: number }>; participants?: Array<{ faculty_id: string; points?: number }>; series_id?: number }) {
+export async function applyCustomSeriesResultsAndPoints(args: { sport_id: string; gender: "Men's" | "Women's" | 'Mixed'; placements: Array<{ faculty_id: string; label: 'champion' | 'runner_up' | 'second_runner_up' | 'third_runner_up'; points: number }>; participants?: Array<{ faculty_id: string; points?: number }>; series_id?: number; venue?: string | null }) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
-  const { sport_id, gender, placements, participants = [], series_id } = args;
+  const { sport_id, gender, placements, participants = [], series_id, venue } = args;
   // Prefer scheduled time for the sport; fall back to current time
-  const { event_date, event_time } = await suggestEventDateTimeForSport(sport_id);
+  const suggested = await suggestEventDateTimeForSport(sport_id);
+  const event_date = suggested.event_date;
+  const event_time = suggested.event_time;
+  const venueToUse = venue ?? suggested.venue ?? null;
   const { data: resRow, error: resErr } = await supabase
     .from('results')
-    .insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date, event_time }])
+    .insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date, event_time, venue: venueToUse }])
     .select('id')
     .single();
   if (resErr) throw resErr;

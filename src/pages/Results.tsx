@@ -334,11 +334,26 @@ export function Results() {
                     </div>
                   </div>
                   <div className="text-right text-xs">
-                    <div className="text-gray-500 mb-1">Updated</div>
-                    <div className="text-gray-300 font-medium animate-pulse">
-                      {event.date}
-                    </div>
-                    <div className="text-gray-400">{event.time}</div>
+                    {event.scheduled_date && (() => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const scheduledDate = new Date(event.scheduled_date);
+                      scheduledDate.setHours(0, 0, 0, 0);
+                      const isPast = scheduledDate < today;
+                      const label = isPast ? "Concluded" : "Scheduled";
+                      
+                      return (
+                        <>
+                          <div className="text-gray-500 mb-1">{label}</div>
+                          <div className="text-gray-300 font-medium">
+                            {event.scheduled_date && new Date(event.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                          {event.scheduled_time && (
+                            <div className="text-gray-400">{event.scheduled_time}</div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </CardHeader>

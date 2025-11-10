@@ -14,7 +14,7 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 
 type Sport = { id: string; name: string; };
-type ResultRow = { id: number; event: string | null; category: 'Team Sport' | 'Individual Sport' | 'Athletics' | 'Swimming'; gender: "Men's" | "Women's" | 'Mixed'; event_date: string; event_time: string };
+type ResultRow = { id: number; event: string | null; category: 'Team Sport' | 'Individual Sport' | 'Athletics' | 'Swimming'; gender: "Men's" | "Women's" | 'Mixed'; event_date: string; event_time: string; venue?: string | null };
 type PositionRow = { place: number; faculty_id: string; faculties?: { name: string } | { name: string }[] | null };
 
 const ManageResultsPage: React.FC = () => {
@@ -80,7 +80,7 @@ const ManageResultsPage: React.FC = () => {
   // Metadata editing
   function startEditMeta(r: ResultRow) {
     setEditingMetaId(r.id);
-    setMetaDraft({ event: r.event ?? '', category: r.category, gender: r.gender, event_date: r.event_date, event_time: r.event_time });
+  setMetaDraft({ event: r.event ?? '', category: r.category, gender: r.gender, event_date: r.event_date, event_time: r.event_time, venue: r.venue ?? '' });
   }
   async function saveMeta(id: number) {
     setError(null);
@@ -92,6 +92,7 @@ const ManageResultsPage: React.FC = () => {
         gender: metaDraft.gender,
         event_date: metaDraft.event_date,
         event_time: metaDraft.event_time,
+        venue: (metaDraft.venue ?? '').trim() || null,
       };
       await updateResultRow(id, patch);
       const updated = await fetchResultsBySport(selectedSport);
@@ -239,6 +240,10 @@ const ManageResultsPage: React.FC = () => {
                             <label className="block text-xs text-gray-500">Time</label>
                             <input type="time" defaultValue={r.event_time} onChange={e=>setMetaDraft(d=>({...d, event_time: e.target.value}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
                           </div>
+                          <div className="md:col-span-3">
+                            <label className="block text-xs text-gray-500">Venue</label>
+                            <input defaultValue={r.venue ?? ''} onChange={e=>setMetaDraft(d=>({...d, venue: e.target.value}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" placeholder="Main Ground" />
+                          </div>
                           <div className="md:col-span-12 flex justify-end gap-2">
                             <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={()=>{ setEditingMetaId(null); setMetaDraft({}); }}>Cancel</button>
                             <button className="px-3 py-1.5 rounded-md bg-green-700 hover:bg-green-600" onClick={()=>saveMeta(r.id)}>{saving ? 'Saving…' : 'Save'}</button>
@@ -248,7 +253,7 @@ const ManageResultsPage: React.FC = () => {
                         <div className="flex items-center justify-between gap-3">
                           <div className="text-sm text-gray-300">
                             <div className="font-medium">{r.event || 'Overall standings'} • {r.gender}</div>
-                            <div className="text-xs text-gray-500">{r.category} • {r.event_date} {r.event_time}</div>
+                            <div className="text-xs text-gray-500">{r.category} • {r.event_date} {r.event_time} • {r.venue || '—'}</div>
                           </div>
                           <div className="flex gap-2">
                             <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={()=>startEditMeta(r)}>Edit meta</button>
