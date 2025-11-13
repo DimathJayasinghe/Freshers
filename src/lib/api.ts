@@ -452,7 +452,8 @@ export async function createResult(payload: { sport_id: string; event?: string |
 }
 export async function addResultPositions(resultId: number, positions: Array<{ place: number; faculty_id: string }>) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
-  const rows = positions.map(p => ({ result_id: resultId, place: p.place, faculty_id: p.faculty_id }));
+  const normalized = normalizePositionsForStorage(positions);
+  const rows = normalized.map(p => ({ result_id: resultId, place: p.place, faculty_id: p.faculty_id }));
   const { data, error } = await supabase.from('result_positions').insert(rows).select();
   if (error) throw error;
   return data;
@@ -475,6 +476,48 @@ function scoreForPlace(place: number, custom?: Record<number, number>) {
   if (custom && Number.isFinite(custom[place])) return Number(custom[place]);
   if (place === 1) return 7; if (place === 2) return 5; if (place === 3) return 3; if (place === 4) return 2; return 1;
 }
+
+// Compute deltas with tie handling and competition ranking (1,1,3)
+// - positions: array of { place, faculty_id }
+// - custom: optional map overriding base points per rank
+// Rules:
+//   1) If multiple faculties share a rank r, split that rank's points equally among them
+//   2) Skip the next position(s) by the size of the tie (competition ranking)
+function computeTieAwareDeltas(positions: Array<{ place: number; faculty_id: string }>, custom?: Record<number, number>): Map<string, number> {
+  const byPlace = new Map<number, string[]>();
+  for (const p of positions) {
+    if (!p.faculty_id || !Number.isFinite(p.place)) continue;
+    byPlace.set(p.place, [...(byPlace.get(p.place) || []), p.faculty_id]);
+  }
+  const groups = Array.from(byPlace.entries()).sort((a,b)=>a[0]-b[0]).map(([_, ids])=>ids);
+  const deltas = new Map<string, number>();
+  let rank = 1; // effective rank according to competition ranking
+  for (const ids of groups) {
+    const base = scoreForPlace(rank, custom);
+    const share = base / Math.max(1, ids.length);
+    ids.forEach(fid => deltas.set(fid, (deltas.get(fid) || 0) + share));
+    rank += ids.length; // skip ranks according to tie size
+  }
+  return deltas;
+}
+
+// Normalize an incoming positions list so stored places follow competition ranking (1,1,3)
+function normalizePositionsForStorage(rows: Array<{ place: number; faculty_id: string }>): Array<{ place: number; faculty_id: string }>{
+  const byPlace = new Map<number, { place: number; faculty_id: string }[]>();
+  for (const r of rows) {
+    if (!r.faculty_id || !Number.isFinite(r.place)) continue;
+    byPlace.set(r.place, [...(byPlace.get(r.place) || []), { place: r.place, faculty_id: r.faculty_id }]);
+  }
+  const placesSorted = Array.from(byPlace.keys()).sort((a,b)=>a-b);
+  const result: Array<{ place: number; faculty_id: string }> = [];
+  let nextPlace = 1;
+  for (const nominal of placesSorted) {
+    const group = byPlace.get(nominal)!;
+    for (const r of group) result.push({ place: nextPlace, faculty_id: r.faculty_id });
+    nextPlace += group.length; // competition ranking skip
+  }
+  return result;
+}
 export async function applyPointsForResult(resultId: number, customPoints?: Record<number, number>, mode: 'overall-only' | 'always' = 'overall-only') {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const rRes = await supabase.from('results').select('id,event,gender').eq('id', resultId).single();
@@ -483,9 +526,9 @@ export async function applyPointsForResult(resultId: number, customPoints?: Reco
   const name = (result.event || '').toLowerCase(); const isOverall = name.includes('overall') || name.trim() === '';
   if (mode === 'overall-only' && !isOverall) return null;
   const pos = await fetchResultPositions(resultId); if (!pos.length) return null;
-  const deltas = new Map<string, number>(); pos.forEach(p => deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + scoreForPlace(p.place, customPoints)));
+  const deltas = computeTieAwareDeltas(pos as any, customPoints);
   const facIds = Array.from(deltas.keys()); const { data: existingRows } = await supabase.from('faculty_points').select('faculty_id,mens_points,womens_points').in('faculty_id', facIds);
-  const existingMap = new Map<string, { mens_points: number; womens_points: number }>(); (existingRows || []).forEach((r: any) => existingMap.set(r.faculty_id, { mens_points: (r.mens_points ?? 0) as number, womens_points: (r.womens_points ?? 0) as number }));
+  const existingMap = new Map<string, { mens_points: number; womens_points: number }>(); (existingRows || []).forEach((r: any) => existingMap.set(r.faculty_id, { mens_points: Number(r.mens_points ?? 0), womens_points: Number(r.womens_points ?? 0) }));
   const { isMens, isWomens } = parseGenderFlags(result.gender);
   for (const [faculty_id, delta] of deltas.entries()) {
     const current = existingMap.get(faculty_id);
@@ -508,9 +551,9 @@ export async function removePointsForResult(resultId: number, customPoints?: Rec
   const name = (result.event || '').toLowerCase(); const isOverall = name.includes('overall') || name.trim() === '';
   if (mode === 'overall-only' && !isOverall) return null;
   const pos = await fetchResultPositions(resultId); if (!pos.length) return null;
-  const deltas = new Map<string, number>(); pos.forEach(p => deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + scoreForPlace(p.place, customPoints)));
+  const deltas = computeTieAwareDeltas(pos as any, customPoints);
   const facIds = Array.from(deltas.keys()); const { data: existingRows } = await supabase.from('faculty_points').select('faculty_id,mens_points,womens_points').in('faculty_id', facIds);
-  const existingMap = new Map<string, { mens_points: number; womens_points: number }>(); (existingRows || []).forEach((r: any) => existingMap.set(r.faculty_id, { mens_points: (r.mens_points ?? 0) as number, womens_points: (r.womens_points ?? 0) as number }));
+  const existingMap = new Map<string, { mens_points: number; womens_points: number }>(); (existingRows || []).forEach((r: any) => existingMap.set(r.faculty_id, { mens_points: Number(r.mens_points ?? 0), womens_points: Number(r.womens_points ?? 0) }));
   const { isMens, isWomens } = parseGenderFlags(result.gender);
   for (const [faculty_id, delta] of deltas.entries()) {
     const current = existingMap.get(faculty_id) ?? { mens_points: 0, womens_points: 0 };
@@ -536,12 +579,13 @@ export async function replaceResultPositionsAndReapply(resultId: number, positio
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   try { await removePointsForResult(resultId, customPoints, applyMode); } catch (e) { console.warn('remove points warn', e); }
   const { error: delErr } = await supabase.from('result_positions').delete().eq('result_id', resultId); if (delErr) throw delErr;
-  const rows = positions.filter(p => p.faculty_id && p.place > 0).map(p => ({ result_id: resultId, place: p.place, faculty_id: p.faculty_id }));
+  const normalized = normalizePositionsForStorage(positions.filter(p => p.faculty_id && p.place > 0));
+  const rows = normalized.map(p => ({ result_id: resultId, place: p.place, faculty_id: p.faculty_id }));
   if (rows.length) { const { error: insErr } = await supabase.from('result_positions').insert(rows); if (insErr) throw insErr; }
   try { await applyPointsForResult(resultId, customPoints, applyMode); } catch (e) { console.warn('apply points warn', e); }
   try {
     const part = (participants || []).filter(p => p.faculty_id);
-    const placedIds = new Set<string>(positions.map(p => p.faculty_id));
+    const placedIds = new Set<string>(normalized.map(p => p.faculty_id));
     const filtered = part.filter(p => !placedIds.has(p.faculty_id));
     if (filtered.length) {
       const rRes = await supabase.from('results').select('gender').eq('id', resultId).single();
@@ -549,8 +593,8 @@ export async function replaceResultPositionsAndReapply(resultId: number, positio
       const deltas = new Map<string, number>();
       filtered.forEach(p => deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + (Number.isFinite(p.points as number) ? Number(p.points) : 1)));
       const facIds = Array.from(deltas.keys());
-      const { data: existingRows } = await supabase.from('faculty_points').select('faculty_id,mens_points,womens_points').in('faculty_id', facIds);
-  const existingMap = new Map<string, { mens_points: number; womens_points: number }>(); (existingRows || []).forEach((r: any) => existingMap.set(r.faculty_id, { mens_points: (r.mens_points ?? 0) as number, womens_points: (r.womens_points ?? 0) as number }));
+    const { data: existingRows } = await supabase.from('faculty_points').select('faculty_id,mens_points,womens_points').in('faculty_id', facIds);
+  const existingMap = new Map<string, { mens_points: number; womens_points: number }>(); (existingRows || []).forEach((r: any) => existingMap.set(r.faculty_id, { mens_points: Number(r.mens_points ?? 0), womens_points: Number(r.womens_points ?? 0) }));
       for (const [faculty_id, delta] of deltas.entries()) {
         const current = existingMap.get(faculty_id);
         if (current) {
@@ -622,7 +666,18 @@ export async function updateLiveMatch(id: number, patch: Partial<Pick<AdminLiveM
   if (error) throw error; return data as AdminLiveMatch;
 }
 export async function deleteLiveMatch(id: number) { if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured'); const { error } = await supabase.from('live_series_matches').delete().eq('id', id); if (error) throw error; return true; }
-export async function finishSeries(series_id: number, podium: { champion: string; runner_up: string; third: string }) { if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured'); const { error } = await supabase.from('live_sport_series').update({ is_finished: true, winner_faculty_id: podium.champion, runner_up_faculty_id: podium.runner_up, third_place_faculty_id: podium.third }).eq('id', series_id); if (error) throw error; return true; }
+export async function finishSeries(series_id: number, podium: { champion?: string | null; runner_up?: string | null; third?: string | null }) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const champion = podium.champion && podium.champion.trim() !== '' ? podium.champion : null;
+  const runner_up = podium.runner_up && podium.runner_up.trim() !== '' ? podium.runner_up : null;
+  const third = podium.third && podium.third.trim() !== '' ? podium.third : null;
+  const { error } = await supabase
+    .from('live_sport_series')
+    .update({ is_finished: true, winner_faculty_id: champion, runner_up_faculty_id: runner_up, third_place_faculty_id: third })
+    .eq('id', series_id);
+  if (error) throw error;
+  return true;
+}
 export async function applySeriesResultsToPointsAndResults(sport_id: string, podium: { champion: string; runner_up: string; third: string }, gender: "Men's" | "Women's" | 'Mixed' = "Men's", series_id?: number) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const { data: resRow, error: resErr } = await supabase.from('results').insert([{ sport_id, event: 'Championship Standings', category: 'Team Sport', gender, event_date: new Date().toISOString().slice(0,10), event_time: '00:00:00' }]).select('id').single(); if (resErr) throw resErr;
@@ -631,7 +686,7 @@ export async function applySeriesResultsToPointsAndResults(sport_id: string, pod
   const { error: posErr } = await supabase.from('result_positions').insert(pos); if (posErr) throw posErr;
   const deltas = new Map<string, number>([[podium.champion,7],[podium.runner_up,5],[podium.third,3]]);
   const facIds = Array.from(deltas.keys()); const { data: existingRows } = await supabase.from('faculty_points').select('faculty_id,mens_points,womens_points').in('faculty_id', facIds);
-  const existingMap = new Map<string,{ mens_points: number; womens_points: number }>(); (existingRows||[]).forEach((r:any)=>existingMap.set(r.faculty_id,{ mens_points:(r.mens_points??0) as number, womens_points:(r.womens_points??0) as number }));
+  const existingMap = new Map<string,{ mens_points: number; womens_points: number }>(); (existingRows||[]).forEach((r:any)=>existingMap.set(r.faculty_id,{ mens_points:Number(r.mens_points??0), womens_points:Number(r.womens_points??0) }));
   const { isMens, isWomens } = parseGenderFlags(gender);
   for (const [faculty_id, delta] of deltas.entries()) {
     const current = existingMap.get(faculty_id);
@@ -668,7 +723,7 @@ export async function applyCustomSeriesResultsAndPoints(args: { sport_id: string
   const deltas = new Map<string, number>(); placements.forEach(p => deltas.set(p.faculty_id, (deltas.get(p.faculty_id) || 0) + (Number.isFinite(p.points)?Number(p.points):0))); participants.forEach(pp => { if (!pp.faculty_id) return; const pts = Number.isFinite(pp.points as number)?Number(pp.points):1; deltas.set(pp.faculty_id,(deltas.get(pp.faculty_id)||0)+pts); });
   const facIds = Array.from(deltas.keys()); if (facIds.length) {
     const { data: existingRows } = await supabase.from('faculty_points').select('faculty_id,mens_points,womens_points').in('faculty_id', facIds);
-  const existingMap = new Map<string,{ mens_points: number; womens_points: number }>(); (existingRows||[]).forEach((r:any)=>existingMap.set(r.faculty_id,{ mens_points:(r.mens_points??0) as number, womens_points:(r.womens_points??0) as number }));
+  const existingMap = new Map<string,{ mens_points: number; womens_points: number }>(); (existingRows||[]).forEach((r:any)=>existingMap.set(r.faculty_id,{ mens_points:Number(r.mens_points??0), womens_points:Number(r.womens_points??0) }));
     const { isMens, isWomens } = parseGenderFlags(gender);
     for (const [faculty_id, delta] of deltas.entries()) {
       const current = existingMap.get(faculty_id);
