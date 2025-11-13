@@ -314,7 +314,9 @@ export function Results() {
                           {event.gender}
                         </span>
                         {event.event && (
-                          <span className="text-gray-400 text-sm">
+                          <span
+                            className={`text-gray-400 text-sm ${/championship\s+standings/i.test(event.event) ? 'hidden sm:inline' : ''}`}
+                          >
                             {event.event}
                           </span>
                         )}
@@ -339,7 +341,6 @@ export function Results() {
                     <div className="text-gray-300 font-medium animate-pulse">
                       {event.date}
                     </div>
-                    <div className="text-gray-400">{event.time}</div>
                   </div>
                 </div>
               </CardHeader>
