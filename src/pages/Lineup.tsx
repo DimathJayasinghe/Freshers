@@ -23,17 +23,7 @@ export function Lineup() {
     return () => { mounted = false; };
   }, []);
 
-  const handleSportClick = (sport: string) => {
-
-
-    // Generate a slug from the sport label for routing
-    const sportId = sport.toLowerCase().replace(/\s+/g, '-').replace(/[()&']/g, '');
-    if (sportId === 'closing-ceremony') {
-      navigate('/closing-ceremony');
-    } else {
-      navigate(`/sport/${sportId}`);
-    }
-  };
+  // Click on schedule items disabled by request; hover effects retained
 
   // Compute filtered list: by default show only upcoming (today or later)
   const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
@@ -176,8 +166,7 @@ export function Lineup() {
                       {day.events.map((event, eventIndex) => (
                         <div key={eventIndex}>
                           <div
-                            onClick={() => handleSportClick(event.sport)}
-                            className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-gradient-to-r from-white/5 to-transparent backdrop-blur-sm rounded-lg border border-white/10 hover:border-red-500/50 hover:bg-white/10 hover:shadow-lg hover:shadow-red-500/10 transition-all cursor-pointer group/event"
+                            className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-gradient-to-r from-white/5 to-transparent backdrop-blur-sm rounded-lg border border-white/10 hover:border-red-500/50 hover:bg-white/10 hover:shadow-lg hover:shadow-red-500/10 transition-all group/event"
                           >
                             {/* Sport Name */}
                             <div className="md:col-span-5 flex items-center gap-3">
