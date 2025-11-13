@@ -108,11 +108,14 @@ export function Leaderboard() {
                   key={`${team.code}-${index}`}
                   onClick={() => handleFacultyClick(team.name)}
                   className={`cursor-pointer transition-all duration-300 hover:scale-105 animate-scale-in ${
-                    index === 0 
-                      ? 'md:order-2 bg-gradient-to-br from-yellow-500/20 via-amber-600/10 to-yellow-500/20 border-yellow-500/50 shadow-lg shadow-yellow-500/20' 
-                      : index === 1
-                      ? 'md:order-1 bg-gradient-to-br from-gray-400/20 via-gray-500/10 to-gray-400/20 border-gray-400/50'
-                      : 'md:order-3 bg-gradient-to-br from-orange-600/20 via-orange-700/10 to-orange-600/20 border-orange-500/50'
+                    // Keep the nice centered layout for the first card, but color by computed rank
+                    (index === 0 ? 'md:order-2' : index === 1 ? 'md:order-1' : 'md:order-3')
+                  } ${
+                    team.computedRank === 1
+                      ? 'bg-gradient-to-br from-yellow-500/20 via-amber-600/10 to-yellow-500/20 border-yellow-500/50 shadow-lg shadow-yellow-500/20'
+                      : team.computedRank === 2
+                      ? 'bg-gradient-to-br from-gray-400/20 via-gray-500/10 to-gray-400/20 border-gray-400/50'
+                      : 'bg-gradient-to-br from-orange-600/20 via-orange-700/10 to-orange-600/20 border-orange-500/50'
                   }`}
                   style={{ animationDelay: `${index * 100 + 300}ms` }}
                 >
