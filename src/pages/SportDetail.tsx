@@ -3,9 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, ArrowLeft, Users, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { fetchResults } from "@/lib/api";
+import { fetchResults, fetchFacultiesList } from "@/lib/api";
 import { getShortFacultyName } from "@/data/tournamentData";
-import { getFacultyIdByName } from "@/data/facultiesData";
 
 export function SportDetail() {
   const { sportName } = useParams<{ sportName: string }>();
@@ -14,15 +13,30 @@ export function SportDetail() {
   const [showWomens, setShowWomens] = useState(true);
   const [showMixed, setShowMixed] = useState(true);
   const [allResults, setAllResults] = useState([] as Awaited<ReturnType<typeof fetchResults>>);
+  const [facNameToId, setFacNameToId] = useState<Map<string, string>>(new Map());
+  const [facNameToShort, setFacNameToShort] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    fetchResults()
-      .then((rows) => { if (mounted) setAllResults(rows || []); })
-      .catch((e) => { console.error('[SportDetail] fetchResults error', e); if (mounted) setError('Failed to load results'); })
+    Promise.all([fetchResults(), fetchFacultiesList()])
+      .then(([rows, facs]) => {
+        if (!mounted) return;
+        setAllResults(rows || []);
+        const idMap = new Map<string, string>();
+        const shortMap = new Map<string, string>();
+        (facs || []).forEach(f => {
+          if (f?.name) {
+            if (f.id) idMap.set(f.name, f.id);
+            if ((f as any).short_name) shortMap.set(f.name, (f as any).short_name);
+          }
+        });
+        setFacNameToId(idMap);
+        setFacNameToShort(shortMap);
+      })
+      .catch((e) => { console.error('[SportDetail] initial load error', e); if (mounted) setError('Failed to load results'); })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
@@ -30,7 +44,7 @@ export function SportDetail() {
   // Handle faculty name click
   const handleFacultyClick = (e: React.MouseEvent, facultyName: string) => {
     e.stopPropagation();
-    const facultyId = getFacultyIdByName(facultyName);
+    const facultyId = facNameToId.get(facultyName);
     if (facultyId) {
       navigate(`/faculty/${facultyId}`);
     }
@@ -294,7 +308,7 @@ export function SportDetail() {
                               className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
                               onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
-                              {getShortFacultyName(position.faculty)}
+                              {facNameToShort.get(position.faculty) ?? getShortFacultyName(position.faculty)}
                             </div>
                             <div 
                               className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
@@ -319,7 +333,7 @@ export function SportDetail() {
                             >
                               {position.place === 1 && '🥇 Champion'}
                               {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Third'}
+                              {position.place === 3 && '🥉 Second Runner-up'}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
@@ -395,7 +409,7 @@ export function SportDetail() {
                               className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
                               onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
-                              {getShortFacultyName(position.faculty)}
+                              {facNameToShort.get(position.faculty) ?? getShortFacultyName(position.faculty)}
                             </div>
                             <div 
                               className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
@@ -420,7 +434,7 @@ export function SportDetail() {
                             >
                               {position.place === 1 && '🥇 Champion'}
                               {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Third'}
+                              {position.place === 3 && '🥉 Second Runner-up'}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
@@ -496,7 +510,7 @@ export function SportDetail() {
                               className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
                               onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
-                              {getShortFacultyName(position.faculty)}
+                              {facNameToShort.get(position.faculty) ?? getShortFacultyName(position.faculty)}
                             </div>
                             <div 
                               className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
@@ -521,7 +535,7 @@ export function SportDetail() {
                             >
                               {position.place === 1 && '🥇 Champion'}
                               {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Third'}
+                              {position.place === 3 && '🥉 Second Runner-up'}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
