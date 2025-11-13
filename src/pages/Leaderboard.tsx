@@ -1,17 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award, Sparkles } from "lucide-react";
 import type { TeamData } from "../data/leaderboardData";
-import { getFacultyIdByName } from "../data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useState } from "react";
-import { fetchLeaderboard } from "../lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { fetchLeaderboard, fetchFacultiesList } from "../lib/api";
 
 export function Leaderboard() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  type RankedTeam = TeamData & { computedRank: number };
+  const [facByName, setFacByName] = useState<Record<string, string>>({});
+  const [facByCode, setFacByCode] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -25,17 +27,52 @@ export function Leaderboard() {
         // Fallback to static data silently
       })
       .finally(() => { if (mounted) setLoading(false); });
+    // Build a name/code -> id lookup for navigation
+    fetchFacultiesList()
+      .then(list => {
+        if (!mounted || !list) return;
+        const byName: Record<string, string> = {};
+        const byCode: Record<string, string> = {};
+        list.forEach(f => {
+          if (f.name) byName[f.name.toLowerCase()] = f.id;
+          if (f.short_name) byCode[f.short_name.toLowerCase()] = f.id;
+        });
+        setFacByName(byName);
+        setFacByCode(byCode);
+      })
+      .catch(err => console.warn('[Leaderboard] faculties list fetch warn', err));
     return () => {
       mounted = false;
     };
   }, []);
 
-  // Handle faculty name click
-  const handleFacultyClick = (facultyName: string) => {
-    const facultyId = getFacultyIdByName(facultyName);
-    if (facultyId) {
-      navigate(`/faculty/${facultyId}`);
-    }
+  // Compute competition ranking (1,1,3) based on totalPoints and keep list sorted desc by total
+  const rankedRows = useMemo<RankedTeam[]>(() => {
+    if (!rows || rows.length === 0) return [] as RankedTeam[];
+    const sorted = [...rows].sort((a, b) => {
+      const at = Number(a.totalPoints);
+      const bt = Number(b.totalPoints);
+      if (bt !== at) return bt - at; // desc by total points
+      // stable tie-breaker for deterministic order
+      return (a.name || "").localeCompare(b.name || "");
+    });
+    let prevPoints: number | null = null;
+    let prevRank = 0;
+    return sorted.map<RankedTeam>((t, idx) => {
+      const pts = Number(t.totalPoints);
+      const rank = prevPoints !== null && pts === prevPoints ? prevRank : idx + 1;
+      prevPoints = pts;
+      prevRank = rank;
+      return { ...t, computedRank: rank };
+    });
+  }, [rows]);
+
+  // Handle faculty click using name/code -> id lookup
+  const handleFacultyClick = (facultyName: string, facultyCode?: string) => {
+    const idFromCode = facultyCode ? facByCode[facultyCode.toLowerCase()] : undefined;
+    const idFromName = facultyName ? facByName[facultyName.toLowerCase()] : undefined;
+    const facultyId = idFromCode || idFromName;
+    if (facultyId) navigate(`/faculty/${facultyId}`);
   };
 
   const getMedalIcon = (rank: number) => {
@@ -81,22 +118,25 @@ export function Leaderboard() {
                   </CardContent>
                 </Card>
               ))}
-              {!loading && rows.slice(0, 3).map((team, index) => (
+              {!loading && rankedRows.slice(0, 3).map((team, index) => (
                 <Card
-                  key={team.rank}
-                  onClick={() => handleFacultyClick(team.name)}
+                  key={`${team.code}-${index}`}
+                  onClick={() => handleFacultyClick(team.name, team.code)}
                   className={`cursor-pointer transition-all duration-300 hover:scale-105 animate-scale-in ${
-                    index === 0 
-                      ? 'md:order-2 bg-gradient-to-br from-yellow-500/20 via-amber-600/10 to-yellow-500/20 border-yellow-500/50 shadow-lg shadow-yellow-500/20' 
-                      : index === 1
-                      ? 'md:order-1 bg-gradient-to-br from-gray-400/20 via-gray-500/10 to-gray-400/20 border-gray-400/50'
-                      : 'md:order-3 bg-gradient-to-br from-orange-600/20 via-orange-700/10 to-orange-600/20 border-orange-500/50'
+                    // Keep the nice centered layout for the first card, but color by computed rank
+                    (index === 0 ? 'md:order-2' : index === 1 ? 'md:order-1' : 'md:order-3')
+                  } ${
+                    team.computedRank === 1
+                      ? 'bg-gradient-to-br from-yellow-500/20 via-amber-600/10 to-yellow-500/20 border-yellow-500/50 shadow-lg shadow-yellow-500/20'
+                      : team.computedRank === 2
+                      ? 'bg-gradient-to-br from-gray-400/20 via-gray-500/10 to-gray-400/20 border-gray-400/50'
+                      : 'bg-gradient-to-br from-orange-600/20 via-orange-700/10 to-orange-600/20 border-orange-500/50'
                   }`}
                   style={{ animationDelay: `${index * 100 + 300}ms` }}
                 >
                   <CardContent className="p-6 text-center">
                     <div className="mb-3 flex justify-center">
-                      {getMedalIcon(team.rank)}
+                      {getMedalIcon(team.computedRank)}
                     </div>
                     <h3 className="text-white font-bold text-lg mb-1">{team.code}</h3>
                     <p className="text-gray-400 text-xs mb-3 line-clamp-1">{team.name}</p>
@@ -167,12 +207,12 @@ export function Leaderboard() {
                   </div>
                 </div>
               ))}
-              {!loading && rows.map((team, index) => (
+              {!loading && rankedRows.map((team, index) => (
                 <div
-                  key={team.rank}
-                  onClick={() => handleFacultyClick(team.name)}
+                  key={`${team.code}-${index}`}
+                  onClick={() => handleFacultyClick(team.name, team.code)}
                   className={`grid grid-cols-1 md:grid-cols-10 gap-4 p-4 rounded-lg border transition-all duration-300 hover:scale-[1.02] cursor-pointer group animate-fade-in-up ${
-                    team.rank <= 3
+                    team.computedRank <= 3
                       ? "bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5 border-yellow-500/30 hover:border-yellow-500/60 hover:shadow-lg hover:shadow-yellow-500/10"
                       : "bg-white/5 backdrop-blur-sm border-white/10 hover:border-red-500/40 hover:shadow-md"
                   }`}
@@ -182,7 +222,7 @@ export function Leaderboard() {
                   <div className="md:col-span-1 flex md:justify-center items-center">
                     <div className="flex items-center gap-3 md:block md:text-center">
                       <div className="flex justify-center transform group-hover:scale-110 transition-transform">
-                        {getMedalIcon(team.rank)}
+                        {getMedalIcon(team.computedRank)}
                       </div>
                       <div className="md:hidden flex-1">
                         <span className="text-white font-semibold text-base block">
@@ -201,9 +241,9 @@ export function Leaderboard() {
                       </h3>
                       <div className="flex items-center gap-2">
                         <p className="text-gray-400 text-xs">{team.code}</p>
-                        {team.rank <= 3 && (
+                        {team.computedRank <= 3 && (
                           <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-500/50 text-xs px-2 py-0">
-                            Top {team.rank}
+                            Top {team.computedRank}
                           </Badge>
                         )}
                       </div>

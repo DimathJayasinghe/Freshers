@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getFacultyById } from "@/data/facultiesData";
 import { useEffect, useMemo, useState } from "react";
-import { fetchFacultyDetail, type FacultyDetailData } from "@/lib/api";
+import { fetchFacultyDetail, fetchFacultiesOverview, type FacultyDetailData } from "@/lib/api";
 import { 
   Trophy, 
   Medal, 
@@ -12,7 +12,6 @@ import {
   Users, 
   TrendingUp, 
   ArrowLeft,
-  Target,
   Flag,
   Star,
   Sparkles
@@ -24,6 +23,7 @@ export function FacultyDetail() {
   const fallback = facultyId ? getFacultyById(facultyId) : undefined;
   const [detail, setDetail] = useState<FacultyDetailData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [rank, setRank] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -39,6 +39,22 @@ export function FacultyDetail() {
       }
     };
     run();
+    return () => { mounted = false; };
+  }, [facultyId]);
+
+  // Fetch rank for this faculty from overview/leaderboard
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        if (!facultyId) return;
+        const overview = await fetchFacultiesOverview();
+        const me = overview.find(o => o.id === facultyId);
+        if (mounted) setRank(me?.rank ?? null);
+      } catch (e) {
+        console.error('[FacultyDetail] fetch rank error', e);
+      }
+    })();
     return () => { mounted = false; };
   }, [facultyId]);
 
@@ -137,8 +153,11 @@ export function FacultyDetail() {
   // Map textual positions to a numeric rank; unknown becomes 99 (Participation)
   const toRank = (pos: string): number => {
     const p = pos.toLowerCase();
+    // Handle common labels explicitly
+    if (/(^|\b)(second\s*runner|second\s*runner-up)(\b|$)/.test(p)) return 3; // Second runner-up == 3rd
+    if (/(^|\b)(third\s*runner|third\s*runner-up)(\b|$)/.test(p)) return 4;  // Third runner-up == 4th
     if (/(^|\b)(1st|champ|champion|gold|winner)(\b|$)/.test(p)) return 1;
-    if (/(^|\b)(2nd|runner|runner-up|silver)(\b|$)/.test(p)) return 2;
+    if (/(^|\b)(2nd|runner\b|runner-up|silver)(\b|$)/.test(p)) return 2;
     if (/(^|\b)(3rd|third|bronze)(\b|$)/.test(p)) return 3;
     if (/(^|\b)(4th|fourth)(\b|$)/.test(p)) return 4;
     // Try to extract an explicit number like 5th, 6th, etc.
@@ -170,8 +189,7 @@ export function FacultyDetail() {
   const firstPlaces = facultyAchievements.filter(a => a.position === 1);
   const secondPlaces = facultyAchievements.filter(a => a.position === 2);
   const thirdPlaces = facultyAchievements.filter(a => a.position === 3);
-  const fourthPlaces = facultyAchievements.filter(a => a.position === 4);
-  const participation = facultyAchievements.filter(a => a.position > 4);
+  // We only show up to second runner-up in sections; positions > 3 are omitted from sections
 
   // Get medal config
   const getMedalConfig = (position: number) => {
@@ -279,28 +297,32 @@ export function FacultyDetail() {
                     color: faculty.colors.primary,
                   }}
                 >
-                  #{faculty.position ?? "-"}
+                  #{rank ?? "-"}
                 </Badge>
               </div>
               <p className="text-xl text-gray-300">{faculty.name}</p>
 
-              {/* Stats Overview */}
+              {/* Key Stats Overview */}
               <div className="flex flex-wrap gap-4 mt-6">
+                {/* Total Points */}
                 <div className="bg-black/50 border border-gray-700 rounded-lg px-6 py-3">
                   <div className="text-3xl font-bold text-white">{faculty.totalPoints}</div>
                   <div className="text-sm text-gray-400">Total Points</div>
                 </div>
-                <div className="bg-black/50 border border-gray-700 rounded-lg px-6 py-3">
-                  <div className="text-3xl font-bold text-white">{facultyAchievements.length}</div>
-                  <div className="text-sm text-gray-400">Total Events</div>
-                </div>
+                {/* Championships */}
                 <div className="bg-black/50 border border-gray-700 rounded-lg px-6 py-3">
                   <div className="text-3xl font-bold text-yellow-500">{firstPlaces.length}</div>
                   <div className="text-sm text-gray-400">Championships</div>
                 </div>
+                {/* Runner-ups */}
                 <div className="bg-black/50 border border-gray-700 rounded-lg px-6 py-3">
                   <div className="text-3xl font-bold text-gray-400">{secondPlaces.length}</div>
                   <div className="text-sm text-gray-400">Runner-ups</div>
+                </div>
+                {/* Second runner-ups (Third place) */}
+                <div className="bg-black/50 border border-gray-700 rounded-lg px-6 py-3">
+                  <div className="text-3xl font-bold text-orange-500">{thirdPlaces.length}</div>
+                  <div className="text-sm text-gray-400">Second runner-ups</div>
                 </div>
               </div>
             </div>
@@ -399,14 +421,14 @@ export function FacultyDetail() {
           </section>
         )}
 
-        {/* Third Place Section */}
+        {/* Second Runner-up Section (Third place) */}
         {thirdPlaces.length > 0 && (
           <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
               <Award className="w-8 h-8 text-orange-600" />
-              <h2 className="text-3xl font-bold text-white">Third Place Finishes</h2>
+              <h2 className="text-3xl font-bold text-white">Second Runner-up Positions</h2>
               <Badge className="bg-orange-600/20 text-orange-600 border-orange-600/50">
-                {thirdPlaces.length} Bronze{thirdPlaces.length !== 1 ? 's' : ''}
+                {thirdPlaces.length} Second runner-up{thirdPlaces.length !== 1 ? 's' : ''}
               </Badge>
               <div className="flex-1 h-[2px] bg-gradient-to-r from-orange-600/50 to-transparent"></div>
             </div>
@@ -428,98 +450,7 @@ export function FacultyDetail() {
                             {achievement.sport}
                           </CardTitle>
                           <Badge className={`${config.bgColor} ${config.color} ${config.borderColor} border`}>
-                            {config.label}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-400 text-sm">{achievement.date}</p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Fourth Place Section */}
-        {fourthPlaces.length > 0 && (
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-6">
-              <Star className="w-8 h-8 text-blue-500" />
-              <h2 className="text-3xl font-bold text-white">Fourth Place Achievements</h2>
-              <Badge className="bg-blue-500/20 text-blue-500 border-blue-500/50">
-                {fourthPlaces.length} Event{fourthPlaces.length !== 1 ? 's' : ''}
-              </Badge>
-              <div className="flex-1 h-[2px] bg-gradient-to-r from-blue-500/50 to-transparent"></div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {fourthPlaces.map((achievement, index) => {
-                const config = getMedalConfig(4);
-                const Icon = config.icon;
-                return (
-                  <Card
-                    key={index}
-                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border-2 hover:scale-105 transition-transform duration-300`}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2">
-                            <Icon className={`w-5 h-5 ${config.color}`} />
-                            {achievement.sport}
-                          </CardTitle>
-                          <Badge className={`${config.bgColor} ${config.color} ${config.borderColor} border`}>
-                            {config.label}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-400 text-sm">{achievement.date}</p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Participation Section (Above 4th Place) */}
-        {participation.length > 0 && (
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-6">
-              <Target className="w-8 h-8 text-green-500" />
-              <h2 className="text-3xl font-bold text-white">Other Participations</h2>
-              <Badge className="bg-green-500/20 text-green-500 border-green-500/50">
-                {participation.length} Event{participation.length !== 1 ? 's' : ''}
-              </Badge>
-              <div className="flex-1 h-[2px] bg-gradient-to-r from-green-500/50 to-transparent"></div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {participation.map((achievement, index) => {
-                const config = getMedalConfig(achievement.position);
-                const Icon = config.icon;
-                const labelText = achievement.position === 99 && achievement.positionText
-                  ? achievement.positionText
-                  : config.label;
-                return (
-                  <Card
-                    key={index}
-                    className={`bg-gradient-to-br from-gray-900 via-black to-gray-900 ${config.borderColor} border hover:scale-105 transition-transform duration-300`}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-white text-lg mb-2 flex items-center gap-2">
-                            <Icon className={`w-5 h-5 ${config.color}`} />
-                            {achievement.sport}
-                          </CardTitle>
-                          <Badge className={`${config.bgColor} ${config.color} ${config.borderColor} border`}>
-                            {labelText}
+                            Second runner-up
                           </Badge>
                         </div>
                       </div>
