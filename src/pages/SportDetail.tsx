@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, ArrowLeft, Users, Calendar, Clock, MapPin } from "lucide-react";
+import { Trophy, ArrowLeft, Users, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { fetchResults } from "@/lib/api";
@@ -245,31 +245,9 @@ export function SportDetail() {
                   <div key={event.id} className="border-b border-gray-800 last:border-b-0">
                     {/* Event Info Section */}
                     <div className="px-6 py-3 bg-gray-900/50 border-b border-gray-800">
-                      <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                          {event.event && (
-                            <h3 className="text-sm font-semibold text-blue-400 mb-1">{event.event}</h3>
-                          )}
-                          <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Scheduled: {event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{event.time}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              <span>Main Grounds</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-gray-500">Updated: </span>
-                          <span className="text-green-400 font-semibold">{event.date} {event.time}</span>
-                        </div>
-                      </div>
+                      {event.event && (
+                        <h3 className="text-sm font-semibold text-blue-400">{event.event}</h3>
+                      )}
                     </div>
                     <div className="p-4">
                       {/* Leaderboard Header */}
@@ -368,31 +346,9 @@ export function SportDetail() {
                   <div key={event.id} className="border-b border-gray-800 last:border-b-0">
                     {/* Event Info Section */}
                     <div className="px-6 py-3 bg-gray-900/50 border-b border-gray-800">
-                      <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                          {event.event && (
-                            <h3 className="text-sm font-semibold text-pink-400 mb-1">{event.event}</h3>
-                          )}
-                          <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Scheduled: {event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{event.time}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              <span>Main Grounds</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-gray-500">Updated: </span>
-                          <span className="text-green-400 font-semibold">{event.date} {event.time}</span>
-                        </div>
-                      </div>
+                      {event.event && (
+                        <h3 className="text-sm font-semibold text-pink-400">{event.event}</h3>
+                      )}
                     </div>
                     <div className="p-4">
                       {/* Leaderboard Header */}
@@ -491,31 +447,9 @@ export function SportDetail() {
                   <div key={event.id} className="border-b border-gray-800 last:border-b-0">
                     {/* Event Info Section */}
                     <div className="px-6 py-3 bg-gray-900/50 border-b border-gray-800">
-                      <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                          {event.event && (
-                            <h3 className="text-sm font-semibold text-purple-400 mb-1">{event.event}</h3>
-                          )}
-                          <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Scheduled: {event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{event.time}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              <span>Main Grounds</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-gray-500">Updated: </span>
-                          <span className="text-green-400 font-semibold">{event.date} {event.time}</span>
-                        </div>
-                      </div>
+                      {event.event && (
+                        <h3 className="text-sm font-semibold text-purple-400">{event.event}</h3>
+                      )}
                     </div>
                     <div className="p-4">
                       {/* Leaderboard Header */}
