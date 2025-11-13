@@ -1,6 +1,8 @@
 -- Admin authentication & RLS policies
 -- Run this after dev/sql.sql and (optionally) dev/live_results_schema.sql
 
+
+
 -- =====================
 -- Admin directory
 -- =====================
