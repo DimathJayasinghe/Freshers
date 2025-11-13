@@ -290,12 +290,18 @@ export async function deleteFaculty(id: string) {
 export type ScheduleDay = { date: string; events: { sport: string; time: string; venue: string }[] };
 export async function fetchScheduleCalendar(): Promise<ScheduleDay[]> {
   if (!hasSupabaseEnv || !supabase) return [];
-  const { data, error } = await supabase.from('scheduled_events').select('event_date,sport_label,start_time,time_range,venue,sports(name)').order('event_date').order('start_time', { ascending: true, nullsFirst: false });
+  const { data, error } = await supabase
+    .from('scheduled_events')
+    .select('event_date,sport_label,start_time,end_time,venue,sports(name)')
+    .order('event_date')
+    .order('start_time', { ascending: true, nullsFirst: false });
   if (error) throw error;
   const byDate = new Map<string, { sport: string; time: string; venue: string }[]>();
   (data || [] as any[]).forEach(r => {
     const date = r.event_date as string;
-    const time = r.time_range ?? (r.start_time ? formatTimeFromISO(`1970-01-01T${r.start_time}Z`) : '');
+    const start = r.start_time ? formatTimeFromISO(`1970-01-01T${r.start_time}Z`) : '';
+    const end = r.end_time ? formatTimeFromISO(`1970-01-01T${r.end_time}Z`) : '';
+    const time = start && end ? `${start} – ${end}` : start || end || '';
     const sportObj = Array.isArray(r.sports) ? (r.sports as any[])[0] : (r.sports as any | undefined);
     const sport = r.sport_label ?? (sportObj ? (sportObj as any).name : undefined) ?? 'Event';
     const entry = { sport, time, venue: r.venue as string };
@@ -402,32 +408,43 @@ export async function deleteLiveSeries(series_id: number) {
   return true;
 }
 
-type ScheduledEventRow = { id: number; event_date: string; sport_label: string | null; time_range: string | null; start_time: string | null; end_time: string | null; venue: string; sports?: { name: string } | { name: string }[] | null };
+type ScheduledEventRow = { id: number; event_date: string; sport_label: string | null; start_time: string | null; end_time: string | null; venue: string; sports?: { name: string } | { name: string }[] | null };
 export async function fetchTodaySchedule(): Promise<ScheduleMatch[]> {
   if (!hasSupabaseEnv || !supabase) return [];
   const today = new Date(); today.setHours(0,0,0,0);
   const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  const { data, error } = await supabase.from('scheduled_events').select('id,event_date,sport_label,time_range,start_time,end_time,venue,sports(name)').eq('event_date', dateStr).order('start_time', { ascending: true, nullsFirst: false });
+  const { data, error } = await supabase
+    .from('scheduled_events')
+    .select('id,event_date,sport_label,start_time,end_time,venue,sports(name)')
+    .eq('event_date', dateStr)
+    .order('start_time', { ascending: true, nullsFirst: false });
   if (error) throw error;
   return (data as ScheduledEventRow[] | null || []).map(row => {
     const sportObj = Array.isArray(row.sports) ? row.sports[0] : row.sports;
-    return { id: row.id, time: row.time_range ?? (row.start_time ? formatTimeFromISO(`1970-01-01T${row.start_time}Z`) : ''), sport: row.sport_label ?? sportObj?.name ?? 'Event', match: row.sport_label ?? 'Match', team1: '', team2: '', venue: row.venue } as ScheduleMatch;
+    const start = row.start_time ? formatTimeFromISO(`1970-01-01T${row.start_time}Z`) : '';
+    const end = row.end_time ? formatTimeFromISO(`1970-01-01T${row.end_time}Z`) : '';
+    const time = start && end ? `${start} – ${end}` : start || end || '';
+    return { id: row.id, time, sport: row.sport_label ?? sportObj?.name ?? 'Event', match: row.sport_label ?? 'Match', team1: '', team2: '', venue: row.venue } as ScheduleMatch;
   });
 }
-export type ScheduledEventRowFull = { id: number; event_date: string; sport_id: string | null; sport_label: string | null; time_range: string | null; start_time: string | null; end_time: string | null; venue: string; created_at: string };
+export type ScheduledEventRowFull = { id: number; event_date: string; sport_id: string | null; sport_label: string | null; start_time: string | null; end_time: string | null; venue: string; created_at: string };
 export async function fetchScheduledEvents(): Promise<ScheduledEventRowFull[]> {
   if (!hasSupabaseEnv || !supabase) return [];
-  const { data, error } = await supabase.from('scheduled_events').select('id,event_date,sport_id,sport_label,time_range,start_time,end_time,venue,created_at').order('event_date').order('start_time', { ascending: true, nullsFirst: false });
+  const { data, error } = await supabase
+    .from('scheduled_events')
+    .select('id,event_date,sport_id,sport_label,start_time,end_time,venue,created_at')
+    .order('event_date')
+    .order('start_time', { ascending: true, nullsFirst: false });
   if (error) throw error;
   return (data || []) as ScheduledEventRowFull[];
 }
-export async function createScheduledEvent(payload: { event_date: string; sport_id?: string | null; sport_label?: string | null; time_range?: string | null; start_time?: string | null; end_time?: string | null; venue: string }) {
+export async function createScheduledEvent(payload: { event_date: string; sport_id?: string | null; sport_label?: string | null; start_time?: string | null; end_time?: string | null; venue: string }) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const { data, error } = await supabase.from('scheduled_events').insert([payload]).select();
   if (error) throw error;
   return data;
 }
-export async function updateScheduledEvent(id: number, payload: Partial<{ event_date: string; sport_id: string | null; sport_label: string | null; time_range: string | null; start_time: string | null; end_time: string | null; venue: string }>) {
+export async function updateScheduledEvent(id: number, payload: Partial<{ event_date: string; sport_id: string | null; sport_label: string | null; start_time: string | null; end_time: string | null; venue: string }>) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
   const { data, error } = await supabase.from('scheduled_events').update(payload).eq('id', id).select();
   if (error) throw error;
