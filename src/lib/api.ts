@@ -5,6 +5,17 @@ import type { TeamData } from '@/data/leaderboardData';
 import type { LiveMatch, ScheduleMatch } from '@/data/homeData';
 import type { Sport } from '@/data/sportsData';
 import type { CompletedEvent } from '@/data/resultsData';
+// Bug reports
+export type BugReport = {
+  id: number;
+  created_at: string;
+  title: string;
+  description: string;
+  page_url: string;
+  contact: string | null;
+  user_agent: string | null;
+  status: 'open' | 'resolved';
+};
 
 // --------------------------------------------------
 // Generic helpers
@@ -781,3 +792,30 @@ export async function fetchMatchesBySeries(series_id: number) {
   if (error) throw error; return (data || []) as any[];
 }
 export async function completeAllMatchesInSeries(series_id: number) { if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured'); const { error } = await supabase.from('live_series_matches').update({ is_finished: true, status: 'completed', status_text: 'Finished' }).eq('series_id', series_id); if (error) throw error; return true; }
+
+// --------------------------------------------------
+// Bug reports
+// --------------------------------------------------
+export async function submitBugReport(payload: { title: string; description: string; page_url?: string; contact?: string | null; user_agent?: string | null }) {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Bug reporting is not configured');
+  const row = {
+    title: payload.title,
+    description: payload.description,
+    page_url: payload.page_url || (typeof window !== 'undefined' ? window.location.href : ''),
+    contact: payload.contact ?? null,
+    user_agent: payload.user_agent ?? (typeof navigator !== 'undefined' ? navigator.userAgent : null),
+    status: 'open' as const,
+  };
+  const { data, error } = await supabase.from('bug_reports').insert([row]).select().single();
+  if (error) throw error; return data as BugReport;
+}
+export async function fetchBugReports(): Promise<BugReport[]> {
+  if (!hasSupabaseEnv || !supabase) return [];
+  const { data, error } = await supabase.from('bug_reports').select('id,created_at,title,description,page_url,contact,user_agent,status').order('created_at', { ascending: false });
+  if (error) throw error; return (data || []) as BugReport[];
+}
+export async function updateBugReportStatus(id: number, status: 'open' | 'resolved') {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase.from('bug_reports').update({ status }).eq('id', id).select('id,status').single();
+  if (error) throw error; return data as Pick<BugReport,'id'|'status'>;
+}

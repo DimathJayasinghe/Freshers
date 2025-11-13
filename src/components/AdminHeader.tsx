@@ -13,6 +13,7 @@ export function AdminHeader() {
   const isSports = p.startsWith('/admin/sports');
   const isResults = p.startsWith('/admin/results');
   const isLineup = p.startsWith('/admin/lineup');
+  const isBugs = p.startsWith('/admin/bugs');
 
   const baseLink = "flex items-center gap-2 px-3 py-1 rounded-md transition-colors";
   const idle = "text-gray-300 hover:text-white hover:bg-white/5";
@@ -42,6 +43,9 @@ export function AdminHeader() {
           <Link to="/admin/lineup" className={`${baseLink} ${isLineup ? active : idle}`}>
             <Calendar className="w-4 h-4" />
             <span>Config Lineup</span>
+          </Link>
+          <Link to="/admin/bugs" className={`${baseLink} ${isBugs ? active : idle}`}>
+            <span>Bug Reports</span>
           </Link>
         </nav>
 
