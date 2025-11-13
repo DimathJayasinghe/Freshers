@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, TrendingUp, Sparkles, Target, Award, ChevronRight } from "lucide-react";
+import { Users, Sparkles, Target, Award, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
@@ -133,8 +133,7 @@ export function Faculties() {
                         <CardTitle className="text-white text-lg group-hover:text-red-400 transition-colors">
                           {faculty.shortName}
                         </CardTitle>
-                        <div className="flex items-center gap-1">
-                          <TrendingUp className="w-4 h-4 text-green-500" />
+                        <div className="flex items-center">
                           <span className="text-white font-bold">#{faculty.rank ?? '-'}</span>
                         </div>
                       </div>
