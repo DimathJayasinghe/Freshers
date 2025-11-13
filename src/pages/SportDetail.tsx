@@ -201,12 +201,12 @@ export function SportDetail() {
         </div>
 
         {/* Division Slider */}
-        <div className="mb-6">
+        <div className="mb-6 flex justify-center sm:justify-start">
           <Tabs value={divisionTab} onValueChange={(v) => setDivisionTab(v as any)}>
-            <TabsList className="bg-black/40 border border-white/10">
-              <TabsTrigger value="men" className="data-[state=active]:text-blue-400">Men's ({mensEvents.length})</TabsTrigger>
-              <TabsTrigger value="women" className="data-[state=active]:text-pink-400">Women's ({womensEvents.length})</TabsTrigger>
-              <TabsTrigger value="both" className="data-[state=active]:text-red-400">Both</TabsTrigger>
+            <TabsList className="bg-black/40 border border-white/10 text-gray-400 mx-auto sm:mx-0">
+              <TabsTrigger value="men" className="text-gray-400 data-[state=active]:text-blue-400 data-[state=active]:bg-blue-500/10 min-w-[96px]">Men's ({mensEvents.length})</TabsTrigger>
+              <TabsTrigger value="women" className="text-gray-400 data-[state=active]:text-pink-400 data-[state=active]:bg-pink-500/10 min-w-[96px]">Women's ({womensEvents.length})</TabsTrigger>
+              <TabsTrigger value="both" className="text-gray-400 data-[state=active]:text-red-400 data-[state=active]:bg-red-500/10 min-w-[80px]">Both</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
