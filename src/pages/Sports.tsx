@@ -1,23 +1,34 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, Users, User, Waves, Activity, Search } from "lucide-react";
+import { Trophy, Users, User, Waves, Activity, Search, ChevronDown } from "lucide-react";
 import type { Sport } from "../data/sportsData";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { fetchSports } from "../lib/api";
+import { fetchSports, fetchResults } from "../lib/api";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function Sports() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [resultsTab, setResultsTab] = useState<'with'|'all'>("with");
   const [sports, setSports] = useState<Sport[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [sportsWithResults, setSportsWithResults] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let mounted = true;
-    fetchSports()
-      .then((data) => { if (mounted && data && data.length > 0) setSports(data); })
+    Promise.all([fetchSports(), fetchResults()])
+      .then(([data, results]) => {
+        if (!mounted) return;
+        if (data && data.length > 0) setSports(data);
+        const set = new Set<string>();
+        (results || []).forEach(r => {
+          const slug = (r.sport || '').toLowerCase().replace(/\s+/g, '-');
+          if (slug) set.add(slug);
+        });
+        setSportsWithResults(set);
+      })
       .catch((err) => console.error('[Sports] fetchSports error', err))
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
@@ -60,11 +71,13 @@ export function Sports() {
   // Get unique categories
   const categories = ["All", ...Array.from(new Set(sports.map(sport => sport.category)))];
 
-  // Filter sports based on search and category
+  // Filter sports based on search, category, and results-only toggle
   const filteredSports = sports.filter(sport => {
     const matchesSearch = sport.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "All" || sport.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const hasResults = sportsWithResults.has(sport.name.toLowerCase().replace(/\s+/g,'-'));
+    const matchesResults = resultsTab === 'all' ? true : hasResults;
+    return matchesSearch && matchesCategory && matchesResults;
   });
 
   return (
@@ -107,37 +120,59 @@ export function Sports() {
           />
         </div>
 
-        {/* Category Filters */}
-        <div className="flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <Button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              variant={selectedCategory === category ? "default" : "outline"}
-              className={
-                selectedCategory === category
-                  ? "bg-red-600 hover:bg-red-700 text-white border-red-500"
-                  : "bg-black/40 backdrop-blur-xl border border-white/10 text-gray-300 hover:text-white hover:border-red-500/50 hover:bg-white/5"
-              }
-            >
-              {category === "All" ? (
-                <Trophy className="w-4 h-4 mr-2" />
-              ) : (
-                <span className="mr-2">{getCategoryIcon(category)}</span>
-              )}
-              {category}
-              {category === "All" && (
-                <span className="ml-2 px-2 py-0.5 bg-red-500/20 rounded-full text-xs">
-                  {sports.length}
-                </span>
-              )}
-              {category !== "All" && (
-                <span className="ml-2 px-2 py-0.5 bg-white/10 rounded-full text-xs">
-                  {sports.filter(s => s.category === category).length}
-                </span>
-              )}
-            </Button>
-          ))}
+        {/* Category + Results Filters: Tabs on desktop, dropdowns on mobile */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          {/* Desktop/tablet tabs */}
+          <div className="hidden sm:block flex-1">
+            <Tabs value={selectedCategory} onValueChange={(v)=>setSelectedCategory(v)} className="flex-1">
+              <TabsList className="bg-black/40 border border-white/10 text-gray-400 mx-auto sm:mx-0">
+                {categories.map((category) => (
+                  <TabsTrigger key={category} value={category} className="text-gray-400 data-[state=active]:text-red-400 data-[state=active]:bg-red-500/10">
+                    <span className="mr-2">{category === 'All' ? <Trophy className="w-4 h-4" /> : getCategoryIcon(category)}</span>
+                    {category}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+          <div className="hidden sm:block">
+            <Tabs value={resultsTab} onValueChange={(v)=>setResultsTab(v as 'with'|'all')}>
+              <TabsList className="bg-black/40 border border-white/10 text-gray-400">
+                <TabsTrigger value="with" className="text-gray-400 data-[state=active]:text-green-400 data-[state=active]:bg-green-500/10">With Results</TabsTrigger>
+                <TabsTrigger value="all" className="text-gray-400 data-[state=active]:text-blue-400 data-[state=active]:bg-blue-500/10">All Sports</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Mobile dropdowns */}
+          <div className="block sm:hidden w-full space-y-3">
+            <div className="relative">
+              <select
+                aria-label="Category"
+                value={selectedCategory}
+                onChange={(e)=>setSelectedCategory(e.target.value)}
+                className="w-full appearance-none bg-black/50 backdrop-blur-md border border-white/10 text-white rounded-lg px-3 pr-9 py-2 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/50"
+              >
+                {categories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+
+            <div className="relative">
+              <select
+                aria-label="Results filter"
+                value={resultsTab}
+                onChange={(e)=>setResultsTab(e.target.value as 'with'|'all')}
+                className="w-full appearance-none bg-black/50 backdrop-blur-md border border-white/10 text-white rounded-lg px-3 pr-9 py-2 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/50"
+              >
+                <option value="with">With Results</option>
+                <option value="all">All Sports</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -191,13 +226,14 @@ export function Sports() {
                   </div>
                   <Trophy className="w-8 h-8 text-yellow-400 opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                 </div>
-
-                <div className="pt-4 border-t border-white/10">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">View Details</span>
-                    <span className="text-red-400 group-hover:text-red-300">→</span>
+                {(() => { const hasResults = sportsWithResults.has(sport.name.toLowerCase().replace(/\s+/g,'-')); return hasResults ? (
+                  <div className="pt-4 border-t border-white/10">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-400">View Details</span>
+                      <span className="text-red-400 group-hover:text-red-300">→</span>
+                    </div>
                   </div>
-                </div>
+                ) : null; })()}
               </CardContent>
             </Card>
           ))}
