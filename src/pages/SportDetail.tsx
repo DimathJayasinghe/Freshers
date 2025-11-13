@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, ArrowLeft, Users, Award, Calendar, Clock, MapPin } from "lucide-react";
+import { Trophy, ArrowLeft, Users, Calendar, Clock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { fetchResults } from "@/lib/api";
@@ -79,12 +79,12 @@ export function SportDetail() {
   const womensEvents = sportResults.filter(r => r.gender === "Women's");
   const mixedEvents = sportResults.filter(r => r.gender === "Mixed");
   
-  const totalTeams = new Set(
-    sportResults.flatMap(event => event.positions.map(p => p.faculty))
-  ).size;
-  
-  const totalEvents = sportResults.length;
+  // Unique teams participated by gender
+  const mensTeamsCount = new Set(mensEvents.flatMap(e => e.positions.map(p => p.faculty))).size;
+  const womensTeamsCount = new Set(womensEvents.flatMap(e => e.positions.map(p => p.faculty))).size;
   const latestEvent = sportResults[0];
+  const latestDate = latestEvent?.date ?? '';
+  const latestVenue = 'Main Grounds'; // No venue in results_view; keep consistent with event cards
 
   return (
     <div className="min-h-screen">
@@ -134,56 +134,54 @@ export function SportDetail() {
       {/* Insights Section */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {/* Total Teams */}
-          <Card className="border-2 border-red-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-red-600/20 rounded-lg">
-                <Users className="w-6 h-6 text-red-500" />
-              </div>
-              <div>
-                <div className="text-2xl font-black text-white">{totalTeams}</div>
-                <div className="text-xs text-gray-400">Total Teams</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Total Events */}
+          {/* Men's teams participated */}
           <Card className="border-2 border-blue-800/50 bg-gradient-to-br from-gray-900 to-black">
             <CardContent className="p-4 flex items-center gap-3">
               <div className="p-3 bg-blue-600/20 rounded-lg">
-                <Trophy className="w-6 h-6 text-blue-500" />
+                <Users className="w-6 h-6 text-blue-500" />
               </div>
               <div>
-                <div className="text-2xl font-black text-white">{totalEvents}</div>
-                <div className="text-xs text-gray-400">Events Completed</div>
+                <div className="text-2xl font-black text-white">{mensTeamsCount}</div>
+                <div className="text-xs text-gray-400">Men's Teams Participated</div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Latest Champion */}
+          {/* Women's teams participated */}
+          <Card className="border-2 border-pink-800/50 bg-gradient-to-br from-gray-900 to-black">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-3 bg-pink-600/20 rounded-lg">
+                <Users className="w-6 h-6 text-pink-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-black text-white">{womensTeamsCount}</div>
+                <div className="text-xs text-gray-400">Women's Teams Participated</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Location */}
           <Card className="border-2 border-yellow-800/50 bg-gradient-to-br from-gray-900 to-black">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-yellow-600/20 rounded-lg animate-pulse">
-                <Award className="w-6 h-6 text-yellow-500" />
+              <div className="p-3 bg-yellow-600/20 rounded-lg">
+                <MapPin className="w-6 h-6 text-yellow-500" />
               </div>
               <div>
-                <div className="text-sm font-bold text-white truncate">
-                  {getShortFacultyName(latestEvent.positions[0].faculty)}
-                </div>
-                <div className="text-xs text-gray-400">Latest Champion</div>
+                <div className="text-sm font-bold text-white truncate">{latestVenue}</div>
+                <div className="text-xs text-gray-400">Location</div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Last Updated */}
+          {/* Date */}
           <Card className="border-2 border-purple-800/50 bg-gradient-to-br from-gray-900 to-black">
             <CardContent className="p-4 flex items-center gap-3">
               <div className="p-3 bg-purple-600/20 rounded-lg">
                 <Calendar className="w-6 h-6 text-purple-500" />
               </div>
               <div>
-                <div className="text-sm font-bold text-white">{latestEvent.date}</div>
-                <div className="text-xs text-gray-400">Last Updated</div>
+                <div className="text-sm font-bold text-white">{latestDate}</div>
+                <div className="text-xs text-gray-400">Date</div>
               </div>
             </CardContent>
           </Card>
