@@ -35,7 +35,7 @@ const AdminDashboardPage: React.FC = () => {
   const [resultsError, setResultsError] = useState<string | null>(null);
   const [resultsSaving, setResultsSaving] = useState(false);
   // Schedule manager state
-  const [schedule, setSchedule] = useState<Array<{ id: number; event_date: string; sport_id: string | null; sport_label: string | null; time_range: string | null; start_time: string | null; end_time: string | null; venue: string }>>([]);
+  const [schedule, setSchedule] = useState<Array<{ id: number; event_date: string; sport_id: string | null; sport_label: string | null; start_time: string | null; end_time: string | null; venue: string }>>([]);
   const [scheduleRefreshKey, setScheduleRefreshKey] = useState(0);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [newSched, setNewSched] = useState<{ event_date: string; sport_id: string | null; sport_label: string | null; start_time: string | null; end_time: string | null; venue: string }>({ event_date: '', sport_id: null, sport_label: null, start_time: null, end_time: null, venue: '' });
@@ -325,7 +325,6 @@ const AdminDashboardPage: React.FC = () => {
         event_date: newSched.event_date,
         sport_id: newSched.sport_id || null,
         sport_label: newSched.sport_label || null,
-        time_range: null,
         start_time: newSched.start_time || null,
         end_time: newSched.end_time || null,
         venue: newSched.venue,
@@ -917,10 +916,7 @@ const AdminDashboardPage: React.FC = () => {
                       <label className="block text-xs text-gray-500">Label</label>
                       <input defaultValue={item.sport_label ?? ''} onChange={e=>setEditingSched(s=>({...s, sport_label: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
                     </div>
-                    <div className="md:col-span-3">
-                      <label className="block text-xs text-gray-500">Time range</label>
-                      <input defaultValue={item.time_range ?? ''} onChange={e=>setEditingSched(s=>({...s, time_range: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
-                    </div>
+                    
                     <div className="md:col-span-2">
                       <label className="block text-xs text-gray-500">Start time</label>
                       <input type="time" defaultValue={item.start_time ? item.start_time.slice(0,5) : ''} onChange={e=>setEditingSched(s=>({...s, start_time: e.target.value || null}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
@@ -942,7 +938,7 @@ const AdminDashboardPage: React.FC = () => {
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-sm text-gray-300">
                       <div className="font-medium">{item.sport_label || 'Event'}</div>
-                      <div className="text-xs text-gray-500">{item.event_date} • {(item.time_range || ((item.start_time || item.end_time) ? `${(item.start_time||'').slice(0,5)}${item.end_time ? `–${item.end_time.slice(0,5)}` : ''}` : ''))} • {item.venue}</div>
+                      <div className="text-xs text-gray-500">{item.event_date} • {((item.start_time || item.end_time) ? `${(item.start_time||'').slice(0,5)}${item.end_time ? `–${item.end_time.slice(0,5)}` : ''}` : '')} • {item.venue}</div>
                     </div>
                     <div className="flex gap-2">
                       <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={()=>{ setEditingSchedId(item.id); setEditingSched({}); }}>Edit</button>

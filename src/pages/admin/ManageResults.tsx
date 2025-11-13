@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdminHeader } from '@/components/AdminHeader';
 import AdminLayout from '@/components/AdminLayout';
 import {
@@ -31,11 +31,9 @@ const ManageResultsPage: React.FC = () => {
 
   const [positionsByResult, setPositionsByResult] = useState<Record<number, PositionRow[]>>({});
   const [editingPosId, setEditingPosId] = useState<number | null>(null);
-  const [posDraft, setPosDraft] = useState<Record<number, { place: number; faculty_id: string }[]>>({});
-  const [useCustomPoints, setUseCustomPoints] = useState<Record<number, boolean>>({});
-  const [customPointsMap, setCustomPointsMap] = useState<Record<number, Record<number, number>>>({});
-  const [participantsDraft, setParticipantsDraft] = useState<Record<number, string[]>>({});
-  const [participantToAdd, setParticipantToAdd] = useState<Record<number, string>>({});
+  // New drafts to mirror AdminDashboard finalization UI
+  const [placementsDraft, setPlacementsDraft] = useState<Record<number, { faculty_id: string; label: 'champion' | 'runner_up' | 'second_runner_up' | 'third_runner_up'; points: number }[]>>({});
+  const [participantsRowsDraft, setParticipantsRowsDraft] = useState<Record<number, { faculty_id: string; points: number }[]>>({});
   const [faculties, setFaculties] = useState<{ id: string; name: string; short_name: string }[]>([]);
 
   useEffect(() => {
@@ -75,7 +73,7 @@ const ManageResultsPage: React.FC = () => {
     }
   }
 
-  const facultyOptions = useMemo(() => faculties.map(f => ({ id: f.id, label: `${f.name}` })), [faculties]);
+  // faculty options derived directly from faculties when rendering selects
 
   // Metadata editing
   function startEditMeta(r: ResultRow) {
@@ -110,48 +108,80 @@ const ManageResultsPage: React.FC = () => {
   async function startEditPos(r: ResultRow) {
     setEditingPosId(r.id);
     if (!positionsByResult[r.id]) await loadPositions(r.id);
-    const current = positionsByResult[r.id] || [];
-    const draft = current.map(p => ({ place: p.place, faculty_id: p.faculty_id }));
-    setPosDraft(prev => ({ ...prev, [r.id]: draft }));
-    // initialize participants as empty; admins can add moved/other faculties
-    setParticipantsDraft(prev => ({ ...prev, [r.id]: prev[r.id] ?? [] }));
+    const current = (positionsByResult[r.id] || []).sort((a,b)=>a.place-b.place);
+    // Map first four places to labeled placements; remainder become participants with 1 point
+    const placeToLabel = (place: number): 'champion' | 'runner_up' | 'second_runner_up' | 'third_runner_up' => {
+      if (place === 1) return 'champion';
+      if (place === 2) return 'runner_up';
+      if (place === 3) return 'second_runner_up';
+      return 'third_runner_up';
+    };
+    const defaultPointsForLabel: Record<'champion'|'runner_up'|'second_runner_up'|'third_runner_up', number> = { champion:7, runner_up:5, second_runner_up:3, third_runner_up:2 };
+    const placements = current
+      .filter(p => p.place >= 1 && p.place <= 4)
+      .map(p => ({ faculty_id: p.faculty_id, label: placeToLabel(p.place), points: defaultPointsForLabel[placeToLabel(p.place)] }));
+    const participants = current
+      .filter(p => p.place > 4)
+      .map(p => ({ faculty_id: p.faculty_id, points: 1 }));
+    setPlacementsDraft(prev => ({ ...prev, [r.id]: placements.length ? placements : [
+      { faculty_id: '', label: 'champion', points: 7 },
+      { faculty_id: '', label: 'runner_up', points: 5 },
+      { faculty_id: '', label: 'second_runner_up', points: 3 },
+      { faculty_id: '', label: 'third_runner_up', points: 2 },
+    ] }));
+    setParticipantsRowsDraft(prev => ({ ...prev, [r.id]: participants }));
   }
-  function addPlace(resultId: number) {
-    const list = posDraft[resultId] || [];
-    const nextPlace = (list[list.length - 1]?.place || 0) + 1;
-    const updated = [...list, { place: nextPlace, faculty_id: '' }];
-    setPosDraft(prev => ({ ...prev, [resultId]: updated }));
+  function addPlacement(resultId: number) {
+    setPlacementsDraft(prev => ({
+      ...prev,
+      [resultId]: [...(prev[resultId] || []), { faculty_id: '', label: 'third_runner_up', points: 1 }]
+    }));
   }
-  function removePlace(resultId: number, index: number) {
-    const list = posDraft[resultId] || [];
-    const removed = list[index];
-    const updated = list.filter((_, i) => i !== index).map((p, i2) => ({ ...p, place: i2 + 1 }));
-    // if a faculty was removed from placements, add to participants list
-    if (removed?.faculty_id) {
-      setParticipantsDraft(prev => {
-        const cur = new Set(prev[resultId] || []);
-        cur.add(removed.faculty_id);
-        return { ...prev, [resultId]: Array.from(cur) };
-      });
-    }
-    setPosDraft(prev => ({ ...prev, [resultId]: updated }));
+  function removePlacement(resultId: number, index: number) {
+    setPlacementsDraft(prev => {
+      const list = prev[resultId] || [];
+      const removed = list[index];
+      const updated = list.filter((_, i) => i !== index);
+      if (removed?.faculty_id) {
+        setParticipantsRowsDraft(pp => ({ ...pp, [resultId]: [ ...(pp[resultId] || []), { faculty_id: removed.faculty_id, points: 1 } ] }));
+      }
+      return { ...prev, [resultId]: updated };
+    });
+  }
+  function addParticipant(resultId: number) {
+    setParticipantsRowsDraft(prev => ({ ...prev, [resultId]: [ ...(prev[resultId] || []), { faculty_id: '', points: 1 } ] }));
+  }
+  function removeParticipant(resultId: number, index: number) {
+    setParticipantsRowsDraft(prev => ({ ...prev, [resultId]: (prev[resultId] || []).filter((_,i)=>i!==index) }));
   }
   async function savePositions(resultId: number) {
     setError(null);
     try {
       setSaving(true);
-      const draft = (posDraft[resultId] || []).filter(p => p.faculty_id);
-      // normalize places ascending
-      draft.sort((a, b) => a.place - b.place).forEach((p, i) => { p.place = i + 1; });
-      const custom = useCustomPoints[resultId] ? (customPointsMap[resultId] || {}) : undefined;
-      const participants = (participantsDraft[resultId] || [])
-        .filter(fid => fid && !draft.some(p => p.faculty_id === fid))
-        .map(fid => ({ faculty_id: fid, points: 1 }));
-  await replaceResultPositionsAndReapply(resultId, draft, custom as any, participants as any, 'always');
+      const placements = (placementsDraft[resultId] || []).filter(p => p.faculty_id);
+      const placeMap: Record<'champion'|'runner_up'|'second_runner_up'|'third_runner_up', number> = { champion:1, runner_up:2, second_runner_up:3, third_runner_up:4 };
+      const positions = placements.map(p => ({ place: placeMap[p.label], faculty_id: p.faculty_id }));
+      // Important: backend splits base points among ties; to make per-team points stick, multiply by tie size
+      const groupedByPlace: Record<number, { count: number; perTeamPoints: number }> = {};
+      placements.forEach(p => {
+        const place = placeMap[p.label];
+        const per = Number(p.points || 0);
+        if (!groupedByPlace[place]) groupedByPlace[place] = { count: 0, perTeamPoints: per };
+        groupedByPlace[place].count += 1;
+        // if multiple entries have different per-team points, keep the first non-zero; UI should ideally keep them equal
+        if (!groupedByPlace[place].perTeamPoints && per) groupedByPlace[place].perTeamPoints = per;
+      });
+      const customPoints: Record<number, number> = {};
+      Object.entries(groupedByPlace).forEach(([placeStr, g]) => {
+        const place = Number(placeStr);
+        customPoints[place] = (g.perTeamPoints || 0) * Math.max(1, g.count);
+      });
+      const participants = (participantsRowsDraft[resultId] || []).filter(pp => pp.faculty_id && !positions.some(x => x.faculty_id === pp.faculty_id));
+      await replaceResultPositionsAndReapply(resultId, positions, customPoints, participants, 'always');
       await loadPositions(resultId);
       setEditingPosId(null);
       // clear draft states for this result
-      setParticipantsDraft(prev => ({ ...prev, [resultId]: [] }));
+      setParticipantsRowsDraft(prev => ({ ...prev, [resultId]: [] }));
     } catch (e: any) {
       console.error('[ManageResults] savePositions error', e);
       const msg = e?.message || 'Failed to update positions';
@@ -237,7 +267,15 @@ const ManageResultsPage: React.FC = () => {
                           </div>
                           <div className="md:col-span-1">
                             <label className="block text-xs text-gray-500">Time</label>
-                            <input type="time" defaultValue={r.event_time} onChange={e=>setMetaDraft(d=>({...d, event_time: e.target.value}))} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm" />
+                            <input
+                              type="time"
+                              value={(metaDraft.event_time || (r.event_time || '')).slice(0,5)}
+                              onChange={e=>setMetaDraft(d=>({
+                                ...d,
+                                event_time: (e.target.value.length===5 ? `${e.target.value}:00` : e.target.value)
+                              }))}
+                              className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm"
+                            />
                           </div>
                           <div className="md:col-span-12 flex justify-end gap-2">
                             <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={()=>{ setEditingMetaId(null); setMetaDraft({}); }}>Cancel</button>
@@ -260,85 +298,69 @@ const ManageResultsPage: React.FC = () => {
                       {/* Positions */}
                       <div className="mt-3">
                         {editingPosId === r.id ? (
-                          <div className="space-y-2">
-                            {/* Custom points toggle and inputs */}
-                            <div className="border border-zinc-800 rounded-md p-2 bg-black/30">
-                              <label className="flex items-center gap-2 text-xs text-gray-400">
-                                <input type="checkbox" checked={!!useCustomPoints[r.id]} onChange={e=>setUseCustomPoints(prev=>({...prev, [r.id]: e.target.checked}))} />
-                                Use custom points for placements
-                              </label>
-                              {useCustomPoints[r.id] && (
-                                <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mt-2 text-xs">
-                                  {[1,2,3,4,5,6].map(place => (
-                                    <div key={place} className="flex items-center gap-1">
-                                      <span className="text-gray-500">#{place}:</span>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        defaultValue={customPointsMap[r.id]?.[place] ?? (place===1?7:place===2?5:place===3?3:place===4?2:1)}
-                                        onChange={e=>{
-                                          const val = Number(e.target.value);
-                                          setCustomPointsMap(prev=>({ ...prev, [r.id]: { ...(prev[r.id]||{}), [place]: val } }));
-                                        }}
-                                        className="w-16 bg-black border border-zinc-700 rounded-md px-2 py-1"
-                                      />
-                                    </div>
-                                  ))}
+                          <div className="space-y-3">
+                            {/* Placements and points */}
+                            <div className="space-y-2">
+                              <div className="text-sm font-medium text-zinc-200">Placements and points</div>
+                              {(placementsDraft[r.id] || []).map((p, i) => (
+                                <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+                                  <div className="md:col-span-6">
+                                    <label className="block text-xs text-gray-500">Faculty</label>
+                                    <select value={p.faculty_id} onChange={e => setPlacementsDraft(arr => ({ ...arr, [r.id]: (arr[r.id] || []).map((x,idx)=> idx===i ? { ...x, faculty_id: e.target.value } : x) }))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2">
+                                      <option value="">-- choose --</option>
+                                      {faculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                    </select>
+                                  </div>
+                                  <div className="md:col-span-3">
+                                    <label className="block text-xs text-gray-500">Winning status</label>
+                                    <select value={p.label} onChange={e => setPlacementsDraft(arr => ({ ...arr, [r.id]: (arr[r.id] || []).map((x,idx)=> idx===i ? { ...x, label: e.target.value as any } : x) }))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2">
+                                      <option value="champion">Champion</option>
+                                      <option value="runner_up">Runner-up</option>
+                                      <option value="second_runner_up">Second runner-up</option>
+                                      <option value="third_runner_up">Third runner-up</option>
+                                    </select>
+                                  </div>
+                                  <div className="md:col-span-2">
+                                    <label className="block text-xs text-gray-500">Points</label>
+                                    <input type="number" min={0} value={p.points} onChange={e => setPlacementsDraft(arr => ({ ...arr, [r.id]: (arr[r.id] || []).map((x,idx)=> idx===i ? { ...x, points: Number(e.target.value||0) } : x) }))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" />
+                                  </div>
+                                  <div className="md:col-span-1">
+                                    <button type="button" className="w-full px-2 py-2 bg-zinc-800 border border-zinc-700 rounded-md" onClick={() => removePlacement(r.id, i)}>Remove</button>
+                                  </div>
                                 </div>
-                              )}
+                              ))}
+                              <div>
+                                <button type="button" className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={() => addPlacement(r.id)}>Add placement</button>
+                              </div>
                             </div>
-                            {(posDraft[r.id] || []).map((p, idx) => (
-                              <div key={idx} className="grid grid-cols-12 items-center gap-2">
-                                <div className="col-span-2 text-xs text-gray-500">Place #{idx + 1}</div>
-                                <div className="col-span-8">
-                                  <select value={p.faculty_id} onChange={e => {
-                                    const list = [...(posDraft[r.id] || [])];
-                                    list[idx] = { ...list[idx], faculty_id: e.target.value };
-                                    setPosDraft(prev => ({ ...prev, [r.id]: list }));
-                                  }} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm">
-                                    <option value="">Select faculty…</option>
-                                    {facultyOptions.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                                  </select>
+                            {/* Participants */}
+                            <div className="space-y-2 pt-2">
+                              <div className="text-sm font-medium text-zinc-200">Participants (default 1 point)</div>
+                              {(participantsRowsDraft[r.id] || []).map((p, i) => (
+                                <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+                                  <div className="md:col-span-9">
+                                    <label className="block text-xs text-gray-500">Faculty</label>
+                                    <select value={p.faculty_id} onChange={e => setParticipantsRowsDraft(arr => ({ ...arr, [r.id]: (arr[r.id] || []).map((x,idx)=> idx===i ? { ...x, faculty_id: e.target.value } : x) }))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2">
+                                      <option value="">-- choose --</option>
+                                      {faculties.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                    </select>
+                                  </div>
+                                  <div className="md:col-span-2">
+                                    <label className="block text-xs text-gray-500">Points</label>
+                                    <input type="number" min={0} value={p.points} onChange={e => setParticipantsRowsDraft(arr => ({ ...arr, [r.id]: (arr[r.id] || []).map((x,idx)=> idx===i ? { ...x, points: Number(e.target.value||1) } : x) }))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" />
+                                  </div>
+                                  <div className="md:col-span-1">
+                                    <button type="button" className="w-full px-2 py-2 bg-zinc-800 border border-zinc-700 rounded-md" onClick={() => removeParticipant(r.id, i)}>Remove</button>
+                                  </div>
                                 </div>
-                                <div className="col-span-2 flex justify-end">
-                                  <button className="px-2 py-1 rounded-md bg-zinc-800 border border-zinc-700" onClick={()=>removePlace(r.id, idx)}>Remove</button>
-                                </div>
-                              </div>
-                            ))}
-                            {/* Participants editor */}
-                            <div className="mt-3">
-                              <div className="text-xs text-gray-400 mb-1">Participants (1 point each, not in placements)</div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <select value={participantToAdd[r.id] || ''} onChange={e=>setParticipantToAdd(prev=>({ ...prev, [r.id]: e.target.value }))} className="bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm">
-                                  <option value="">Select faculty…</option>
-                                  {facultyOptions.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                                </select>
-                                <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={() => {
-                                  const fid = (participantToAdd[r.id] || '').trim();
-                                  if (!fid) return;
-                                  setParticipantsDraft(prev => {
-                                    const cur = new Set(prev[r.id] || []);
-                                    // do not add if already placed
-                                    const placed = (posDraft[r.id] || []).some(p => p.faculty_id === fid);
-                                    if (!placed) cur.add(fid);
-                                    return { ...prev, [r.id]: Array.from(cur) };
-                                  });
-                                  setParticipantToAdd(prev => ({ ...prev, [r.id]: '' }));
-                                }}>Add participant</button>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {(participantsDraft[r.id] || []).map(fid => (
-                                  <span key={fid} className="text-xs px-2 py-1 rounded-md bg-zinc-800 border border-zinc-700 flex items-center gap-2">
-                                    {facultyOptions.find(f => f.id === fid)?.label || fid}
-                                    <button className="text-red-400" onClick={() => setParticipantsDraft(prev => ({ ...prev, [r.id]: (prev[r.id] || []).filter(x => x !== fid) }))}>✕</button>
-                                  </span>
-                                ))}
+                              ))}
+                              <div>
+                                <button type="button" className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={() => addParticipant(r.id)}>Add participant</button>
                               </div>
                             </div>
                             <div className="flex justify-between">
                               <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={()=>{ setEditingPosId(null); }}>Cancel</button>
                               <div className="flex gap-2">
-                                <button className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700" onClick={()=>addPlace(r.id)}>Add place</button>
                                 <button className="px-3 py-1.5 rounded-md bg-green-700 hover:bg-green-600" onClick={()=>savePositions(r.id)}>{saving ? 'Saving…' : 'Save positions'}</button>
                               </div>
                             </div>
