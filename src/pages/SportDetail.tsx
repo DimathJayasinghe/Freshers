@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, ArrowLeft, Users, Calendar, MapPin } from "lucide-react";
+import { Trophy, Medal, ArrowLeft, Users, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
 import { fetchResults, fetchFacultiesList } from "@/lib/api";
 import { getShortFacultyName } from "@/data/tournamentData";
@@ -9,9 +10,7 @@ import { getShortFacultyName } from "@/data/tournamentData";
 export function SportDetail() {
   const { sportName } = useParams<{ sportName: string }>();
   const navigate = useNavigate();
-  const [showMens, setShowMens] = useState(true);
-  const [showWomens, setShowWomens] = useState(true);
-  const [showMixed, setShowMixed] = useState(true);
+  const [divisionTab, setDivisionTab] = useState<'men' | 'women' | 'both'>('both');
   const [allResults, setAllResults] = useState([] as Awaited<ReturnType<typeof fetchResults>>);
   const [facNameToId, setFacNameToId] = useState<Map<string, string>>(new Map());
   const [facNameToShort, setFacNameToShort] = useState<Map<string, string>>(new Map());
@@ -201,52 +200,20 @@ export function SportDetail() {
           </Card>
         </div>
 
-        {/* Division Toggles */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          {mensEvents.length > 0 && (
-            <Button
-              variant={showMens ? "default" : "outline"}
-              onClick={() => setShowMens(!showMens)}
-              className={`${
-                showMens 
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                  : 'border-blue-600/50 text-blue-400 hover:bg-blue-600/10'
-              }`}
-            >
-              Men's Division ({mensEvents.length})
-            </Button>
-          )}
-          {womensEvents.length > 0 && (
-            <Button
-              variant={showWomens ? "default" : "outline"}
-              onClick={() => setShowWomens(!showWomens)}
-              className={`${
-                showWomens 
-                  ? 'bg-pink-600 hover:bg-pink-700 text-white' 
-                  : 'border-pink-600/50 text-pink-400 hover:bg-pink-600/10'
-              }`}
-            >
-              Women's Division ({womensEvents.length})
-            </Button>
-          )}
-          {mixedEvents.length > 0 && (
-            <Button
-              variant={showMixed ? "default" : "outline"}
-              onClick={() => setShowMixed(!showMixed)}
-              className={`${
-                showMixed 
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                  : 'border-purple-600/50 text-purple-400 hover:bg-purple-600/10'
-              }`}
-            >
-              Mixed Division ({mixedEvents.length})
-            </Button>
-          )}
+        {/* Division Slider */}
+        <div className="mb-6">
+          <Tabs value={divisionTab} onValueChange={(v) => setDivisionTab(v as any)}>
+            <TabsList className="bg-black/40 border border-white/10">
+              <TabsTrigger value="men" className="data-[state=active]:text-blue-400">Men's ({mensEvents.length})</TabsTrigger>
+              <TabsTrigger value="women" className="data-[state=active]:text-pink-400">Women's ({womensEvents.length})</TabsTrigger>
+              <TabsTrigger value="both" className="data-[state=active]:text-red-400">Both</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
         {/* Standings View - Leaderboard Style */}
         <div className="space-y-6">
           {/* Men's Division */}
-          {showMens && mensEvents.length > 0 && (
+          {(divisionTab === 'men' || divisionTab === 'both') && mensEvents.length > 0 && (
             <Card className="border-2 border-blue-800/50 bg-gradient-to-br from-gray-900 to-black shadow-xl">
               <div className="px-6 py-4 border-b border-gray-800 bg-blue-600/10">
                 <h2 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
@@ -319,9 +286,9 @@ export function SportDetail() {
                           </div>
 
                           {/* Status/Medal */}
-                          <div className="col-span-4 text-right">
+                          <div className="col-span-12 sm:col-span-4 text-right">
                             <div
-                              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${
+                              className={`inline-flex items-center justify-center gap-2 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap leading-none w-fit ml-auto sm:ml-0 ${
                                 position.place === 1
                                   ? 'bg-yellow-500/20 text-yellow-400'
                                   : position.place === 2
@@ -331,9 +298,9 @@ export function SportDetail() {
                                   : 'bg-gray-700/20 text-gray-400'
                               }`}
                             >
-                              {position.place === 1 && '🥇 Champion'}
-                              {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Second Runner-up'}
+                              {position.place === 1 && (<><Trophy className="w-3.5 h-3.5" /><span>Champion</span></>)}
+                              {position.place === 2 && (<><Medal className="w-3.5 h-3.5" /><span>Runner-up</span></>)}
+                              {position.place === 3 && (<><Medal className="w-3.5 h-3.5" /><span>2nd Runner-up</span></>)}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
@@ -347,7 +314,7 @@ export function SportDetail() {
           )}
 
           {/* Women's Division */}
-          {showWomens && womensEvents.length > 0 && (
+          {(divisionTab === 'women' || divisionTab === 'both') && womensEvents.length > 0 && (
             <Card className="border-2 border-pink-800/50 bg-gradient-to-br from-gray-900 to-black shadow-xl">
               <div className="px-6 py-4 border-b border-gray-800 bg-pink-600/10">
                 <h2 className="text-2xl font-bold text-pink-400 flex items-center gap-2">
@@ -420,9 +387,9 @@ export function SportDetail() {
                           </div>
 
                           {/* Status/Medal */}
-                          <div className="col-span-4 text-right">
+                          <div className="col-span-12 sm:col-span-4 text-right">
                             <div
-                              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${
+                              className={`inline-flex items-center justify-center gap-2 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap leading-none w-fit ml-auto sm:ml-0 ${
                                 position.place === 1
                                   ? 'bg-yellow-500/20 text-yellow-400'
                                   : position.place === 2
@@ -432,9 +399,9 @@ export function SportDetail() {
                                   : 'bg-gray-700/20 text-gray-400'
                               }`}
                             >
-                              {position.place === 1 && '🥇 Champion'}
-                              {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Second Runner-up'}
+                              {position.place === 1 && (<><Trophy className="w-3.5 h-3.5" /><span>Champion</span></>)}
+                              {position.place === 2 && (<><Medal className="w-3.5 h-3.5" /><span>Runner-up</span></>)}
+                              {position.place === 3 && (<><Medal className="w-3.5 h-3.5" /><span>2nd Runner-up</span></>)}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
@@ -448,7 +415,7 @@ export function SportDetail() {
           )}
 
           {/* Mixed Division */}
-          {showMixed && mixedEvents.length > 0 && (
+          {mixedEvents.length > 0 && (
             <Card className="border-2 border-purple-800/50 bg-gradient-to-br from-gray-900 to-black shadow-xl">
               <div className="px-6 py-4 border-b border-gray-800 bg-purple-600/10">
                 <h2 className="text-2xl font-bold text-purple-400 flex items-center gap-2">
@@ -521,9 +488,9 @@ export function SportDetail() {
                           </div>
 
                           {/* Status/Medal */}
-                          <div className="col-span-4 text-right">
+                          <div className="col-span-12 sm:col-span-4 text-right">
                             <div
-                              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${
+                              className={`inline-flex items-center justify-center gap-2 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap leading-none w-fit ml-auto sm:ml-0 ${
                                 position.place === 1
                                   ? 'bg-yellow-500/20 text-yellow-400'
                                   : position.place === 2
@@ -533,9 +500,9 @@ export function SportDetail() {
                                   : 'bg-gray-700/20 text-gray-400'
                               }`}
                             >
-                              {position.place === 1 && '🥇 Champion'}
-                              {position.place === 2 && '🥈 Runner-up'}
-                              {position.place === 3 && '🥉 Second Runner-up'}
+                              {position.place === 1 && (<><Trophy className="w-3.5 h-3.5" /><span>Champion</span></>)}
+                              {position.place === 2 && (<><Medal className="w-3.5 h-3.5" /><span>Runner-up</span></>)}
+                              {position.place === 3 && (<><Medal className="w-3.5 h-3.5" /><span>2nd Runner-up</span></>)}
                               {position.place > 3 && `#${position.place}`}
                             </div>
                           </div>
