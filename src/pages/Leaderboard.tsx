@@ -5,13 +5,14 @@ import { getFacultyIdByName } from "../data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchLeaderboard } from "../lib/api";
 
 export function Leaderboard() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  type RankedTeam = TeamData & { computedRank: number };
 
   useEffect(() => {
     let mounted = true;
@@ -29,6 +30,27 @@ export function Leaderboard() {
       mounted = false;
     };
   }, []);
+
+  // Compute competition ranking (1,1,3) based on totalPoints and keep list sorted desc by total
+  const rankedRows = useMemo<RankedTeam[]>(() => {
+    if (!rows || rows.length === 0) return [] as RankedTeam[];
+    const sorted = [...rows].sort((a, b) => {
+      const at = Number(a.totalPoints);
+      const bt = Number(b.totalPoints);
+      if (bt !== at) return bt - at; // desc by total points
+      // stable tie-breaker for deterministic order
+      return (a.name || "").localeCompare(b.name || "");
+    });
+    let prevPoints: number | null = null;
+    let prevRank = 0;
+    return sorted.map<RankedTeam>((t, idx) => {
+      const pts = Number(t.totalPoints);
+      const rank = prevPoints !== null && pts === prevPoints ? prevRank : idx + 1;
+      prevPoints = pts;
+      prevRank = rank;
+      return { ...t, computedRank: rank };
+    });
+  }, [rows]);
 
   // Handle faculty name click
   const handleFacultyClick = (facultyName: string) => {
@@ -81,9 +103,9 @@ export function Leaderboard() {
                   </CardContent>
                 </Card>
               ))}
-              {!loading && rows.slice(0, 3).map((team, index) => (
+              {!loading && rankedRows.slice(0, 3).map((team, index) => (
                 <Card
-                  key={team.rank}
+                  key={`${team.code}-${index}`}
                   onClick={() => handleFacultyClick(team.name)}
                   className={`cursor-pointer transition-all duration-300 hover:scale-105 animate-scale-in ${
                     index === 0 
@@ -96,7 +118,7 @@ export function Leaderboard() {
                 >
                   <CardContent className="p-6 text-center">
                     <div className="mb-3 flex justify-center">
-                      {getMedalIcon(team.rank)}
+                      {getMedalIcon(team.computedRank)}
                     </div>
                     <h3 className="text-white font-bold text-lg mb-1">{team.code}</h3>
                     <p className="text-gray-400 text-xs mb-3 line-clamp-1">{team.name}</p>
@@ -167,12 +189,12 @@ export function Leaderboard() {
                   </div>
                 </div>
               ))}
-              {!loading && rows.map((team, index) => (
+              {!loading && rankedRows.map((team, index) => (
                 <div
-                  key={team.rank}
+                  key={`${team.code}-${index}`}
                   onClick={() => handleFacultyClick(team.name)}
                   className={`grid grid-cols-1 md:grid-cols-10 gap-4 p-4 rounded-lg border transition-all duration-300 hover:scale-[1.02] cursor-pointer group animate-fade-in-up ${
-                    team.rank <= 3
+                    team.computedRank <= 3
                       ? "bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5 border-yellow-500/30 hover:border-yellow-500/60 hover:shadow-lg hover:shadow-yellow-500/10"
                       : "bg-white/5 backdrop-blur-sm border-white/10 hover:border-red-500/40 hover:shadow-md"
                   }`}
@@ -182,7 +204,7 @@ export function Leaderboard() {
                   <div className="md:col-span-1 flex md:justify-center items-center">
                     <div className="flex items-center gap-3 md:block md:text-center">
                       <div className="flex justify-center transform group-hover:scale-110 transition-transform">
-                        {getMedalIcon(team.rank)}
+                        {getMedalIcon(team.computedRank)}
                       </div>
                       <div className="md:hidden flex-1">
                         <span className="text-white font-semibold text-base block">
@@ -201,9 +223,9 @@ export function Leaderboard() {
                       </h3>
                       <div className="flex items-center gap-2">
                         <p className="text-gray-400 text-xs">{team.code}</p>
-                        {team.rank <= 3 && (
+                        {team.computedRank <= 3 && (
                           <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-500/50 text-xs px-2 py-0">
-                            Top {team.rank}
+                            Top {team.computedRank}
                           </Badge>
                         )}
                       </div>
