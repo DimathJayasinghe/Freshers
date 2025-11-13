@@ -54,38 +54,41 @@ export function Footer() {
     <footer className="border-t border-red-900/30 mt-auto">
       <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
 
-        {/* Report a bug CTA */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
-          <div className="text-center sm:text-left">
-            <h3 className="text-white font-bold">Spot an issue?</h3>
-            <p className="text-gray-400 text-sm">Help us fix it by reporting the bug.</p>
+        {/* Report a bug (left) and Social links (right) on desktop; stacked on mobile */}
+        <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 mb-6">
+          {/* Left: bug caption + button */}
+          <div className="flex flex-col items-center md:items-start gap-3">
+            <div className="text-center md:text-left">
+              <h3 className="text-white font-bold">Spot an issue?</h3>
+              <p className="text-gray-400 text-sm">Help us fix it by reporting the bug.</p>
+            </div>
+            <Button onClick={() => setBugOpen(true)} className="bg-red-600 hover:bg-red-500">
+              <Bug className="w-4 h-4 mr-2" /> Report a bug
+            </Button>
           </div>
-          <Button onClick={() => setBugOpen(true)} className="bg-red-600 hover:bg-red-500">
-            <Bug className="w-4 h-4 mr-2" /> Report a bug
-          </Button>
-        </div>
 
-        {/* Social Media Links */}
-        <div className="pt-4">
-          <h3 className="text-white font-bold text-center mb-4">
-            Follow Pahasara Media Unit
-          </h3>
-          <div className="flex justify-center items-center gap-4 md:gap-6 flex-wrap">
-            {socialLinks.map((social) => {
-              const Icon = social.icon;
-              return (
-                <a
-                  key={social.name}
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`text-gray-400 ${social.color} transition-colors duration-300 transform hover:scale-110`}
-                  aria-label={social.name}
-                >
-                  <Icon className="w-6 h-6 md:w-7 md:h-7" />
-                </a>
-              );
-            })}
+          {/* Right: follow social links */}
+          <div className="w-full md:w-auto">
+            <h3 className="text-white font-bold text-center md:text-right mb-4 md:mb-2">
+              Follow Pahasara Media Unit
+            </h3>
+            <div className="flex justify-center md:justify-end items-center gap-4 md:gap-6 flex-wrap">
+              {socialLinks.map((social) => {
+                const Icon = social.icon;
+                return (
+                  <a
+                    key={social.name}
+                    href={social.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`text-gray-400 ${social.color} transition-colors duration-300 transform hover:scale-110`}
+                    aria-label={social.name}
+                  >
+                    <Icon className="w-6 h-6 md:w-7 md:h-7" />
+                  </a>
+                );
+              })}
+            </div>
           </div>
         </div>
 
