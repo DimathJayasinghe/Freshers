@@ -12,6 +12,7 @@ export function Lineup() {
   const navigate = useNavigate();
   const [days, setDays] = useState<ScheduleDay[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [includePast, setIncludePast] = useState<boolean>(false);
 
   useEffect(() => {
     let mounted = true;
@@ -22,19 +23,15 @@ export function Lineup() {
     return () => { mounted = false; };
   }, []);
 
-  const handleSportClick = (sport: string) => {
+  // Click on schedule items disabled by request; hover effects retained
 
-
-    // Generate a slug from the sport label for routing
-    const sportId = sport.toLowerCase().replace(/\s+/g, '-').replace(/[()&']/g, '');
-    if (sportId === 'closing-ceremony') {
-      navigate('/closing-ceremony');
-    } else {
-      navigate(`/sport/${sportId}`);
-    }
-  };
-
-  const dayList = days;
+  // Compute filtered list: by default show only upcoming (today or later)
+  const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
+  const dayList = (includePast ? days : days.filter(d => {
+    const dDate = new Date(d.date);
+    dDate.setHours(0,0,0,0);
+    return dDate.getTime() >= todayMidnight.getTime();
+  }));
   const totalEvents = dayList.reduce((sum, day) => sum + day.events.length, 0);
 
   return (
@@ -77,6 +74,15 @@ export function Lineup() {
                   <Clock className="w-4 h-4 mr-2 inline" />
                   {totalEvents} Events
                 </Badge>
+              )}
+              {!loading && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIncludePast(v => !v)}
+                  className="border-white/20 text-gray-200 hover:bg-white/10"
+                >
+                  {includePast ? 'Hide past days' : 'Include past days'}
+                </Button>
               )}
             </div>
           </div>
@@ -160,8 +166,7 @@ export function Lineup() {
                       {day.events.map((event, eventIndex) => (
                         <div key={eventIndex}>
                           <div
-                            onClick={() => handleSportClick(event.sport)}
-                            className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-gradient-to-r from-white/5 to-transparent backdrop-blur-sm rounded-lg border border-white/10 hover:border-red-500/50 hover:bg-white/10 hover:shadow-lg hover:shadow-red-500/10 transition-all cursor-pointer group/event"
+                            className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-gradient-to-r from-white/5 to-transparent backdrop-blur-sm rounded-lg border border-white/10 hover:border-red-500/50 hover:bg-white/10 hover:shadow-lg hover:shadow-red-500/10 transition-all group/event"
                           >
                             {/* Sport Name */}
                             <div className="md:col-span-5 flex items-center gap-3">
