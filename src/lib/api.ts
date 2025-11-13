@@ -119,6 +119,7 @@ export type FacultyOverview = {
   rank: number | null;
   sportsCount: number;
   latestAchievement?: { sport: string | null; position: string; year: number | null } | null;
+  championSports: string[]; // sports where this faculty has recorded a championship
 };
 
 type FacultyRow = { id: string; name: string; short_name: string; primary_color: string; secondary_color: string; logo_url: string };
@@ -143,9 +144,16 @@ export async function fetchFacultiesOverview(): Promise<FacultyOverview[]> {
   const sportsCounts = new Map<string, number>();
   (fsRes.data || [] as FacultySportsRow[]).forEach(r => sportsCounts.set(r.faculty_id, (sportsCounts.get(r.faculty_id) || 0) + 1));
   const latestByFaculty = new Map<string, { sport: string | null; position: string; year: number | null }>();
+  const championByFaculty = new Map<string, Set<string>>();
   (achRes.data || [] as FacultyAchievementRow[]).forEach(r => {
     const sportName = Array.isArray(r.sports) ? (r.sports as { name: string }[])[0]?.name ?? null : (r.sports as { name: string } | null | undefined)?.name ?? null;
     if (!latestByFaculty.has(r.faculty_id)) latestByFaculty.set(r.faculty_id, { sport: sportName, position: r.position, year: r.year });
+    // Detect championships
+  const isChampion = /(champ|1st|first|gold|winner)/i.test(r.position || '');
+    if (isChampion && sportName) {
+      if (!championByFaculty.has(r.faculty_id)) championByFaculty.set(r.faculty_id, new Set());
+      championByFaculty.get(r.faculty_id)!.add(sportName);
+    }
   });
   return faculties.map(f => {
     const lb = leaderboard.find(l => l.name === f.name);
@@ -158,7 +166,8 @@ export async function fetchFacultiesOverview(): Promise<FacultyOverview[]> {
       totalPoints: lb?.total_points ?? 0,
       rank: lb?.rank ?? null,
       sportsCount: sportsCounts.get(f.id) || 0,
-      latestAchievement: latestByFaculty.get(f.id) || null
+      latestAchievement: latestByFaculty.get(f.id) || null,
+      championSports: Array.from(championByFaculty.get(f.id) || [])
     } satisfies FacultyOverview;
   });
 }

@@ -155,19 +155,19 @@ export function Faculties() {
                     </div>
                   </div>
 
-                  {/* Sports Tags */}
+                  {/* Championship Sports Tags */}
                   <div className="flex flex-wrap gap-2">
-                    {Array.from({ length: Math.min(3, faculty.sportsCount) }).map((_, i) => (
+                    {faculty.championSports && faculty.championSports.slice(0,3).map((sport, i) => (
                       <Badge
                         key={i}
-                        className="bg-red-900/30 border border-red-700/50 text-red-300 text-xs hover:bg-red-900/50 transition-colors"
+                        className="bg-yellow-900/20 border border-yellow-600/40 text-yellow-300 text-xs hover:bg-yellow-900/30 transition-colors"
                       >
-                        Sport
+                        {sport}
                       </Badge>
                     ))}
-                    {faculty.sportsCount > 3 && (
+                    {faculty.championSports && faculty.championSports.length > 3 && (
                       <Badge className="bg-gray-800 text-gray-400 text-xs border-gray-700">
-                        +{faculty.sportsCount - 3}
+                        +{faculty.championSports.length - 3}
                       </Badge>
                     )}
                   </div>
