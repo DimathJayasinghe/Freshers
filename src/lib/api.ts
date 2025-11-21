@@ -21,8 +21,15 @@ export type BugReport = {
 // Generic helpers
 // --------------------------------------------------
 function formatTimeFromISO(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+  // iso is expected to be '1970-01-01T07:00:00' or similar, but treat as local time, not UTC
+  // Parse as local time string (not UTC)
+  const [_, time] = iso.split('T');
+  if (!time) return '';
+  const [h, m] = time.split(':');
+  if (h === undefined || m === undefined) return '';
+  const date = new Date();
+  date.setHours(Number(h), Number(m), 0, 0);
+  return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 // Central gender parsing (avoids /men/i matching inside "Women")
@@ -310,8 +317,8 @@ export async function fetchScheduleCalendar(): Promise<ScheduleDay[]> {
   const byDate = new Map<string, { sport: string; time: string; venue: string }[]>();
   (data || [] as any[]).forEach(r => {
     const date = r.event_date as string;
-    const start = r.start_time ? formatTimeFromISO(`1970-01-01T${r.start_time}Z`) : '';
-    const end = r.end_time ? formatTimeFromISO(`1970-01-01T${r.end_time}Z`) : '';
+    const start = r.start_time ? formatTimeFromISO(`1970-01-01T${r.start_time}`) : '';
+    const end = r.end_time ? formatTimeFromISO(`1970-01-01T${r.end_time}`) : '';
     const time = start && end ? `${start} – ${end}` : start || end || '';
     const sportObj = Array.isArray(r.sports) ? (r.sports as any[])[0] : (r.sports as any | undefined);
     const sport = r.sport_label ?? (sportObj ? (sportObj as any).name : undefined) ?? 'Event';
@@ -476,6 +483,14 @@ export async function fetchFacultiesList(): Promise<{ id: string; name: string; 
   const { data, error } = await supabase.from('faculties').select('id,name,short_name').order('name');
   if (error) throw error;
   return (data || []) as { id: string; name: string; short_name: string }[];
+}
+
+// Faculties participating in a given sport (includes placements + participants upserted during series finalization)
+export async function fetchFacultySportsBySportId(sportId: string): Promise<string[]> {
+  if (!hasSupabaseEnv || !supabase) return [];
+  const { data, error } = await supabase.from('faculty_sports').select('faculty_id').eq('sport_id', sportId);
+  if (error) throw error;
+  return ((data || []) as { faculty_id: string }[]).map(r => r.faculty_id).filter(Boolean);
 }
 
 // --------------------------------------------------

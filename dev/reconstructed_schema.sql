@@ -185,7 +185,6 @@ CREATE TABLE IF NOT EXISTS public.scheduled_events (
   event_date  date NOT NULL,
   sport_id    text REFERENCES public.sports(id) ON DELETE SET NULL,
   sport_label text,
-  time_range  text,
   start_time  time,
   end_time    time,
   venue       text NOT NULL,
