@@ -21,8 +21,15 @@ export type BugReport = {
 // Generic helpers
 // --------------------------------------------------
 function formatTimeFromISO(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+  // iso is expected to be '1970-01-01T07:00:00' or similar, but treat as local time, not UTC
+  // Parse as local time string (not UTC)
+  const [_, time] = iso.split('T');
+  if (!time) return '';
+  const [h, m] = time.split(':');
+  if (h === undefined || m === undefined) return '';
+  const date = new Date();
+  date.setHours(Number(h), Number(m), 0, 0);
+  return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 // Central gender parsing (avoids /men/i matching inside "Women")
@@ -310,8 +317,8 @@ export async function fetchScheduleCalendar(): Promise<ScheduleDay[]> {
   const byDate = new Map<string, { sport: string; time: string; venue: string }[]>();
   (data || [] as any[]).forEach(r => {
     const date = r.event_date as string;
-    const start = r.start_time ? formatTimeFromISO(`1970-01-01T${r.start_time}Z`) : '';
-    const end = r.end_time ? formatTimeFromISO(`1970-01-01T${r.end_time}Z`) : '';
+    const start = r.start_time ? formatTimeFromISO(`1970-01-01T${r.start_time}`) : '';
+    const end = r.end_time ? formatTimeFromISO(`1970-01-01T${r.end_time}`) : '';
     const time = start && end ? `${start} – ${end}` : start || end || '';
     const sportObj = Array.isArray(r.sports) ? (r.sports as any[])[0] : (r.sports as any | undefined);
     const sport = r.sport_label ?? (sportObj ? (sportObj as any).name : undefined) ?? 'Event';
