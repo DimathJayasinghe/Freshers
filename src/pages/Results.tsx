@@ -415,7 +415,7 @@ export function Results() {
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <button
                     onClick={(e) => handleShare(e, event)}
-                    className="flex items-center gap-1 py-2 px-3 rounded-lg text-xs text-gray-400 hover:text-red-400 transition-colors cursor-pointer group border border-transparent hover:border-red-800/50"
+                    className="hidden flex items-center gap-1 py-2 px-3 rounded-lg text-xs text-gray-400 hover:text-red-400 transition-colors cursor-pointer group border border-transparent hover:border-red-800/50"
                   >
                     <Share2 className="w-3 h-3" />
                     <span>Share post</span>

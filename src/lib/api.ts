@@ -478,6 +478,14 @@ export async function fetchFacultiesList(): Promise<{ id: string; name: string; 
   return (data || []) as { id: string; name: string; short_name: string }[];
 }
 
+// Faculties participating in a given sport (includes placements + participants upserted during series finalization)
+export async function fetchFacultySportsBySportId(sportId: string): Promise<string[]> {
+  if (!hasSupabaseEnv || !supabase) return [];
+  const { data, error } = await supabase.from('faculty_sports').select('faculty_id').eq('sport_id', sportId);
+  if (error) throw error;
+  return ((data || []) as { faculty_id: string }[]).map(r => r.faculty_id).filter(Boolean);
+}
+
 // --------------------------------------------------
 // Results CRUD (admin)
 // --------------------------------------------------

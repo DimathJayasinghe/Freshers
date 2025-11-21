@@ -212,6 +212,10 @@ const ManageResultsPage: React.FC = () => {
       <AdminHeader />
       <AdminLayout title="Manage Results">
         <div className="max-w-6xl mx-auto">
+                    {/* Banner: Not completed yet */}
+                    <div className="mb-4 p-3 rounded-lg bg-yellow-900/80 border border-yellow-600 text-yellow-200 text-center font-semibold text-sm">
+                      ⚠️ Edit Results section is not completed yet.
+                    </div>
           <div className="text-xs text-gray-500 mb-2">Signed in as: {whoami.email ?? '—'} • Admin verified: {whoami.admin ? 'Yes' : 'No'}</div>
           <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
             <h3 className="font-semibold mb-3">Edit finalized results</h3>

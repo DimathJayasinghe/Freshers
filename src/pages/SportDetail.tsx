@@ -1,10 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, Medal, ArrowLeft, Users, Calendar, MapPin } from "lucide-react";
+import { Trophy, Medal, ArrowLeft, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
-import { fetchResults, fetchFacultiesList } from "@/lib/api";
+import { fetchResults, fetchFacultiesList, fetchSports, fetchFacultySportsBySportId } from "@/lib/api";
 import { getShortFacultyName } from "@/data/tournamentData";
 
 export function SportDetail() {
@@ -20,8 +20,8 @@ export function SportDetail() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    Promise.all([fetchResults(), fetchFacultiesList()])
-      .then(([rows, facs]) => {
+    Promise.all([fetchResults(), fetchFacultiesList(), fetchSports()])
+      .then(async ([rows, facs, sports]) => {
         if (!mounted) return;
         setAllResults(rows || []);
         const idMap = new Map<string, string>();
@@ -34,6 +34,17 @@ export function SportDetail() {
         });
         setFacNameToId(idMap);
         setFacNameToShort(shortMap);
+
+        // Determine sportId from slug param using sports list (no longer stored in state)
+        const slug = (sportName || '').toLowerCase();
+        const found = (sports || []).find(s => s.name && s.name.toLowerCase().replace(/\s+/g,'-') === slug);
+        if (found?.id) {
+          try {
+            await fetchFacultySportsBySportId(found.id);
+          } catch (e) {
+            console.warn('[SportDetail] faculty_sports fetch failed', e);
+          }
+        }
       })
       .catch((e) => { console.error('[SportDetail] initial load error', e); if (mounted) setError('Failed to load results'); })
       .finally(() => { if (mounted) setLoading(false); });
@@ -91,10 +102,9 @@ export function SportDetail() {
   const mensEvents = sportResults.filter(r => r.gender === "Men's");
   const womensEvents = sportResults.filter(r => r.gender === "Women's");
   const mixedEvents = sportResults.filter(r => r.gender === "Mixed");
-  
-  // Unique teams participated by gender
-  const mensTeamsCount = new Set(mensEvents.flatMap(e => e.positions.map(p => p.faculty))).size;
-  const womensTeamsCount = new Set(womensEvents.flatMap(e => e.positions.map(p => p.faculty))).size;
+  // Note: We intentionally do NOT override with faculty_sports totals because that table
+  // lacks gender granularity and was causing identical counts for Men/Women.
+  // If gender-specific participation data becomes available, integrate it here.
   const latestEvent = sportResults[0];
   const latestDate = latestEvent?.date ?? '';
   const latestVenue = 'Main Grounds'; // No venue in results_view; keep consistent with event cards
@@ -146,33 +156,7 @@ export function SportDetail() {
 
       {/* Insights Section */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {/* Men's teams participated */}
-          <Card className="border-2 border-blue-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-blue-600/20 rounded-lg">
-                <Users className="w-6 h-6 text-blue-500" />
-              </div>
-              <div>
-                <div className="text-2xl font-black text-white">{mensTeamsCount}</div>
-                <div className="text-xs text-gray-400">Men's Teams Participated</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Women's teams participated */}
-          <Card className="border-2 border-pink-800/50 bg-gradient-to-br from-gray-900 to-black">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-pink-600/20 rounded-lg">
-                <Users className="w-6 h-6 text-pink-500" />
-              </div>
-              <div>
-                <div className="text-2xl font-black text-white">{womensTeamsCount}</div>
-                <div className="text-xs text-gray-400">Women's Teams Participated</div>
-              </div>
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {/* Location */}
           <Card className="border-2 border-yellow-800/50 bg-gradient-to-br from-gray-900 to-black">
             <CardContent className="p-4 flex items-center gap-3">
