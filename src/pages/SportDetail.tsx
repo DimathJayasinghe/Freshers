@@ -15,8 +15,6 @@ export function SportDetail() {
   const [facNameToId, setFacNameToId] = useState<Map<string, string>>(new Map());
   const [facNameToShort, setFacNameToShort] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState<boolean>(true);
-  const [sportId, setSportId] = useState<string | null>(null);
-  const [participatingFacultyIds, setParticipatingFacultyIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,14 +35,12 @@ export function SportDetail() {
         setFacNameToId(idMap);
         setFacNameToShort(shortMap);
 
-        // Determine sportId from slug param using sports list
+        // Determine sportId from slug param using sports list (no longer stored in state)
         const slug = (sportName || '').toLowerCase();
         const found = (sports || []).find(s => s.name && s.name.toLowerCase().replace(/\s+/g,'-') === slug);
         if (found?.id) {
-          setSportId(found.id);
           try {
-            const facIds = await fetchFacultySportsBySportId(found.id);
-            if (mounted) setParticipatingFacultyIds(facIds);
+            await fetchFacultySportsBySportId(found.id);
           } catch (e) {
             console.warn('[SportDetail] faculty_sports fetch failed', e);
           }
