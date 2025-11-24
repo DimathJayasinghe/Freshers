@@ -2,7 +2,7 @@ name: Build and Release
 
 on:
   push:
-    branches: ['main']
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -28,7 +28,7 @@ jobs:
         run: |
           echo "VITE_SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "VITE_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
-          echo "VITE_SITE_URL"=${{ secrets.SITE_URL }} >> .env
+          echo "VITE_SITE_URL=${{ secrets.SITE_URL }}" >> .env
 
       - name: Build
         run: npm run build
@@ -38,7 +38,7 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
           files: build.zip
           tag_name: release-${{ github.sha }}
