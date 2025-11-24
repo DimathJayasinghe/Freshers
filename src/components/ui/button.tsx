@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-
+import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
@@ -36,23 +36,51 @@ const buttonVariants = cva(
   }
 )
 
+type RouterExtras = {
+  /** Route path to navigate to after successful onClick. Ignored if `asChild` is true. */
+  to?: string
+  /** Optional replace flag for navigation (defaults to push). */
+  replace?: boolean
+  /** Optional state object passed to navigate */
+  state?: any
+}
+
 function Button({
   className,
   variant,
   size,
   asChild = false,
-  ...props
+  to,
+  replace,
+  state,
+  onClick,
+  type,
+  ...rest
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
-  }) {
+  } & RouterExtras) {
   const Comp = asChild ? Slot : "button"
+  const navigate = useNavigate()
+
+  function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
+    if (onClick) {
+      onClick(e)
+    }
+    if (!e.defaultPrevented && to) {
+      navigate(to, { replace, state })
+    }
+  }
 
   return (
     <Comp
       data-slot="button"
+      // Ensure button role semantics even if customized
+      type={type ?? (to ? "button" : undefined)}
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
+      // Only attach click if not rendering as child (child may be a Link itself)
+      {...(asChild ? {} : { onClick: handleClick })}
+      {...rest}
     />
   )
 }

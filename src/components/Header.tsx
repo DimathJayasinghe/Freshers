@@ -81,20 +81,21 @@ export function Header() {
               </SheetHeader>
               <nav className="flex flex-col gap-3 mt-6">
                 {navItems.map(({ path, icon: Icon, label }) => (
-                  <Link key={path} to={path} onClick={() => setOpen(false)}>
-                    <Button
-                      variant={isActive(path) ? "default" : "ghost"}
-                      size="lg"
-                      className={
-                        isActive(path)
-                          ? "w-full justify-start bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white gap-3 shadow-lg shadow-red-900/50"
-                          : "w-full justify-start text-gray-300 hover:text-white hover:bg-red-900/40 gap-3"
-                      }
-                    >
-                      <Icon className="h-5 w-5 flex-shrink-0" />
-                      <span>{label}</span>
-                    </Button>
-                  </Link>
+                  <Button
+                    key={path}
+                    to={path}
+                    onClick={() => setOpen(false)}
+                    variant={isActive(path) ? "default" : "ghost"}
+                    size="lg"
+                    className={
+                      isActive(path)
+                        ? "w-full justify-start bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white gap-3 shadow-lg shadow-red-900/50"
+                        : "w-full justify-start text-gray-300 hover:text-white hover:bg-red-900/40 gap-3"
+                    }
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <span>{label}</span>
+                  </Button>
                 ))}
               </nav>
             </SheetContent>
