@@ -9,6 +9,7 @@ import { fetchLeaderboard } from "../lib/api";
 export function Leaderboard() {
   const [rows, setRows] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [sortBy, setSortBy] = useState<'total' | 'mens' | 'womens'>('total');
   type RankedTeam = TeamData & { computedRank: number };
 
   useEffect(() => {
@@ -28,15 +29,14 @@ export function Leaderboard() {
     };
   }, []);
 
-  // Compute competition ranking (1,1,3) based on totalPoints and keep list sorted desc by total
-  const rankedRows = useMemo<RankedTeam[]>(() => {
+  // Base total-points ranking (used for podium cards only)
+  const rankedTotalRows = useMemo<RankedTeam[]>(() => {
     if (!rows || rows.length === 0) return [] as RankedTeam[];
     const sorted = [...rows].sort((a, b) => {
       const at = Number(a.totalPoints);
       const bt = Number(b.totalPoints);
-      if (bt !== at) return bt - at; // desc by total points
-      // stable tie-breaker for deterministic order
-      return (a.name || "").localeCompare(b.name || "");
+      if (bt !== at) return bt - at;
+      return (a.name || '').localeCompare(b.name || '');
     });
     let prevPoints: number | null = null;
     let prevRank = 0;
@@ -48,6 +48,37 @@ export function Leaderboard() {
       return { ...t, computedRank: rank };
     });
   }, [rows]);
+
+  // Dynamic table ranking based on selected column metric
+  const tableRows = useMemo<RankedTeam[]>(() => {
+    if (!rows || rows.length === 0) return [] as RankedTeam[];
+    const metricValue = (t: TeamData) => {
+      switch (sortBy) {
+        case 'mens': return Number(t.mensPoints);
+        case 'womens': return Number(t.womensPoints);
+        default: return Number(t.totalPoints);
+      }
+    };
+    const sorted = [...rows].sort((a, b) => {
+      const av = metricValue(a);
+      const bv = metricValue(b);
+      if (bv !== av) return bv - av; // desc by metric
+      // Tie-breaker deterministic: fall back to total points then name
+      const at = Number(a.totalPoints);
+      const bt = Number(b.totalPoints);
+      if (bt !== at) return bt - at;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    let prevVal: number | null = null;
+    let prevRank = 0;
+    return sorted.map<RankedTeam>((t, idx) => {
+      const val = metricValue(t);
+      const rank = prevVal !== null && val === prevVal ? prevRank : idx + 1;
+      prevVal = val;
+      prevRank = rank;
+      return { ...t, computedRank: rank };
+    });
+  }, [rows, sortBy]);
 
   // Faculty detail navigation removed; rows are now static
 
@@ -94,7 +125,7 @@ export function Leaderboard() {
                   </CardContent>
                 </Card>
               ))}
-              {!loading && rankedRows.slice(0, 3).map((team, index) => (
+              {!loading && rankedTotalRows.slice(0, 3).map((team, index) => (
                 <Card
                   key={`${team.code}-${index}`}
                   className={`transition-all duration-300 animate-scale-in ${
@@ -155,13 +186,34 @@ export function Leaderboard() {
           </CardHeader>
           <CardContent className="p-4 md:p-6">
             {/* Header Row */}
-            <div className="hidden md:grid md:grid-cols-10 gap-4 p-4 bg-gradient-to-r from-red-900/20 to-transparent rounded-lg mb-4 font-semibold text-gray-300 text-sm border border-white/5">
+            <div className="hidden md:grid md:grid-cols-10 gap-4 p-4 bg-gradient-to-r from-red-900/20 to-transparent rounded-lg mb-4 font-semibold text-gray-300 text-sm border border-white/5 select-none">
               <div className="col-span-1 text-center">Rank</div>
               <div className="col-span-4">Faculty</div>
               <div className="col-span-5 grid grid-cols-3 gap-4 text-center">
-                <div>Men's Points</div>
-                <div>Women's Points</div>
-                <div className="text-yellow-400 font-bold">Total Points</div>
+                <button
+                  type="button"
+                  onClick={() => setSortBy('mens')}
+                  className={`transition-colors cursor-pointer focus:outline-none rounded px-2 py-1 border ${sortBy==='mens' ? 'text-blue-400 border-blue-500/40 bg-blue-500/10 shadow-sm' : 'border-transparent hover:text-blue-300'} `}
+                  aria-pressed={sortBy==='mens'}
+                >
+                  Men's Points
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortBy('womens')}
+                  className={`transition-colors cursor-pointer focus:outline-none rounded px-2 py-1 border ${sortBy==='womens' ? 'text-pink-400 border-pink-500/40 bg-pink-500/10 shadow-sm' : 'border-transparent hover:text-pink-300'} `}
+                  aria-pressed={sortBy==='womens'}
+                >
+                  Women's Points
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortBy('total')}
+                  className={`transition-colors cursor-pointer focus:outline-none rounded px-2 py-1 border ${sortBy==='total' ? 'text-yellow-400 border-yellow-500/40 bg-yellow-500/10 shadow-sm font-bold' : 'border-transparent hover:text-yellow-300'} `}
+                  aria-pressed={sortBy==='total'}
+                >
+                  Total Points
+                </button>
               </div>
             </div>
 
@@ -182,7 +234,7 @@ export function Leaderboard() {
                   </div>
                 </div>
               ))}
-              {!loading && rankedRows.map((team, index) => (
+              {!loading && tableRows.map((team, index) => (
                 <div
                   key={`${team.code}-${index}`}
                   className={`grid grid-cols-1 md:grid-cols-10 gap-4 p-4 rounded-lg border transition-all duration-300 group animate-fade-in-up ${
@@ -226,23 +278,23 @@ export function Leaderboard() {
 
                   {/* Points */}
                   <div className="md:col-span-5 grid grid-cols-3 gap-3 text-center">
-                    <div className="flex flex-col justify-center">
-                      <div className="text-white font-bold text-xl lg:text-2xl">
+                    <div className={`flex flex-col justify-center ${sortBy==='mens' ? 'ring-1 ring-blue-500/40 rounded-md bg-blue-500/5' : ''}`}>
+                      <div className={`font-bold text-xl lg:text-2xl ${sortBy==='mens' ? 'text-blue-400' : 'text-white'}`}>
                         {team.mensPoints}
                       </div>
-                      <div className="text-gray-500 text-xs mt-1">Men's</div>
+                      <div className={`text-xs mt-1 ${sortBy==='mens' ? 'text-blue-300 font-semibold' : 'text-gray-500'}`}>Men's</div>
                     </div>
-                    <div className="flex flex-col justify-center">
-                      <div className="text-white font-bold text-xl lg:text-2xl">
+                    <div className={`flex flex-col justify-center ${sortBy==='womens' ? 'ring-1 ring-pink-500/40 rounded-md bg-pink-500/5' : ''}`}>
+                      <div className={`font-bold text-xl lg:text-2xl ${sortBy==='womens' ? 'text-pink-400' : 'text-white'}`}>
                         {team.womensPoints}
                       </div>
-                      <div className="text-gray-500 text-xs mt-1">Women's</div>
+                      <div className={`text-xs mt-1 ${sortBy==='womens' ? 'text-pink-300 font-semibold' : 'text-gray-500'}`}>Women's</div>
                     </div>
-                    <div className="flex flex-col justify-center group-hover:scale-110 transition-transform">
-                      <div className="text-yellow-400 font-bold text-xl lg:text-2xl">
+                    <div className={`flex flex-col justify-center group-hover:scale-110 transition-transform ${sortBy==='total' ? 'ring-1 ring-yellow-500/40 rounded-md bg-yellow-500/5' : ''}`}>
+                      <div className={`font-bold text-xl lg:text-2xl ${sortBy==='total' ? 'text-yellow-400' : 'text-yellow-400'}`}>
                         {team.totalPoints}
                       </div>
-                      <div className="text-gray-400 text-xs mt-1 font-semibold">Total</div>
+                      <div className={`text-xs mt-1 font-semibold ${sortBy==='total' ? 'text-yellow-300' : 'text-gray-400'}`}>Total</div>
                     </div>
                   </div>
                 </div>
