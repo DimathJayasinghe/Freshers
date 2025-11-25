@@ -4,7 +4,7 @@ import { Trophy, Medal, ArrowLeft, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
-import { fetchResults, fetchSports, fetchFacultySportsBySportId } from "@/lib/api";
+import { fetchResults, fetchFacultiesList, fetchSports, fetchFacultySportsBySportId } from "@/lib/api";
 import { getShortFacultyName } from "@/data/tournamentData";
 
 export function SportDetail() {
@@ -12,6 +12,7 @@ export function SportDetail() {
   const navigate = useNavigate();
   const [divisionTab, setDivisionTab] = useState<'men' | 'women' | 'both'>('both');
   const [allResults, setAllResults] = useState([] as Awaited<ReturnType<typeof fetchResults>>);
+  const [facNameToId, setFacNameToId] = useState<Map<string, string>>(new Map());
   const [facNameToShort, setFacNameToShort] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,11 +20,19 @@ export function SportDetail() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    Promise.all([fetchResults(), fetchSports()])
-      .then(async ([rows, sports]) => {
+    Promise.all([fetchResults(), fetchFacultiesList(), fetchSports()])
+      .then(async ([rows, facs, sports]) => {
         if (!mounted) return;
         setAllResults(rows || []);
+        const idMap = new Map<string, string>();
         const shortMap = new Map<string, string>();
+        (facs || []).forEach(f => {
+          if (f?.name) {
+            if (f.id) idMap.set(f.name, f.id);
+            if ((f as any).short_name) shortMap.set(f.name, (f as any).short_name);
+          }
+        });
+        setFacNameToId(idMap);
         setFacNameToShort(shortMap);
 
         // Determine sportId from slug param using sports list (no longer stored in state)
