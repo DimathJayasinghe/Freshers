@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Trophy, Medal, ArrowRight, Share2 } from "lucide-react";
 import type { CompletedEvent } from "@/data/resultsData";
-import { getFacultyIdByName } from "@/data/facultiesData";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { fetchResults } from "@/lib/api";
@@ -32,14 +31,7 @@ export function Results() {
     };
   }, []);
 
-  // Handle faculty name click
-  const handleFacultyClick = (e: React.MouseEvent, facultyName: string) => {
-    e.stopPropagation();
-    const facultyId = getFacultyIdByName(facultyName);
-    if (facultyId) {
-      navigate(`/faculty/${facultyId}`);
-    }
-  };
+  // Faculty detail navigation removed; names now static text
 
   // Group events - now each event has all positions in a single entry
   const sortedEvents = [...rows].sort((a, b) => {
@@ -389,8 +381,7 @@ export function Results() {
                           : "🥉 Third Place"}
                       </div>
                       <div
-                        className="text-white font-semibold text-base hover:text-red-400 cursor-pointer transition-colors underline decoration-transparent hover:decoration-red-400"
-                        onClick={(e) => handleFacultyClick(e, position.faculty)}
+                        className="text-white font-semibold text-base"
                       >
                         {position.faculty}
                       </div>

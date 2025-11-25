@@ -10,8 +10,7 @@ import { Results } from "@/pages/Results";
 import { LiveResults } from "@/pages/LiveResults";
 import { Sports } from "@/pages/Sports";
 import { SportDetail } from "@/pages/SportDetail";
-import { Faculties } from "@/pages/Faculties";
-import { FacultyDetail } from "@/pages/FacultyDetail";
+// Removed Faculties & FacultyDetail pages per request
 import { ClosingCeremony } from "@/pages/ClosingCeremony";
 import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -47,8 +46,7 @@ function App() {
             <Route path="/live" element={<LiveResults />} />
             <Route path="/sports" element={<Sports />} />
             <Route path="/sport/:sportName" element={<SportDetail />} />
-            <Route path="/faculties" element={<Faculties />} />
-            <Route path="/faculty/:facultyId" element={<FacultyDetail />} />
+            {/* Faculties & FacultyDetail routes removed */}
             <Route path="/closing-ceremony" element={<ClosingCeremony />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />

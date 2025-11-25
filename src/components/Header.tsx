@@ -1,4 +1,4 @@
-import { Home, LineChart, Trophy, Target, Menu, Dumbbell, Users } from "lucide-react";
+import { Home, LineChart, Trophy, Target, Menu, Dumbbell } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +26,7 @@ export function Header() {
 
   const navItems = [
     { path: "/", icon: Home, label: "Home" },
-    { path: "/faculties", icon: Users, label: "Faculties" },
+    // Faculties link removed per request
     { path: "/sports", icon: Dumbbell, label: "Sports" },
     { path: "/lineup", icon: LineChart, label: "Lineup" },
     { path: "/results", icon: Target, label: "Results" },
