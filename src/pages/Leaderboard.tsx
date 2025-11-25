@@ -216,6 +216,20 @@ export function Leaderboard() {
                 </button>
               </div>
             </div>
+            {/* Mobile Sort Dropdown */}
+            <div className="md:hidden mb-4 flex items-center justify-end gap-2">
+              <label htmlFor="lb-mobile-sort" className="text-xs text-gray-400">Sort by</label>
+              <select
+                id="lb-mobile-sort"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'total' | 'mens' | 'womens')}
+                className="bg-black/40 border border-white/10 text-gray-200 text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-yellow-500"
+              >
+                <option value="total">Total Points</option>
+                <option value="mens">Men's Points</option>
+                <option value="womens">Women's Points</option>
+              </select>
+            </div>
 
             {/* Team Rows */}
             <div className="space-y-3">
