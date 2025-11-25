@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, MapPin, Trophy, Award, Sparkles, Users, Music, Camera, PartyPopper } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Calendar, Clock, MapPin, Trophy, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -9,46 +9,9 @@ export function ClosingCeremony() {
   const ceremonyDetails = {
     date: "December 9, 2025",
     time: "6:00 PM - 9:00 PM",
-    venue: "Main Auditorium",
+    venue: "NAT",
     duration: "3 Hours"
   };
-
-  const highlights = [
-    {
-      icon: Trophy,
-      title: "Award Ceremony",
-      description: "Recognition of champions and outstanding performers",
-      color: "text-yellow-500"
-    },
-    {
-      icon: Users,
-      title: "Guest Speeches",
-      description: "Inspiring words from university officials and honored guests",
-      color: "text-blue-500"
-    },
-    {
-      icon: Music,
-      title: "Cultural Performances",
-      description: "Spectacular performances by talented students",
-      color: "text-purple-500"
-    },
-    {
-      icon: Camera,
-      title: "Photo Opportunities",
-      description: "Capture memories with teams and trophies",
-      color: "text-pink-500"
-    }
-  ];
-
-  const awards = [
-    "Overall Championship Trophy",
-    "Men's Championship",
-    "Women's Championship",
-    "Best Sportsman",
-    "Best Sportswoman",
-    "Fair Play Award",
-    "Most Improved Faculty"
-  ];
 
   return (
     <div className="min-h-screen">
@@ -112,98 +75,7 @@ export function ClosingCeremony() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16">
-        {/* Event Highlights */}
-        <div className="mb-16">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Event <span className="text-yellow-500">Highlights</span>
-            </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
-              Experience an unforgettable evening filled with celebration, recognition, and entertainment
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {highlights.map((highlight, index) => (
-              <Card
-                key={index}
-                className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-white/10 hover:border-red-500/50 transition-all duration-300 group animate-fade-in-up"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <highlight.icon className={`w-6 h-6 ${highlight.color}`} />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-white text-lg mb-2 group-hover:text-yellow-400 transition-colors">
-                        {highlight.title}
-                      </CardTitle>
-                      <p className="text-gray-400 text-sm">{highlight.description}</p>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Awards Section */}
-        <div className="mb-16">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              <Trophy className="w-8 h-8 inline mb-2 text-yellow-500" /> Awards & Recognition
-            </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
-              Honoring excellence, sportsmanship, and outstanding achievements
-            </p>
-          </div>
-
-          <Card className="bg-gradient-to-br from-yellow-900/20 via-black to-red-900/20 border-yellow-500/30">
-            <CardContent className="p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {awards.map((award, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 bg-black/40 border border-white/10 rounded-lg p-4 hover:border-yellow-500/50 hover:bg-white/5 transition-all animate-fade-in-up"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <Award className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-                    <span className="text-white font-medium text-sm">{award}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Important Information */}
-        <Card className="bg-gradient-to-r from-red-950/50 via-black to-red-950/50 border-red-500/30 mb-12">
-          <CardContent className="p-8">
-            <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-yellow-500" />
-              Important Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-300">
-              <div>
-                <h4 className="text-white font-semibold mb-2">Dress Code</h4>
-                <p className="text-sm">Formal or semi-formal attire recommended</p>
-              </div>
-              <div>
-                <h4 className="text-white font-semibold mb-2">Attendance</h4>
-                <p className="text-sm">Open to all students, faculty, and staff</p>
-              </div>
-              <div>
-                <h4 className="text-white font-semibold mb-2">Entry</h4>
-                <p className="text-sm">Doors open at 5:30 PM</p>
-              </div>
-              <div>
-                <h4 className="text-white font-semibold mb-2">Photography</h4>
-                <p className="text-sm">Professional photographers will be present</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Sections removed: Event Highlights, Awards & Recognition, Important Information */}
 
         {/* CTA Section */}
         <Card className="bg-gradient-to-r from-yellow-950/50 via-black to-yellow-950/50 border-yellow-500/30">
