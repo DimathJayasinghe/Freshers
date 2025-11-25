@@ -1,12 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award, Sparkles } from "lucide-react";
 import type { TeamData } from "../data/leaderboardData";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useMemo, useState } from "react";
 import { fetchLeaderboard, fetchFacultiesList } from "../lib/api";
 
 export function Leaderboard() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   type RankedTeam = TeamData & { computedRank: number };
@@ -65,7 +67,13 @@ export function Leaderboard() {
     });
   }, [rows]);
 
-  // Faculty detail navigation removed; rows are now static
+  // Handle faculty click using name/code -> id lookup
+  const handleFacultyClick = (facultyName: string, facultyCode?: string) => {
+    const idFromCode = facultyCode ? facByCode[facultyCode.toLowerCase()] : undefined;
+    const idFromName = facultyName ? facByName[facultyName.toLowerCase()] : undefined;
+    const facultyId = idFromCode || idFromName;
+    if (facultyId) navigate(`/faculty/${facultyId}`);
+  };
 
   const getMedalIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="h-7 w-7 text-yellow-500 drop-shadow-lg" />;
@@ -113,7 +121,8 @@ export function Leaderboard() {
               {!loading && rankedRows.slice(0, 3).map((team, index) => (
                 <Card
                   key={`${team.code}-${index}`}
-                  className={`transition-all duration-300 animate-scale-in ${
+                  onClick={() => handleFacultyClick(team.name, team.code)}
+                  className={`cursor-pointer transition-all duration-300 hover:scale-105 animate-scale-in ${
                     // Keep the nice centered layout for the first card, but color by computed rank
                     (index === 0 ? 'md:order-2' : index === 1 ? 'md:order-1' : 'md:order-3')
                   } ${
@@ -166,7 +175,7 @@ export function Leaderboard() {
               Complete Faculty Rankings
             </CardTitle>
             <p className="text-gray-400 text-sm mt-2">
-              Standings update automatically as events conclude
+              Click on any faculty to view their detailed profile and achievements
             </p>
           </CardHeader>
           <CardContent className="p-4 md:p-6">
@@ -201,7 +210,8 @@ export function Leaderboard() {
               {!loading && rankedRows.map((team, index) => (
                 <div
                   key={`${team.code}-${index}`}
-                  className={`grid grid-cols-1 md:grid-cols-10 gap-4 p-4 rounded-lg border transition-all duration-300 group animate-fade-in-up ${
+                  onClick={() => handleFacultyClick(team.name, team.code)}
+                  className={`grid grid-cols-1 md:grid-cols-10 gap-4 p-4 rounded-lg border transition-all duration-300 hover:scale-[1.02] cursor-pointer group animate-fade-in-up ${
                     team.computedRank <= 3
                       ? "bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5 border-yellow-500/30 hover:border-yellow-500/60 hover:shadow-lg hover:shadow-yellow-500/10"
                       : "bg-white/5 backdrop-blur-sm border-white/10 hover:border-red-500/40 hover:shadow-md"

@@ -51,7 +51,14 @@ export function SportDetail() {
     return () => { mounted = false; };
   }, []);
 
-  // Faculty detail navigation removed; names now static text
+  // Handle faculty name click
+  const handleFacultyClick = (e: React.MouseEvent, facultyName: string) => {
+    e.stopPropagation();
+    const facultyId = facNameToId.get(facultyName);
+    if (facultyId) {
+      navigate(`/faculty/${facultyId}`);
+    }
+  };
 
   // Filter results for this sport
   const sportResults = allResults.filter(
@@ -249,12 +256,14 @@ export function SportDetail() {
                           {/* Team Name */}
                           <div className="col-span-7">
                             <div 
-                              className="text-white font-bold text-lg"
+                              className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
+                              onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
                               {facNameToShort.get(position.faculty) ?? getShortFacultyName(position.faculty)}
                             </div>
                             <div 
-                              className="text-gray-400 text-xs"
+                              className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
+                              onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
                               {position.faculty}
                             </div>
@@ -348,12 +357,14 @@ export function SportDetail() {
                           {/* Team Name */}
                           <div className="col-span-7">
                             <div 
-                              className="text-white font-bold text-lg"
+                              className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
+                              onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
                               {facNameToShort.get(position.faculty) ?? getShortFacultyName(position.faculty)}
                             </div>
                             <div 
-                              className="text-gray-400 text-xs"
+                              className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
+                              onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
                               {position.faculty}
                             </div>
@@ -447,12 +458,14 @@ export function SportDetail() {
                           {/* Team Name */}
                           <div className="col-span-7">
                             <div 
-                              className="text-white font-bold text-lg"
+                              className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
+                              onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
                               {facNameToShort.get(position.faculty) ?? getShortFacultyName(position.faculty)}
                             </div>
                             <div 
-                              className="text-gray-400 text-xs"
+                              className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
+                              onClick={(e) => handleFacultyClick(e, position.faculty)}
                             >
                               {position.faculty}
                             </div>
