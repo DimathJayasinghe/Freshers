@@ -162,7 +162,7 @@ export function Home() {
                         </div>
                         <div className="text-[10px] sm:text-xs text-gray-400 group-hover:text-yellow-400 transition-colors">Sports</div>
                       </div>
-                      <div className="text-center transition-transform">
+                      <div onClick={() => navigate('/leaderboard')} className="text-center cursor-pointer hover:scale-105 transition-transform">
                         <div className="flex items-center justify-center gap-2 mb-1 sm:mb-1.5">
                           <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                           <div className="text-lg sm:text-xl font-bold text-white">11</div>
