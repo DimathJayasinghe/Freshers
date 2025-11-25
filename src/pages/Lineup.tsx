@@ -155,10 +155,7 @@ export function Lineup() {
                         <p className="text-gray-400 text-sm mt-1">{day.events.length} event{day.events.length !== 1 ? 's' : ''} scheduled</p>
                       </div>
 
-                      {/* Day Badge */}
-                      <Badge className="bg-blue-600/20 text-blue-400 border-blue-500/50 hidden md:inline-flex">
-                        Day {index + 1}
-                      </Badge>
+                      {/* Day Badge removed per request */}
                     </div>
                   </CardHeader>
                   <CardContent className="pt-4">
