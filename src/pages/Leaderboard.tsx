@@ -4,14 +4,12 @@ import type { TeamData } from "../data/leaderboardData";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useMemo, useState } from "react";
-import { fetchLeaderboard, fetchFacultiesList } from "../lib/api";
+import { fetchLeaderboard } from "../lib/api";
 
 export function Leaderboard() {
   const [rows, setRows] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   type RankedTeam = TeamData & { computedRank: number };
-  const [facByName, setFacByName] = useState<Record<string, string>>({});
-  const [facByCode, setFacByCode] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -25,20 +23,6 @@ export function Leaderboard() {
         // Fallback to static data silently
       })
       .finally(() => { if (mounted) setLoading(false); });
-    // Build a name/code -> id lookup for navigation
-    fetchFacultiesList()
-      .then(list => {
-        if (!mounted || !list) return;
-        const byName: Record<string, string> = {};
-        const byCode: Record<string, string> = {};
-        list.forEach(f => {
-          if (f.name) byName[f.name.toLowerCase()] = f.id;
-          if (f.short_name) byCode[f.short_name.toLowerCase()] = f.id;
-        });
-        setFacByName(byName);
-        setFacByCode(byCode);
-      })
-      .catch(err => console.warn('[Leaderboard] faculties list fetch warn', err));
     return () => {
       mounted = false;
     };
