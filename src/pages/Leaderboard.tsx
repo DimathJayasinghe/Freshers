@@ -83,10 +83,10 @@ export function Leaderboard() {
   // Faculty detail navigation removed; rows are now static
 
   const getMedalIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-7 w-7 text-yellow-500 drop-shadow-lg" />;
-    if (rank === 2) return <Medal className="h-7 w-7 text-gray-400 drop-shadow-lg" />;
-    if (rank === 3) return <Award className="h-7 w-7 text-orange-600 drop-shadow-lg" />;
-    return <span className="text-xl font-bold text-gray-500">#{rank}</span>;
+    if (rank === 1) return <Trophy className="h-6 w-6 md:h-7 md:w-7 text-yellow-500 drop-shadow-lg" />;
+    if (rank === 2) return <Medal className="h-6 w-6 md:h-7 md:w-7 text-gray-400 drop-shadow-lg" />;
+    if (rank === 3) return <Award className="h-6 w-6 md:h-7 md:w-7 text-orange-600 drop-shadow-lg" />;
+    return <span className="text-lg md:text-xl font-bold text-gray-500">#{rank}</span>;
   };
 
   return (
@@ -140,23 +140,23 @@ export function Leaderboard() {
                   }`}
                   style={{ animationDelay: `${index * 100 + 300}ms` }}
                 >
-                  <CardContent className="p-6 text-center">
+                  <CardContent className="p-4 md:p-6 text-center">
                     <div className="mb-3 flex justify-center">
                       {getMedalIcon(team.computedRank)}
                     </div>
-                    <h3 className="text-white font-bold text-lg mb-1">{team.code}</h3>
-                    <p className="text-gray-400 text-xs mb-3 line-clamp-1">{team.name}</p>
+                    <h3 className="text-white font-bold text-base md:text-lg mb-1">{team.code}</h3>
+                    <p className="text-gray-400 text-[10px] md:text-xs mb-3 line-clamp-1">{team.name}</p>
                     <Separator className="my-3 bg-white/10" />
-                    <div className="text-3xl font-bold text-white mb-1">{team.totalPoints}</div>
+                    <div className="text-2xl md:text-3xl font-bold text-white mb-1">{team.totalPoints}</div>
                     <p className="text-gray-400 text-xs">Total Points</p>
                     <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
                       <div>
-                        <div className="text-white font-semibold">{team.mensPoints}</div>
-                        <div className="text-gray-500">Men's</div>
+                        <div className="text-white font-semibold text-sm md:text-base">{team.mensPoints}</div>
+                        <div className="text-gray-500 text-[10px] md:text-xs">Men's</div>
                       </div>
                       <div>
-                        <div className="text-white font-semibold">{team.womensPoints}</div>
-                        <div className="text-gray-500">Women's</div>
+                        <div className="text-white font-semibold text-sm md:text-base">{team.womensPoints}</div>
+                        <div className="text-gray-500 text-[10px] md:text-xs">Women's</div>
                       </div>
                     </div>
                   </CardContent>
