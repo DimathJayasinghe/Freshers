@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useEffect, useMemo, useState } from "react";
 import { fetchLeaderboard } from "../lib/api";
 
+
 export function Leaderboard() {
   const [rows, setRows] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
