@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Flame, ChevronRight, MapPin, ListOrdered, RefreshCw } from 'lucide-react';
 import { supabase, hasSupabaseEnv } from '@/lib/supabaseClient';
-import { fetchLiveSportsNow, fetchLiveSeriesMatchesBySport, fetchActiveSeriesBySport, type LiveSeriesMatchView } from '@/lib/api';
+import { fetchLiveSportsNow, fetchLiveSeriesMatchesBySport, type LiveSeriesMatchView } from '@/lib/api';
 
 export function LiveResults() {
   const navigate = useNavigate();
@@ -15,7 +15,8 @@ export function LiveResults() {
   const [loadingSports, setLoadingSports] = useState<boolean>(true);
   const [loadingFixtures, setLoadingFixtures] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedGender, setSelectedGender] = useState<'male' | 'female' | 'mixed' | null>(null);
+  const [availableGenders, setAvailableGenders] = useState<Array<'male' | 'female' | 'mixed'>>([]);
+  const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female' | 'mixed'>('all');
   // Track last scores/winner to animate when numbers or winner change
   const lastScoresRef = useRef<Record<string, { s1: string | null; s2: string | null }>>({});
   const lastWinnerRef = useRef<Record<string, string | null>>({});
@@ -64,7 +65,8 @@ export function LiveResults() {
   useEffect(() => {
     if (!selectedSport) {
       setFixtures([]);
-      setSelectedGender(null);
+      setAvailableGenders([]);
+      setGenderFilter('all');
       return;
     }
     let alive = true;
@@ -122,12 +124,12 @@ export function LiveResults() {
         });
         lastScoresRef.current = newLast;
         setFixtures(rows);
-        // Also fetch active series meta to get gender for header chip
-        try {
-          const series = await fetchActiveSeriesBySport(selectedSport);
-          if (alive) setSelectedGender(series?.gender ?? null);
-        } catch {
-          if (alive) setSelectedGender(null);
+        // derive available genders from rows
+        const gens = Array.from(new Set((rows || []).map(r => (r as any).gender).filter(Boolean))) as Array<'male'|'female'|'mixed'>;
+        if (alive) {
+          setAvailableGenders(gens);
+          // keep current filter if still valid, else reset to 'all'
+          setGenderFilter(prev => (prev === 'all' || gens.includes(prev as any)) ? prev : 'all');
         }
       } catch (e) {
         console.error('[LiveResults] fetchLiveSeriesMatchesBySport error', e);
@@ -193,6 +195,11 @@ export function LiveResults() {
             });
             lastScoresRef.current = newLast;
             setFixtures(rows);
+            const gens = Array.from(new Set((rows || []).map(r => (r as any).gender).filter(Boolean))) as Array<'male'|'female'|'mixed'>;
+            if (alive) {
+              setAvailableGenders(gens);
+              setGenderFilter(prev => (prev === 'all' || gens.includes(prev as any)) ? prev : 'all');
+            }
           } catch (e) {
             console.error('[LiveResults] realtime matches INSERT refetch error', e);
           }
@@ -245,6 +252,11 @@ export function LiveResults() {
             });
             lastScoresRef.current = newLast;
             setFixtures(rows);
+            const gens = Array.from(new Set((rows || []).map(r => (r as any).gender).filter(Boolean))) as Array<'male'|'female'|'mixed'>;
+            if (alive) {
+              setAvailableGenders(gens);
+              setGenderFilter(prev => (prev === 'all' || gens.includes(prev as any)) ? prev : 'all');
+            }
           } catch (e) {
             console.error('[LiveResults] realtime matches UPDATE refetch error', e);
           }
@@ -284,6 +296,11 @@ export function LiveResults() {
             });
             lastScoresRef.current = newLast;
             setFixtures(rows);
+            const gens = Array.from(new Set((rows || []).map(r => (r as any).gender).filter(Boolean))) as Array<'male'|'female'|'mixed'>;
+            if (alive) {
+              setAvailableGenders(gens);
+              setGenderFilter(prev => (prev === 'all' || gens.includes(prev as any)) ? prev : 'all');
+            }
           } catch (e) {
             console.error('[LiveResults] realtime matches DELETE refetch error', e);
           }
@@ -402,7 +419,12 @@ export function LiveResults() {
               if (!selectedSport) return;
               setLoadingFixtures(true);
               fetchLiveSeriesMatchesBySport(selectedSport)
-                .then((rows) => setFixtures(rows))
+                .then((rows) => {
+                  setFixtures(rows);
+                  const gens = Array.from(new Set((rows || []).map(r => (r as any).gender).filter(Boolean))) as Array<'male'|'female'|'mixed'>;
+                  setAvailableGenders(gens);
+                  setGenderFilter(prev => (prev === 'all' || gens.includes(prev as any)) ? prev : 'all');
+                })
                 .catch((e) => { console.error(e); setError('Failed to refresh'); })
                 .finally(() => setLoadingFixtures(false));
             }}
@@ -410,6 +432,38 @@ export function LiveResults() {
             <RefreshCw className="w-4 h-4 mr-1" /> Refresh
           </Button>
         </div>
+
+        {/* Gender filter pills (Men/Women/Mixed/All) */}
+        {selectedSport && (
+          <div className="flex items-center gap-2 flex-wrap mt-2">
+            <span className="text-xs text-gray-400">Filter:</span>
+            <button
+              onClick={() => setGenderFilter('all')}
+              className={`px-3 h-8 rounded-full text-xs font-semibold border transition-colors ${
+                genderFilter === 'all'
+                  ? 'bg-white/10 text-white border-white/20'
+                  : 'bg-black/40 text-gray-300 border-white/10 hover:border-red-600 hover:text-red-400'
+              }`}
+            >All</button>
+            {(['male','female','mixed'] as const)
+              .filter(g => availableGenders.includes(g))
+              .map(g => (
+                <button
+                  key={`gf-${g}`}
+                  onClick={() => setGenderFilter(g)}
+                  className={`px-3 h-8 rounded-full text-xs font-semibold border transition-colors ${
+                    genderFilter === g
+                      ? (g === 'male'
+                          ? 'bg-blue-500/20 text-blue-200 border-blue-500/40'
+                          : g === 'female'
+                          ? 'bg-pink-500/20 text-pink-200 border-pink-500/40'
+                          : 'bg-violet-500/20 text-violet-200 border-violet-500/40')
+                      : 'bg-black/40 text-gray-300 border-white/10 hover:border-red-600 hover:text-red-400'
+                  }`}
+                >{g === 'male' ? 'Men' : g === 'female' ? 'Women' : 'Mixed'}</button>
+              ))}
+          </div>
+        )}
 
         {/* Fixtures list */}
         {!selectedSport && (
@@ -422,15 +476,15 @@ export function LiveResults() {
               <CardTitle className="text-white flex items-center gap-2">
                 <ListOrdered className="w-5 h-5 text-red-500" />
                 <span className="truncate">{selectedSportName || 'Live Matches'}</span>
-                {selectedGender && (
+                {genderFilter !== 'all' && (
                   <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                    selectedGender === 'male'
+                    genderFilter === 'male'
                       ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
-                      : selectedGender === 'female'
+                      : genderFilter === 'female'
                       ? 'bg-pink-500/15 text-pink-300 border-pink-500/30'
                       : 'bg-violet-500/15 text-violet-300 border-violet-500/30'
                   }`}>
-                    {selectedGender === 'male' ? 'Men' : selectedGender === 'female' ? 'Women' : 'Mixed'}
+                    {genderFilter === 'male' ? 'Men' : genderFilter === 'female' ? 'Women' : 'Mixed'}
                   </span>
                 )}
               </CardTitle>
@@ -444,13 +498,16 @@ export function LiveResults() {
                 </div>
               )}
 
-              {!loadingFixtures && fixtures.length === 0 && (
+              {(() => {
+                const shown = genderFilter === 'all' ? fixtures : fixtures.filter(f => (f as any).gender === genderFilter);
+                return !loadingFixtures && shown.length === 0;
+              })() && (
                 <div className="text-gray-400">No matches are live right now for this sport.</div>
               )}
 
-              {!loadingFixtures && fixtures.length > 0 && (
+              {!loadingFixtures && (genderFilter === 'all' ? fixtures.length > 0 : fixtures.some(f => (f as any).gender === genderFilter)) && (
                 <div className="space-y-3">
-                  {fixtures.map((m, idx) => (
+                  {(genderFilter === 'all' ? fixtures : fixtures.filter(m => (m as any).gender === genderFilter)).map((m, idx) => (
                     <div key={m.id} className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-red-600/40 transition-colors">
                       <div className="flex items-center justify-between gap-3 flex-wrap">
                         <div className="flex items-center gap-2">
