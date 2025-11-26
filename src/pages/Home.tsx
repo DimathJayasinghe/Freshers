@@ -254,14 +254,14 @@ export function Home() {
                   style={{ animationDelay: `${index * 80}ms` }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <CardHeader className="py-5 relative z-10">
+                  <CardHeader className="py-3 md:py-5 relative z-10">
                     <div className="flex items-center justify-between gap-3">
-                      <CardTitle className="text-white text-base md:text-lg group-hover:text-red-400 transition-colors truncate flex items-center gap-2">
-                        <div className="w-1 h-6 bg-red-500 rounded-full"></div>
+                      <CardTitle className="text-white text-sm md:text-lg group-hover:text-red-400 transition-colors truncate flex items-center gap-1.5 md:gap-2">
+                        <div className="w-1 h-5 md:h-6 bg-red-500 rounded-full"></div>
                         {s.name}
                       </CardTitle>
-                      <span className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-bold rounded-full flex items-center gap-2 animate-pulse flex-shrink-0 shadow-lg shadow-red-500/50">
-                        <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
+                      <span className="px-2 py-1 md:px-3 md:py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center gap-1.5 md:gap-2 animate-pulse flex-shrink-0 shadow-lg shadow-red-500/50">
+                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full animate-ping"></span>
                         LIVE
                       </span>
                     </div>
