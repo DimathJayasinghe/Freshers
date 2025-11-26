@@ -402,24 +402,24 @@ export function Home() {
               {/* 2nd Place */}
               <Card 
                 onClick={() => navigate('/leaderboard')}
-                className={`group relative overflow-hidden transition-all duration-300 cursor-pointer md:mt-8 ${themeForRank(rankedTop[1]?.computedRank ?? 2).card}`}
+                className={`group relative overflow-hidden transition-all duration-300 cursor-pointer order-2 md:order-1 md:mt-8 ${themeForRank(rankedTop[1]?.computedRank ?? 2).card}`}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-400/0 via-gray-400/10 to-gray-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <CardContent className="p-6 relative z-10 text-center">
+                <CardContent className="p-4 md:p-6 relative z-10 text-center">
                   {/* Rank Badge */}
-                  <div className={`mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[1]?.computedRank ?? 2).badge}`}>
+                  <div className={`mx-auto mb-4 w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[1]?.computedRank ?? 2).badge}`}>
                     <span className="text-2xl font-bold">{rankedTop[1]?.computedRank ?? 2}</span>
                   </div>
 
                   {/* Medal Icon */}
                   <div className="mb-3">
-                    <Trophy className={`w-12 h-12 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[1]?.computedRank ?? 2).trophy}`} />
+                    <Trophy className={`w-10 h-10 md:w-12 md:h-12 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[1]?.computedRank ?? 2).trophy}`} />
                   </div>
 
                   {/* Faculty Info */}
                   <div className="mb-4">
-                    <h3 className="text-white font-bold text-lg mb-1 transition-colors">
+                    <h3 className="text-white font-bold text-base md:text-lg mb-1 transition-colors">
                       {rankedTop[1]?.name ?? '—'}
                     </h3>
                     <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${themeForRank(rankedTop[1]?.computedRank ?? 2).codeChip}`}>
@@ -441,7 +441,7 @@ export function Home() {
 
                   {/* Total Points */}
                   <div className={`pt-4 border-t ${themeForRank(rankedTop[1]?.computedRank ?? 2).totalBorder}`}>
-                    <div className={`text-4xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[1]?.computedRank ?? 2).pointsGradient}`}>
+                    <div className={`text-3xl md:text-4xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[1]?.computedRank ?? 2).pointsGradient}`}>
                       {rankedTop[1]?.totalPoints ?? 0}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">Total Points</div>
@@ -452,24 +452,24 @@ export function Home() {
               {/* 1st Place - Elevated */}
               <Card 
                 onClick={() => navigate('/leaderboard')}
-                className={`group relative overflow-hidden transition-all duration-300 cursor-pointer md:scale-105 md:-mt-4 ${themeForRank(rankedTop[0]?.computedRank ?? 1).card}`}
+                className={`group relative overflow-hidden transition-all duration-300 cursor-pointer order-1 md:order-2 md:scale-105 md:-mt-4 ${themeForRank(rankedTop[0]?.computedRank ?? 1).card}`}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/0 via-yellow-400/10 to-yellow-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <CardContent className="p-6 pt-8 relative z-10 text-center">
+                <CardContent className="p-4 pt-6 md:p-6 md:pt-8 relative z-10 text-center">
                   {/* Rank Badge */}
-                  <div className={`mx-auto mb-4 w-20 h-20 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[0]?.computedRank ?? 1).badge}`}>
+                  <div className={`mx-auto mb-4 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[0]?.computedRank ?? 1).badge}`}>
                     <span className="text-3xl font-bold">{rankedTop[0]?.computedRank ?? 1}</span>
                   </div>
 
                   {/* Medal Icon */}
                   <div className="mb-3">
-                    <Trophy className={`w-16 h-16 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[0]?.computedRank ?? 1).trophy}`} />
+                    <Trophy className={`w-12 h-12 md:w-16 md:h-16 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[0]?.computedRank ?? 1).trophy}`} />
                   </div>
 
                   {/* Faculty Info */}
                   <div className="mb-4">
-                    <h3 className="text-white font-bold text-xl mb-2 transition-colors">
+                    <h3 className="text-white font-bold text-lg md:text-xl mb-2 transition-colors">
                       {rankedTop[0]?.name ?? '—'}
                     </h3>
                     <span className={`inline-block px-4 py-1 rounded-full text-sm font-bold ${themeForRank(rankedTop[0]?.computedRank ?? 1).codeChip}`}>
@@ -491,7 +491,7 @@ export function Home() {
 
                   {/* Total Points */}
                   <div className={`pt-4 border-t ${themeForRank(rankedTop[0]?.computedRank ?? 1).totalBorder}`}>
-                    <div className={`text-5xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[0]?.computedRank ?? 1).pointsGradient}`}>
+                    <div className={`text-4xl md:text-5xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[0]?.computedRank ?? 1).pointsGradient}`}>
                       {rankedTop[0]?.totalPoints ?? 0}
                     </div>
                     <div className="text-xs text-yellow-400 mt-1 font-semibold">Total Points</div>
@@ -502,24 +502,24 @@ export function Home() {
               {/* 3rd Place */}
               <Card 
                 onClick={() => navigate('/leaderboard')}
-                className={`group relative overflow-hidden transition-all duration-300 cursor-pointer md:mt-8 ${themeForRank(rankedTop[2]?.computedRank ?? 3).card}`}
+                className={`group relative overflow-hidden transition-all duration-300 cursor-pointer order-3 md:order-3 md:mt-8 ${themeForRank(rankedTop[2]?.computedRank ?? 3).card}`}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <CardContent className="p-6 relative z-10 text-center">
+                <CardContent className="p-4 md:p-6 relative z-10 text-center">
                   {/* Rank Badge */}
-                  <div className={`mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[2]?.computedRank ?? 3).badge}`}>
+                  <div className={`mx-auto mb-4 w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[2]?.computedRank ?? 3).badge}`}>
                     <span className="text-2xl font-bold">{rankedTop[2]?.computedRank ?? 3}</span>
                   </div>
 
                   {/* Medal Icon */}
                   <div className="mb-3">
-                    <Trophy className={`w-12 h-12 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[2]?.computedRank ?? 3).trophy}`} />
+                    <Trophy className={`w-10 h-10 md:w-12 md:h-12 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[2]?.computedRank ?? 3).trophy}`} />
                   </div>
 
                   {/* Faculty Info */}
                   <div className="mb-4">
-                    <h3 className="text-white font-bold text-lg mb-1 transition-colors">
+                    <h3 className="text-white font-bold text-base md:text-lg mb-1 transition-colors">
                       {rankedTop[2]?.name ?? '—'}
                     </h3>
                     <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${themeForRank(rankedTop[2]?.computedRank ?? 3).codeChip}`}>
@@ -541,7 +541,7 @@ export function Home() {
 
                   {/* Total Points */}
                   <div className={`pt-4 border-t ${themeForRank(rankedTop[2]?.computedRank ?? 3).totalBorder}`}>
-                    <div className={`text-4xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[2]?.computedRank ?? 3).pointsGradient}`}>
+                    <div className={`text-3xl md:text-4xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[2]?.computedRank ?? 3).pointsGradient}`}>
                       {rankedTop[2]?.totalPoints ?? 0}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">Total Points</div>
