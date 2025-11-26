@@ -703,6 +703,18 @@ export async function fetchActiveSeriesBySport(sport_id: string): Promise<AdminL
   const { data, error } = await supabase.from('live_sport_series').select('id,sport_id,title,is_finished,gender').eq('sport_id', sport_id).eq('is_finished', false).order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (error) throw error; return (data as AdminLiveSeries) ?? null;
 }
+// New: fetch all active series for a sport (supports multiple concurrent series)
+export async function fetchActiveSeriesListBySport(sport_id: string): Promise<AdminLiveSeries[]> {
+  if (!hasSupabaseEnv || !supabase) return [];
+  const { data, error } = await supabase
+    .from('live_sport_series')
+    .select('id,sport_id,title,is_finished,gender')
+    .eq('sport_id', sport_id)
+    .eq('is_finished', false)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []) as AdminLiveSeries[];
+}
 export type AdminLiveMatch = { id: number; series_id: number; match_order: number; venue: string | null; stage: 'round_of_16' | 'quarter_final' | 'semi_final' | 'final' | null; faculty1_id: string; faculty2_id: string; faculty1_score: string | null; faculty2_score: string | null; status: string; status_text: string | null; is_finished: boolean; winner_faculty_id: string | null; commentary: string | null };
 export async function addLiveMatch(payload: Omit<AdminLiveMatch, 'id' | 'status' | 'is_finished' | 'winner_faculty_id'> & { status?: string; is_finished?: boolean; winner_faculty_id?: string | null }) {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
