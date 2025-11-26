@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Trophy, Users, Flame, ChevronRight, ChevronDown, MapPin, Clock } from "lucide-react";
+import { Calendar, Trophy, Users, Flame, ChevronRight, MapPin, Clock } from "lucide-react";
 import type { ScheduleMatch } from "../data/homeData";
 import type { TeamData } from "../data/leaderboardData";
 import { Button } from "@/components/ui/button";
@@ -331,24 +331,50 @@ export function Home() {
                 {/* Animated background glow */}
                 <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <CardContent className="p-4 sm:p-6 relative z-10">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-                    {/* Time Badge */}
-                    <div className="flex items-center gap-2 bg-gradient-to-br from-yellow-500 to-amber-600 text-black rounded-lg px-3 py-2 flex-shrink-0">
-                      <Clock className="w-4 h-4" />
-                      <span className="font-bold text-sm">{event.time}</span>
-                    </div>
+                <CardContent className="p-3 sm:p-5 relative z-10">
+                  {/* Mobile compact row layout */}
+                  <div className="md:hidden">
+                    <div className="flex items-center justify-between gap-3">
+                      {/* Time Badge */}
+                      <div className="flex items-center gap-1.5 bg-gradient-to-br from-yellow-500 to-amber-600 text-black rounded-md px-2 py-1.5 flex-shrink-0">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span className="font-bold text-xs">{event.time}</span>
+                      </div>
 
-                    {/* Sport Name */}
-                    <div className="flex-1 flex items-center gap-3">
-                      <div className="w-1 h-8 bg-yellow-500"></div>
-                      <div className="text-white font-bold text-lg md:text-xl">{event.sport}</div>
-                    </div>
+                      {/* Sport Name */}
+                      <div className="flex-1 min-w-0 flex items-center gap-2">
+                        <div className="w-1 h-6 bg-yellow-500"></div>
+                        <div className="text-white font-semibold text-sm truncate">{event.sport}</div>
+                      </div>
 
-                    {/* Location */}
-                    <div className="flex items-center gap-2 text-gray-400 text-sm bg-black/30 px-3 py-2 rounded-lg flex-shrink-0 group-hover:text-yellow-400 transition-colors">
-                      <MapPin className="w-4 h-4 flex-shrink-0 text-yellow-500" />
-                      <span className="font-medium">{event.venue}</span>
+                      {/* Location */}
+                      <div className="flex items-center gap-1.5 text-gray-400 text-[11px] bg-black/30 px-2 py-1.5 rounded-md flex-shrink-0 group-hover:text-yellow-400 transition-colors max-w-[45%]">
+                        <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-yellow-500" />
+                        <span className="font-medium truncate">{event.venue}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Desktop original layout */}
+                  <div className="hidden md:block">
+                    <div className="flex flex-row items-center gap-6">
+                      {/* Time Badge */}
+                      <div className="flex items-center gap-2 bg-gradient-to-br from-yellow-500 to-amber-600 text-black rounded-lg px-3 py-2 flex-shrink-0">
+                        <Clock className="w-4 h-4" />
+                        <span className="font-bold text-sm">{event.time}</span>
+                      </div>
+
+                      {/* Sport Name */}
+                      <div className="flex-1 flex items-center gap-3">
+                        <div className="w-1 h-8 bg-yellow-500"></div>
+                        <div className="text-white font-bold text-xl">{event.sport}</div>
+                      </div>
+
+                      {/* Location */}
+                      <div className="flex items-center gap-2 text-gray-400 text-sm bg-black/30 px-3 py-2 rounded-lg flex-shrink-0 group-hover:text-yellow-400 transition-colors">
+                        <MapPin className="w-4 h-4 flex-shrink-0 text-yellow-500" />
+                        <span className="font-medium">{event.venue}</span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -406,45 +432,73 @@ export function Home() {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-400/0 via-gray-400/10 to-gray-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <CardContent className="p-4 md:p-6 relative z-10 text-center">
-                  {/* Rank Badge */}
-                  <div className={`mx-auto mb-4 w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[1]?.computedRank ?? 2).badge}`}>
-                    <span className="text-2xl font-bold">{rankedTop[1]?.computedRank ?? 2}</span>
-                  </div>
-
-                  {/* Medal Icon */}
-                  <div className="mb-3">
-                    <Trophy className={`w-10 h-10 md:w-12 md:h-12 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[1]?.computedRank ?? 2).trophy}`} />
-                  </div>
-
-                  {/* Faculty Info */}
-                  <div className="mb-4">
-                    <h3 className="text-white font-bold text-base md:text-lg mb-1 transition-colors">
-                      {rankedTop[1]?.name ?? '—'}
-                    </h3>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${themeForRank(rankedTop[1]?.computedRank ?? 2).codeChip}`}>
-                      {rankedTop[1]?.code ?? '—'}
-                    </span>
-                  </div>
-
-                  {/* Points Breakdown */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Men's:</span>
-                      <span className="text-blue-400 font-bold">{rankedTop[1]?.mensPoints ?? 0}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Women's:</span>
-                      <span className="text-pink-400 font-bold">{rankedTop[1]?.womensPoints ?? 0}</span>
+                <CardContent className="p-3 md:p-6 relative z-10">
+                  {/* Mobile compact row layout */}
+                  <div className="md:hidden">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${themeForRank(rankedTop[1]?.computedRank ?? 2).badge}`}>
+                        <span className="text-lg font-bold">{rankedTop[1]?.computedRank ?? 2}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate text-white font-semibold text-sm">{rankedTop[1]?.name ?? '—'}</div>
+                        <div className={`mt-0.5 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${themeForRank(rankedTop[1]?.computedRank ?? 2).codeChip}`}>
+                          {rankedTop[1]?.code ?? '—'}
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400">
+                          <span>Men's: <span className="text-blue-400 font-bold">{rankedTop[1]?.mensPoints ?? 0}</span></span>
+                          <span>Women's: <span className="text-pink-400 font-bold">{rankedTop[1]?.womensPoints ?? 0}</span></span>
+                        </div>
+                      </div>
+                      <div className="text-right px-2">
+                        <div className={`text-2xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[1]?.computedRank ?? 2).pointsGradient}`}>
+                          {rankedTop[1]?.totalPoints ?? 0}
+                        </div>
+                        <div className="text-[10px] text-gray-400 -mt-0.5">Total</div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Total Points */}
-                  <div className={`pt-4 border-t ${themeForRank(rankedTop[1]?.computedRank ?? 2).totalBorder}`}>
-                    <div className={`text-3xl md:text-4xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[1]?.computedRank ?? 2).pointsGradient}`}>
-                      {rankedTop[1]?.totalPoints ?? 0}
+                  {/* Desktop original content */}
+                  <div className="hidden md:block text-center">
+                    {/* Rank Badge */}
+                    <div className={`mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[1]?.computedRank ?? 2).badge}`}>
+                      <span className="text-2xl font-bold">{rankedTop[1]?.computedRank ?? 2}</span>
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">Total Points</div>
+
+                    {/* Medal Icon */}
+                    <div className="mb-3">
+                      <Trophy className={`w-12 h-12 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[1]?.computedRank ?? 2).trophy}`} />
+                    </div>
+
+                    {/* Faculty Info */}
+                    <div className="mb-4">
+                      <h3 className="text-white font-bold text-lg mb-1 transition-colors">
+                        {rankedTop[1]?.name ?? '—'}
+                      </h3>
+                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${themeForRank(rankedTop[1]?.computedRank ?? 2).codeChip}`}>
+                        {rankedTop[1]?.code ?? '—'}
+                      </span>
+                    </div>
+
+                    {/* Points Breakdown */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Men's:</span>
+                        <span className="text-blue-400 font-bold">{rankedTop[1]?.mensPoints ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Women's:</span>
+                        <span className="text-pink-400 font-bold">{rankedTop[1]?.womensPoints ?? 0}</span>
+                      </div>
+                    </div>
+
+                    {/* Total Points */}
+                    <div className={`pt-4 px-3 border-t ${themeForRank(rankedTop[1]?.computedRank ?? 2).totalBorder}`}>
+                      <div className={`text-4xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[1]?.computedRank ?? 2).pointsGradient}`}>
+                        {rankedTop[1]?.totalPoints ?? 0}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">Total Points</div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -456,45 +510,73 @@ export function Home() {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/0 via-yellow-400/10 to-yellow-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <CardContent className="p-4 pt-6 md:p-6 md:pt-8 relative z-10 text-center">
-                  {/* Rank Badge */}
-                  <div className={`mx-auto mb-4 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[0]?.computedRank ?? 1).badge}`}>
-                    <span className="text-3xl font-bold">{rankedTop[0]?.computedRank ?? 1}</span>
-                  </div>
-
-                  {/* Medal Icon */}
-                  <div className="mb-3">
-                    <Trophy className={`w-12 h-12 md:w-16 md:h-16 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[0]?.computedRank ?? 1).trophy}`} />
-                  </div>
-
-                  {/* Faculty Info */}
-                  <div className="mb-4">
-                    <h3 className="text-white font-bold text-lg md:text-xl mb-2 transition-colors">
-                      {rankedTop[0]?.name ?? '—'}
-                    </h3>
-                    <span className={`inline-block px-4 py-1 rounded-full text-sm font-bold ${themeForRank(rankedTop[0]?.computedRank ?? 1).codeChip}`}>
-                      {rankedTop[0]?.code ?? '—'}
-                    </span>
-                  </div>
-
-                  {/* Points Breakdown */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-300">Men's:</span>
-                      <span className="text-blue-400 font-bold">{rankedTop[0]?.mensPoints ?? 0}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-300">Women's:</span>
-                      <span className="text-pink-400 font-bold">{rankedTop[0]?.womensPoints ?? 0}</span>
+                <CardContent className="p-3 md:p-6 md:pt-8 relative z-10">
+                  {/* Mobile compact row layout */}
+                  <div className="md:hidden">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${themeForRank(rankedTop[0]?.computedRank ?? 1).badge}`}>
+                        <span className="text-lg font-bold">{rankedTop[0]?.computedRank ?? 1}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate text-white font-semibold text-sm">{rankedTop[0]?.name ?? '—'}</div>
+                        <div className={`mt-0.5 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${themeForRank(rankedTop[0]?.computedRank ?? 1).codeChip}`}>
+                          {rankedTop[0]?.code ?? '—'}
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400">
+                          <span>Men's: <span className="text-blue-400 font-bold">{rankedTop[0]?.mensPoints ?? 0}</span></span>
+                          <span>Women's: <span className="text-pink-400 font-bold">{rankedTop[0]?.womensPoints ?? 0}</span></span>
+                        </div>
+                      </div>
+                      <div className="text-right px-2">
+                        <div className={`text-2xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[0]?.computedRank ?? 1).pointsGradient}`}>
+                          {rankedTop[0]?.totalPoints ?? 0}
+                        </div>
+                        <div className="text-[10px] text-gray-400 -mt-0.5">Total</div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Total Points */}
-                  <div className={`pt-4 border-t ${themeForRank(rankedTop[0]?.computedRank ?? 1).totalBorder}`}>
-                    <div className={`text-4xl md:text-5xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[0]?.computedRank ?? 1).pointsGradient}`}>
-                      {rankedTop[0]?.totalPoints ?? 0}
+                  {/* Desktop original content */}
+                  <div className="hidden md:block text-center">
+                    {/* Rank Badge */}
+                    <div className={`mx-auto mb-4 w-20 h-20 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[0]?.computedRank ?? 1).badge}`}>
+                      <span className="text-3xl font-bold">{rankedTop[0]?.computedRank ?? 1}</span>
                     </div>
-                    <div className="text-xs text-yellow-400 mt-1 font-semibold">Total Points</div>
+
+                    {/* Medal Icon */}
+                    <div className="mb-3">
+                      <Trophy className={`w-16 h-16 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[0]?.computedRank ?? 1).trophy}`} />
+                    </div>
+
+                    {/* Faculty Info */}
+                    <div className="mb-4">
+                      <h3 className="text-white font-bold text-xl mb-2 transition-colors">
+                        {rankedTop[0]?.name ?? '—'}
+                      </h3>
+                      <span className={`inline-block px-4 py-1 rounded-full text-sm font-bold ${themeForRank(rankedTop[0]?.computedRank ?? 1).codeChip}`}>
+                        {rankedTop[0]?.code ?? '—'}
+                      </span>
+                    </div>
+
+                    {/* Points Breakdown */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-300">Men's:</span>
+                        <span className="text-blue-400 font-bold">{rankedTop[0]?.mensPoints ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-300">Women's:</span>
+                        <span className="text-pink-400 font-bold">{rankedTop[0]?.womensPoints ?? 0}</span>
+                      </div>
+                    </div>
+
+                    {/* Total Points */}
+                    <div className={`pt-4 px-3 border-t ${themeForRank(rankedTop[0]?.computedRank ?? 1).totalBorder}`}>
+                      <div className={`text-5xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[0]?.computedRank ?? 1).pointsGradient}`}>
+                        {rankedTop[0]?.totalPoints ?? 0}
+                      </div>
+                      <div className="text-xs text-yellow-400 mt-1 font-semibold">Total Points</div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -506,92 +588,80 @@ export function Home() {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-600/0 via-amber-600/10 to-amber-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <CardContent className="p-4 md:p-6 relative z-10 text-center">
-                  {/* Rank Badge */}
-                  <div className={`mx-auto mb-4 w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[2]?.computedRank ?? 3).badge}`}>
-                    <span className="text-2xl font-bold">{rankedTop[2]?.computedRank ?? 3}</span>
-                  </div>
-
-                  {/* Medal Icon */}
-                  <div className="mb-3">
-                    <Trophy className={`w-10 h-10 md:w-12 md:h-12 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[2]?.computedRank ?? 3).trophy}`} />
-                  </div>
-
-                  {/* Faculty Info */}
-                  <div className="mb-4">
-                    <h3 className="text-white font-bold text-base md:text-lg mb-1 transition-colors">
-                      {rankedTop[2]?.name ?? '—'}
-                    </h3>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${themeForRank(rankedTop[2]?.computedRank ?? 3).codeChip}`}>
-                      {rankedTop[2]?.code ?? '—'}
-                    </span>
-                  </div>
-
-                  {/* Points Breakdown */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Men's:</span>
-                      <span className="text-blue-400 font-bold">{rankedTop[2]?.mensPoints ?? 0}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Women's:</span>
-                      <span className="text-pink-400 font-bold">{rankedTop[2]?.womensPoints ?? 0}</span>
+                <CardContent className="p-3 md:p-6 relative z-10">
+                  {/* Mobile compact row layout */}
+                  <div className="md:hidden">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${themeForRank(rankedTop[2]?.computedRank ?? 3).badge}`}>
+                        <span className="text-lg font-bold">{rankedTop[2]?.computedRank ?? 3}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate text-white font-semibold text-sm">{rankedTop[2]?.name ?? '—'}</div>
+                        <div className={`mt-0.5 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${themeForRank(rankedTop[2]?.computedRank ?? 3).codeChip}`}>
+                          {rankedTop[2]?.code ?? '—'}
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400">
+                          <span>Men's: <span className="text-blue-400 font-bold">{rankedTop[2]?.mensPoints ?? 0}</span></span>
+                          <span>Women's: <span className="text-pink-400 font-bold">{rankedTop[2]?.womensPoints ?? 0}</span></span>
+                        </div>
+                      </div>
+                      <div className="text-right px-2">
+                        <div className={`text-2xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[2]?.computedRank ?? 3).pointsGradient}`}>
+                          {rankedTop[2]?.totalPoints ?? 0}
+                        </div>
+                        <div className="text-[10px] text-gray-400 -mt-0.5">Total</div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Total Points */}
-                  <div className={`pt-4 border-t ${themeForRank(rankedTop[2]?.computedRank ?? 3).totalBorder}`}>
-                    <div className={`text-3xl md:text-4xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[2]?.computedRank ?? 3).pointsGradient}`}>
-                      {rankedTop[2]?.totalPoints ?? 0}
+                  {/* Desktop original content */}
+                  <div className="hidden md:block text-center">
+                    {/* Rank Badge */}
+                    <div className={`mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${themeForRank(rankedTop[2]?.computedRank ?? 3).badge}`}>
+                      <span className="text-2xl font-bold">{rankedTop[2]?.computedRank ?? 3}</span>
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">Total Points</div>
+
+                    {/* Medal Icon */}
+                    <div className="mb-3">
+                      <Trophy className={`w-12 h-12 mx-auto group-hover:scale-110 transition-transform ${themeForRank(rankedTop[2]?.computedRank ?? 3).trophy}`} />
+                    </div>
+
+                    {/* Faculty Info */}
+                    <div className="mb-4">
+                      <h3 className="text-white font-bold text-lg mb-1 transition-colors">
+                        {rankedTop[2]?.name ?? '—'}
+                      </h3>
+                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${themeForRank(rankedTop[2]?.computedRank ?? 3).codeChip}`}>
+                        {rankedTop[2]?.code ?? '—'}
+                      </span>
+                    </div>
+
+                    {/* Points Breakdown */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Men's:</span>
+                        <span className="text-blue-400 font-bold">{rankedTop[2]?.mensPoints ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Women's:</span>
+                        <span className="text-pink-400 font-bold">{rankedTop[2]?.womensPoints ?? 0}</span>
+                      </div>
+                    </div>
+
+                    {/* Total Points */}
+                    <div className={`pt-4 px-3 border-t ${themeForRank(rankedTop[2]?.computedRank ?? 3).totalBorder}`}>
+                      <div className={`text-4xl font-bold bg-clip-text text-transparent ${themeForRank(rankedTop[2]?.computedRank ?? 3).pointsGradient}`}>
+                        {rankedTop[2]?.totalPoints ?? 0}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">Total Points</div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
           </section>
 
-          {/* Quick Actions */}
-          <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            <Card 
-              onClick={() => navigate('/leaderboard')}
-              className="bg-gradient-to-br from-yellow-900/20 via-black to-gray-900 border-yellow-700/30 hover:border-yellow-500/50 cursor-pointer group transition-all duration-300 hover:scale-105"
-            >
-              <CardContent className="p-4 sm:p-6 text-center">
-                <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-500 mx-auto mb-3 group-hover:scale-110 transition-transform" />
-                <h3 className="text-white font-bold text-base sm:text-lg mb-1 group-hover:text-yellow-400 transition-colors">
-                  Leaderboard
-                </h3>
-                <p className="text-gray-400 text-xs sm:text-sm">View faculty rankings</p>
-              </CardContent>
-            </Card>
-
-            <Card 
-              onClick={() => navigate('/sports')}
-              className="bg-gradient-to-br from-red-900/20 via-black to-gray-900 border-red-700/30 hover:border-red-500/50 cursor-pointer group transition-all duration-300 hover:scale-105"
-            >
-              <CardContent className="p-3 sm:p-4 text-center">
-                <Flame className="w-8 h-8 sm:w-10 sm:h-10 text-red-500 mx-auto mb-3 group-hover:scale-110 transition-transform" />
-                <h3 className="text-white font-bold text-base sm:text-lg mb-1 group-hover:text-red-400 transition-colors">
-                  All Sports
-                </h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Browse all events</p>
-              </CardContent>
-            </Card>
-
-            <Card 
-              onClick={() => navigate('/faculties')}
-              className="bg-gradient-to-br from-blue-900/20 via-black to-gray-900 border-blue-700/30 hover:border-blue-500/50 cursor-pointer group transition-all duration-300 hover:scale-105 sm:col-span-2 lg:col-span-1"
-            >
-              <CardContent className="p-3 sm:p-4 text-center">
-                <Users className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500 mx-auto mb-3 group-hover:scale-110 transition-transform" />
-                <h3 className="text-white font-bold text-base sm:text-lg mb-1 group-hover:text-blue-400 transition-colors">
-                  Faculties
-                </h3>
-                <p className="text-gray-400 text-xs sm:text-sm">Explore competing teams</p>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Quick Actions removed as requested */}
         </section>
       </div>
     </div>
