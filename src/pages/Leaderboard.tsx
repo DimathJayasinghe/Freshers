@@ -162,9 +162,9 @@ export function Leaderboard() {
                       </div>
                     </div>
 
-                    {/* Desktop original layout (left-aligned) */}
-                    <div className="hidden md:block text-left">
-                      <div className="mb-3 flex justify-start">
+                    {/* Desktop original layout (center-aligned) */}
+                    <div className="hidden md:block text-center">
+                      <div className="mb-3 flex justify-center">
                         {getMedalIcon(team.computedRank)}
                       </div>
                       <h3 className="text-white font-bold text-lg mb-1">{team.code}</h3>
