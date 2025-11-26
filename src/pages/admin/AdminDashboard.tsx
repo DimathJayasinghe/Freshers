@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { AdminHeader } from '@/components/AdminHeader';
-import { fetchSports, fetchFacultiesList, fetchActiveSeriesBySport, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries, applyCustomSeriesResultsAndPoints, deleteLiveMatch } from '@/lib/api';
+import { fetchSports, fetchFacultiesList, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries, applyCustomSeriesResultsAndPoints, deleteLiveMatch, fetchActiveSeriesListBySport } from '@/lib/api';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 
 type SportOption = { id: string; name: string; category: string; gender?: string };
@@ -11,10 +11,13 @@ const AdminDashboardPage: React.FC = () => {
   const [faculties, setFaculties] = useState<{ id: string; name: string; short_name: string }[]>([]);
   const facultyNameById = useMemo(() => Object.fromEntries(faculties.map(f => [f.id, f.name])), [faculties]);
 
-  const [selectedSportId, setSelectedSportId] = useState<string>('');
+  // Creation-only controls
+  const [createSportId, setCreateSportId] = useState<string>('');
   const [seriesTitle, setSeriesTitle] = useState<string>('');
   const [seriesGender, setSeriesGender] = useState<'male'|'female'|'mixed'>('male');
-  const [activeSeries, setActiveSeries] = useState<{ id: number; sport_id: string; title: string | null; is_finished?: boolean; gender?: 'male'|'female'|'mixed' } | null>(null);
+
+  // Series management selection (can manage any live series irrespective of sport)
+  const [selectedSeries, setSelectedSeries] = useState<{ id: number; sport_id: string; title: string | null; is_finished?: boolean; gender?: 'male'|'female'|'mixed' } | null>(null);
 
   const [matches, setMatches] = useState<any[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -24,6 +27,9 @@ const AdminDashboardPage: React.FC = () => {
   const [pushedCommentIds, setPushedCommentIds] = useState<number[]>([]);
   const enterCountsRef = useRef<Record<number, { count: number; timer: any }>>({});
   const [liveSports, setLiveSports] = useState<{ id: string; name: string }[]>([]);
+  // Live series list filtered by sport
+  const [seriesFilterSportId, setSeriesFilterSportId] = useState<string>('');
+  const [seriesList, setSeriesList] = useState<Array<{ id: number; sport_id: string; title: string | null; is_finished?: boolean; gender?: 'male'|'female'|'mixed' }>>([]);
   // Removed results/schedule management state as per request
   useEffect(() => {
     (async () => {
@@ -56,36 +62,47 @@ const AdminDashboardPage: React.FC = () => {
     })();
   }, []);
 
+  // Load live series list for the selected sport filter
   useEffect(() => {
-    if (!selectedSportId) { setActiveSeries(null); setMatches([]); return; }
     (async () => {
       try {
-        const series = await fetchActiveSeriesBySport(selectedSportId);
-        setActiveSeries(series);
-        if (series?.id) {
-          const m = await fetchMatchesBySeries(series.id);
-          setMatches(m);
-        } else {
-          setMatches([]);
-        }
+        if (!seriesFilterSportId) { setSeriesList([]); return; }
+        const list = await fetchActiveSeriesListBySport(seriesFilterSportId);
+        setSeriesList(list);
       } catch (err) {
-        console.error('Failed to load active series/matches', err);
+        console.error('Failed to load live series list', err);
       }
     })();
-  }, [selectedSportId, refreshKey]);
+  }, [seriesFilterSportId, refreshKey]);
+
+  // Load matches when a specific series is selected
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!selectedSeries?.id) { setMatches([]); return; }
+        const m = await fetchMatchesBySeries(selectedSeries.id);
+        setMatches(m);
+      } catch (err) {
+        console.error('Failed to load matches for series', err);
+      }
+    })();
+  }, [selectedSeries?.id, refreshKey]);
 
   // const selectedSport = useMemo(() => sports.find(s => s.id === selectedSportId), [sports, selectedSportId]);
 
   async function handleCreateSeries(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedSportId) return;
-    const s = await createLiveSeries(selectedSportId, seriesTitle || null, seriesGender);
-    setActiveSeries(s);
+    if (!createSportId) return;
+    const s = await createLiveSeries(createSportId, seriesTitle || null, seriesGender);
+    // After creation, select this series for management and refresh lists
+    setSelectedSeries(s);
+    setSeriesFilterSportId(s.sport_id);
+    setRefreshKey((k) => k + 1);
   }
 
   async function handleAddMatch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!activeSeries?.id) return;
+    if (!selectedSeries?.id) return;
     setFormError(null);
     // Capture form element before any await to avoid React SyntheticEvent pooling
     const formEl = e.currentTarget as HTMLFormElement;
@@ -106,7 +123,7 @@ const AdminDashboardPage: React.FC = () => {
     if (!match_order || match_order < 1) { setFormError('Order must be 1 or higher'); return; }
     try {
       await addLiveMatch({
-        series_id: activeSeries.id,
+        series_id: selectedSeries.id,
         match_order,
         venue,
         stage,
@@ -199,11 +216,11 @@ const AdminDashboardPage: React.FC = () => {
   const [confirmFinalizeLoading, setConfirmFinalizeLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [confirmDeleteLoading, setConfirmDeleteLoading] = useState(false);
-  const [confirmDeleteSeriesOpen, setConfirmDeleteSeriesOpen] = useState(false);
+  const [confirmDeleteSeriesId, setConfirmDeleteSeriesId] = useState<number | null>(null);
   const [confirmDeleteSeriesLoading, setConfirmDeleteSeriesLoading] = useState(false);
 
   async function onFinalizeSeries() {
-    if (!activeSeries?.id || !selectedSportId) return;
+    if (!selectedSeries?.id) return;
     setFinalizeError(null);
     setFinalizeOk(null);
     const validPlacements = placements.filter(p => p.faculty_id && p.points >= 0);
@@ -213,14 +230,14 @@ const AdminDashboardPage: React.FC = () => {
   const champId = validPlacements.find(p => p.label === 'champion')?.faculty_id || '';
   const runId = validPlacements.find(p => p.label === 'runner_up')?.faculty_id || '';
   const thirdId = validPlacements.find(p => p.label === 'second_runner_up')?.faculty_id || '';
-  await finishSeries(activeSeries.id, { champion: champId, runner_up: runId, third: thirdId });
-  const gLabel: "Men's" | "Women's" | 'Mixed' = activeSeries?.gender === 'female' ? "Women's" : activeSeries?.gender === 'mixed' ? 'Mixed' : "Men's";
+  await finishSeries(selectedSeries.id, { champion: champId, runner_up: runId, third: thirdId });
+  const gLabel: "Men's" | "Women's" | 'Mixed' = selectedSeries?.gender === 'female' ? "Women's" : selectedSeries?.gender === 'mixed' ? 'Mixed' : "Men's";
   await applyCustomSeriesResultsAndPoints({
-    sport_id: selectedSportId,
+    sport_id: selectedSeries.sport_id,
     gender: gLabel,
     placements: validPlacements,
     participants: participants.filter(p => p.faculty_id).map(p => ({ faculty_id: p.faculty_id, points: Number(p.points || 1) })),
-    series_id: activeSeries.id,
+    series_id: selectedSeries.id,
   });
       setFinalizeOk('Series finalized and points applied');
       setRefreshKey((k) => k + 1);
@@ -243,58 +260,158 @@ const AdminDashboardPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
-              <h3 className="font-semibold mb-2">1) Select sport & series</h3>
+              <h3 className="font-semibold mb-2">1) Create new series</h3>
               <label className="block text-sm mb-1">Sport</label>
-              <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2 mb-3" value={selectedSportId} onChange={(e) => setSelectedSportId(e.target.value)}>
+              <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2 mb-3" value={createSportId} onChange={(e) => setCreateSportId(e.target.value)}>
                 <option value="">-- choose --</option>
                 {sports.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
-              {liveSports.length > 0 && (
-                <div className="mt-2">
-                  <div className="text-xs text-gray-400 mb-1">Currently Live:</div>
-                  <div className="flex flex-wrap gap-2">
-                    {liveSports.map(s => (
-                      <button key={s.id} className={`px-3 py-1 rounded-full text-xs border ${selectedSportId===s.id?'bg-red-600 text-white border-red-500':'bg-black/40 text-gray-300 border-white/10 hover:border-red-600'}`} onClick={() => setSelectedSportId(s.id)}>
-                        {s.name}
-                      </button>
-                    ))}
-                  </div>
+              <form onSubmit={handleCreateSeries} className="mt-2 space-y-2">
+                <label className="block text-sm">Series title (optional)</label>
+                <input className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="e.g., Knockouts" value={seriesTitle} onChange={(e) => setSeriesTitle(e.target.value)} />
+                <div>
+                  <label className="block text-sm">Gender</label>
+                  <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={seriesGender} onChange={(e) => setSeriesGender(e.target.value as any)}>
+                    <option value="male">Men</option>
+                    <option value="female">Women</option>
+                    <option value="mixed">Mixed</option>
+                  </select>
                 </div>
-              )}
-              {activeSeries ? (
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-green-300 text-sm">Active series: #{activeSeries.id} {activeSeries.title ? `— ${activeSeries.title}` : ''} {activeSeries?.gender ? `· ${activeSeries.gender === 'male' ? 'Men' : activeSeries.gender === 'female' ? 'Women' : 'Mixed'}` : ''}</div>
-                  <button
-                    type="button"
-                    className="px-3 py-1.5 rounded-md border border-red-700 bg-red-900/30 text-red-300 hover:bg-red-800/40"
-                    onClick={() => setConfirmDeleteSeriesOpen(true)}
-                  >
-                    Remove series
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleCreateSeries} className="mt-2 space-y-2">
-                  <label className="block text-sm">Series title (optional)</label>
-                  <input className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="e.g., Knockouts" value={seriesTitle} onChange={(e) => setSeriesTitle(e.target.value)} />
-                  <div>
-                    <label className="block text-sm">Gender</label>
-                    <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={seriesGender} onChange={(e) => setSeriesGender(e.target.value as any)}>
-                      <option value="male">Men</option>
-                      <option value="female">Women</option>
-                      <option value="mixed">Mixed</option>
-                    </select>
-                  </div>
-                  <button className="w-full bg-red-600 hover:bg-red-500 rounded-md py-2">Create series</button>
-                </form>
-              )}
+                <button className="w-full bg-red-600 hover:bg-red-500 rounded-md py-2" disabled={!createSportId}>Create series</button>
+              </form>
             </div>
+          </div>
 
+          <div className="lg:col-span-2 space-y-6">
+            {/* Live series list */}
             <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Live series</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+                <div className="md:col-span-6">
+                  <label className="block text-sm mb-1">Filter by sport</label>
+                  <select className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" value={seriesFilterSportId} onChange={(e)=>setSeriesFilterSportId(e.target.value)}>
+                    <option value="">-- choose --</option>
+                    {sports.map((s)=>(<option key={s.id} value={s.id}>{s.name}</option>))}
+                  </select>
+                  {liveSports.length > 0 && (
+                    <div className="mt-2">
+                      <div className="text-xs text-gray-400 mb-1">Currently Live:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {liveSports.map(s => (
+                          <button key={s.id} className={`px-3 py-1 rounded-full text-xs border ${seriesFilterSportId===s.id?'bg-red-600 text-white border-red-500':'bg-black/40 text-gray-300 border-white/10 hover:border-red-600'}`} onClick={() => setSeriesFilterSportId(s.id)}>
+                            {s.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="md:col-span-6">
+                  {selectedSeries ? (
+                    <div className="text-sm text-green-300">Managing series #{selectedSeries.id} {selectedSeries.title ? `— ${selectedSeries.title}` : ''} {selectedSeries?.gender ? `· ${selectedSeries.gender === 'male' ? 'Men' : selectedSeries.gender === 'female' ? 'Women' : 'Mixed'}` : ''}</div>
+                  ) : (
+                    <div className="text-sm text-gray-400">No series selected for management.</div>
+                  )}
+                </div>
+              </div>
+              <div className="mt-3">
+                {seriesFilterSportId === '' ? (
+                  <div className="text-sm text-gray-400">Choose a sport to view its live series.</div>
+                ) : seriesList.length === 0 ? (
+                  <div className="text-sm text-gray-400">No live series for selected sport.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {seriesList.map(s => (
+                      <div key={s.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 bg-black/40 border border-zinc-800 rounded-lg p-3">
+                        <div className="text-sm">
+                          <span className="font-medium">Series #{s.id}</span>
+                          {s.title && <span className="text-gray-300"> — {s.title}</span>}
+                          {s.gender && (
+                            <span className="ml-2 text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">{s.gender === 'male' ? 'Men' : s.gender === 'female' ? 'Women' : 'Mixed'}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button type="button" className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700 hover:bg-zinc-700" onClick={()=>setSelectedSeries(s)}>Manage</button>
+                          <button type="button" className="px-3 py-1.5 rounded-md border border-red-700 bg-red-900/30 text-red-300 hover:bg-red-800/40" onClick={()=>setConfirmDeleteSeriesId(s.id)}>Remove</button>
+                        </div>
+                      </div>
+                    ))}
+                      {/* Add live match (moved here under Live series) */}
+                      <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">2) Add live match</h3>
+                          {selectedSeries ? (
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">{selectedSeries.gender === 'male' ? 'Men' : selectedSeries.gender === 'female' ? 'Women' : 'Mixed'}</span>
+                              <span className="text-gray-400">Series #{selectedSeries.id}{selectedSeries.title ? ` — ${selectedSeries.title}` : ''}</span>
+                            </div>
+                          ) : null}
+                        </div>
+                        {!selectedSeries ? (
+                          <div className="text-sm text-gray-400">Select a series above to add matches.</div>
+                        ) : (
+                          <form onSubmit={handleAddMatch} className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-sm">Order</label>
+                                <input name="match_order" type="number" min={1} value={matchOrder} onChange={(e) => setMatchOrder(Number(e.target.value||1))} className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" />
+                              </div>
+                              <div>
+                                <label className="block text-sm">Venue</label>
+                                <input name="venue" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="Court 1" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-sm">Stage</label>
+                                <select name="stage" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2">
+                                  <option value="">--</option>
+                                  <option value="round_of_16">Round of 16</option>
+                                  <option value="quarter_final">Quarter Final</option>
+                                  <option value="semi_final">Semi Final</option>
+                                  <option value="final">Final</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm">Status text</label>
+                                <input name="status_text" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="QF1" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-sm">Team 1</label>
+                                <select name="faculty1_id" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" required>
+                                  <option value="">-- choose --</option>
+                                  {faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm">Team 2</label>
+                                <select name="faculty2_id" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" required>
+                                  <option value="">-- choose --</option>
+                                  {faculties.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                            {formError && <div className="text-red-400 text-sm">{formError}</div>}
+                            <button className="w-full bg-red-600 hover:bg-red-500 rounded-md py-2">Add match</button>
+                          </form>
+                        )}
+                      </div>
+
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Add live match under the Live series selection */}
+            <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4 hidden">
               <h3 className="font-semibold mb-2">2) Add live match</h3>
-              {!activeSeries ? (
-                <div className="text-sm text-gray-400">Select a sport and create/continue a series first.</div>
+              {!selectedSeries ? (
+                <div className="text-sm text-gray-400">Select a series from "Live series" to add matches.</div>
               ) : (
                 <form onSubmit={handleAddMatch} className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
@@ -307,7 +424,7 @@ const AdminDashboardPage: React.FC = () => {
                       <input name="venue" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="Court 1" />
                     </div>
                   </div>
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm">Stage</label>
                       <select name="stage" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2">
@@ -319,8 +436,8 @@ const AdminDashboardPage: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                        <label className="block text-sm">Status text</label>
-                        <input name="status_text" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="QF1" />
+                      <label className="block text-sm">Status text</label>
+                      <input name="status_text" className="w-full bg-black border border-zinc-700 rounded-md px-3 py-2" placeholder="QF1" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -344,17 +461,14 @@ const AdminDashboardPage: React.FC = () => {
                 </form>
               )}
             </div>
-          </div>
-
-          <div className="lg:col-span-2 space-y-6">
             <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold">3) Matches in series</h3>
-                {activeSeries?.gender && (
-                  <span className="text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">{activeSeries.gender === 'male' ? 'Men' : activeSeries.gender === 'female' ? 'Women' : 'Mixed'}</span>
+                {selectedSeries?.gender && (
+                  <span className="text-xs px-2 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300">{selectedSeries.gender === 'male' ? 'Men' : selectedSeries.gender === 'female' ? 'Women' : 'Mixed'}</span>
                 )}
               </div>
-              {!activeSeries ? (
+              {!selectedSeries ? (
                 <div className="text-sm text-gray-400">No active series selected.</div>
               ) : matches.length === 0 ? (
                 <div className="text-sm text-gray-400">No matches yet.</div>
@@ -461,8 +575,8 @@ const AdminDashboardPage: React.FC = () => {
             {/* Finalization */}
             <div className="bg-zinc-900 border border-red-500/30 rounded-xl p-4">
               <h3 className="font-semibold mb-2">4) All matches done</h3>
-              {!activeSeries ? (
-                <div className="text-sm text-gray-400">Select a sport and create/continue a series first.</div>
+              {!selectedSeries ? (
+                <div className="text-sm text-gray-400">Select a series to finalize and apply points.</div>
               ) : (
                 <div className="space-y-3">
                   {/* Placements section */}
@@ -553,10 +667,10 @@ const AdminDashboardPage: React.FC = () => {
           setConfirmFinalizeLoading(true);
           try {
             await onFinalizeSeries();
-            if (activeSeries?.id) {
-              await completeAllMatchesInSeries(activeSeries.id);
-              await deleteLiveSeries(activeSeries.id);
-              setActiveSeries(null);
+            if (selectedSeries?.id) {
+              await completeAllMatchesInSeries(selectedSeries.id);
+              await deleteLiveSeries(selectedSeries.id);
+              setSelectedSeries(null);
               setMatches([]);
               setRefreshKey(k=>k+1);
             }
@@ -603,31 +717,37 @@ const AdminDashboardPage: React.FC = () => {
       />
 
       <ConfirmDialog
-        open={confirmDeleteSeriesOpen}
+        open={confirmDeleteSeriesId !== null}
         title="Remove entire series?"
-        description={(
-          <div className="space-y-1">
-            <div className="text-sm text-zinc-300">This will delete the active live series and ALL its matches.</div>
-            <div className="pt-2 text-xs text-zinc-500">This cannot be undone.</div>
-          </div>
-        )}
+        description={(() => {
+          const s = seriesList.find(x => x.id === confirmDeleteSeriesId) || (selectedSeries && selectedSeries.id === confirmDeleteSeriesId ? selectedSeries : null);
+          return (
+            <div className="space-y-1">
+              <div className="text-sm text-zinc-300">This will delete live series {s ? `#${s.id}${s.title ? ` — ${s.title}` : ''}` : ''} and ALL its matches.</div>
+              <div className="pt-2 text-xs text-zinc-500">This cannot be undone.</div>
+            </div>
+          );
+        })()}
         confirmLabel="Remove series"
         cancelLabel="Cancel"
         loading={confirmDeleteSeriesLoading}
         onConfirm={async () => {
-          if (!activeSeries?.id) return;
+          if (!confirmDeleteSeriesId) return;
           setConfirmDeleteSeriesLoading(true);
           try {
-            await deleteLiveSeries(activeSeries.id);
-            setActiveSeries(null);
-            setMatches([]);
+            await deleteLiveSeries(confirmDeleteSeriesId);
+            if (selectedSeries?.id === confirmDeleteSeriesId) {
+              setSelectedSeries(null);
+              setMatches([]);
+            }
+            setSeriesList(arr => arr.filter(s => s.id !== confirmDeleteSeriesId));
             setRefreshKey(k=>k+1);
-            setConfirmDeleteSeriesOpen(false);
+            setConfirmDeleteSeriesId(null);
           } finally {
             setConfirmDeleteSeriesLoading(false);
           }
         }}
-        onCancel={() => setConfirmDeleteSeriesOpen(false)}
+        onCancel={() => setConfirmDeleteSeriesId(null)}
       />
 
       {/* Removed sections: Manage previous results & Manage schedule (lineup) */}
