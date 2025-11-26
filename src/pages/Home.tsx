@@ -113,13 +113,13 @@ export function Home() {
         - Add bottom padding on mobile to reserve space for the absolutely-positioned Stats bar so it doesn't overlap the main content below.
       */}
       <section className="relative overflow-hidden">
-        <div className="relative bg-gradient-to-br from-red-950 via-black to-red-950 min-h-screen">
+        <div className="relative bg-gradient-to-br from-red-950 via-black to-red-950 md:min-h-screen">
           {/* Animated Background Elements */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-20 right-20 w-96 h-96 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
             <div className="absolute bottom-20 left-20 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
           </div>
-          <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-14 md:py-16 pb-12 md:pb-16">
+          <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16 pb-8 md:pb-16">
             <div className="text-center space-y-4 sm:space-y-6 md:space-y-8">
               {/* UOC Logo */}
               <div className="flex justify-center mb-4 animate-fade-in">
@@ -148,6 +148,23 @@ export function Home() {
                 Experience the spirit of competition and camaraderie. Follow live matches, 
                 check schedules, view leaderboards, and celebrate victories together.
               </p>
+
+              {/* Quick Nav Buttons */}
+              <div className="flex justify-center gap-3 sm:gap-4 pt-2 animate-fade-in-up delay-325">
+                <Button
+                  onClick={() => navigate('/leaderboard')}
+                  className="bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white"
+                >
+                  View Leaderboard
+                </Button>
+                <Button
+                  onClick={() => navigate('/results')}
+                  variant="outline"
+                  className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                >
+                  View Results
+                </Button>
+              </div>
 
               {/* In-hero Highlights Ribbon (non-sticky) with glow */}
               <div className="max-w-3xl mx-auto px-3 sm:px-4 animate-fade-in-up delay-350">
@@ -188,18 +205,7 @@ export function Home() {
                 </div>
               </div>
 
-              {/* Swipe down button to guide users to main content - mobile only */}
-              <div className="flex justify-center pt-3 sm:pt-4 px-4 animate-fade-in-up delay-450 md:hidden">
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/20 text-white/90 hover:text-white hover:bg-white/10 px-4 py-2 transition-colors backdrop-blur-sm"
-                  aria-label="Swipe down to content"
-                >
-                  <ChevronDown className="w-5 h-5 animate-bounce" />
-                  <span className="text-sm">Swipe down</span>
-                </button>
-              </div>
+              {/* Mobile scroll button removed */}
             </div>
           </div>
         </div>
