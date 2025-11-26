@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { AdminHeader } from '@/components/AdminHeader';
 import { fetchSports, fetchFacultiesList, fetchActiveSeriesBySport, createLiveSeries, addLiveMatch, fetchMatchesBySeries, updateLiveMatch, finishSeries, completeAllMatchesInSeries, fetchLiveSportsNow, deleteLiveSeries, applyCustomSeriesResultsAndPoints, deleteLiveMatch } from '@/lib/api';
-import { Check, Loader2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 
 type SportOption = { id: string; name: string; category: string; gender?: string };
@@ -20,8 +19,7 @@ const AdminDashboardPage: React.FC = () => {
   const [matches, setMatches] = useState<any[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
-  const [savingMatchIds, setSavingMatchIds] = useState<number[]>([]);
-  const [savedMatchIds, setSavedMatchIds] = useState<number[]>([]);
+  // removed save status trackers
   const [pushingCommentIds, setPushingCommentIds] = useState<number[]>([]);
   const [pushedCommentIds, setPushedCommentIds] = useState<number[]>([]);
   const enterCountsRef = useRef<Record<number, { count: number; timer: any }>>({});
@@ -136,40 +134,36 @@ const AdminDashboardPage: React.FC = () => {
     }
   }
 
-  async function performSave(idx: number) {
+  // Instant score helpers
+  function coerceScore(v: any): number { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; }
+  async function adjustScore(idx: number, which: 'faculty1'|'faculty2', delta: number) {
+    setMatches(arr => arr.map((x,i)=>{
+      if (i!==idx) return x;
+      const f1 = coerceScore(x.faculty1_score);
+      const f2 = coerceScore(x.faculty2_score);
+      const next: any = { ...x };
+      if (which==='faculty1') next.faculty1_score = Math.max(0, f1 + delta);
+      else next.faculty2_score = Math.max(0, f2 + delta);
+      return next;
+    }));
     const m = matches[idx];
+    if (!m) return;
     const id = m.id as number;
-    setSavingMatchIds((arr) => (arr.includes(id) ? arr : [...arr, id]));
-    setConfirmSaveLoading(true);
+    const f1now = coerceScore(which==='faculty1' ? (coerceScore(m.faculty1_score)+delta) : m.faculty1_score);
+    const f2now = coerceScore(which==='faculty2' ? (coerceScore(m.faculty2_score)+delta) : m.faculty2_score);
     try {
-      // Persist scores and winner selection together on Save
-      await updateLiveMatch(id, {
-        faculty1_score: m.faculty1_score ?? '',
-        faculty2_score: m.faculty2_score ?? '',
-        winner_faculty_id: m.winner_faculty_id ?? null,
-        status_text: m.status_text ?? null,
-        // Save commentary if present (new feature)
-        commentary: (m as any).commentary ?? null,
-      });
-      setSavedMatchIds((arr) => (arr.includes(id) ? arr : [...arr, id]));
-      setTimeout(() => {
-        setSavedMatchIds((arr) => arr.filter((x) => x !== id));
-      }, 1200);
-      setRefreshKey((k) => k + 1);
-      setConfirmSaveIdx(null);
-    } finally {
-      setSavingMatchIds((arr) => arr.filter((x) => x !== id));
-      setConfirmSaveLoading(false);
+      await updateLiveMatch(id, { faculty1_score: String(Math.max(0, f1now)), faculty2_score: String(Math.max(0, f2now)) });
+    } catch (e) {
+      // non-blocking persist
     }
   }
 
-  function saveScores(idx: number) {
-    setConfirmSaveIdx(idx);
-  }
-
-  function markWinner(idx: number, winnerId: string) {
-    // Only update local state; actual persistence happens when clicking Save
+  async function markWinner(idx: number, winnerId: string) {
+    // Update locally and persist instantly
     setMatches((arr) => arr.map((x, i) => (i === idx ? { ...x, winner_faculty_id: winnerId || null } : x)));
+    const m = matches[idx];
+    if (!m) return;
+    try { await updateLiveMatch(m.id as number, { winner_faculty_id: winnerId || null }); } catch {}
   }
 
   async function pushCommentary(idx: number) {
@@ -200,8 +194,7 @@ const AdminDashboardPage: React.FC = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
   const [finalizeOk, setFinalizeOk] = useState<string | null>(null);
-  const [confirmSaveIdx, setConfirmSaveIdx] = useState<number | null>(null);
-  const [confirmSaveLoading, setConfirmSaveLoading] = useState(false);
+  // removed confirm-save states
   const [confirmFinalizeOpen, setConfirmFinalizeOpen] = useState(false);
   const [confirmFinalizeLoading, setConfirmFinalizeLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -381,28 +374,21 @@ const AdminDashboardPage: React.FC = () => {
                           <span className="text-gray-300">{facultyNameById[m.faculty2_id] || 'Unknown'}</span>
                         </div>
                       </div>
-                      <div className="md:col-span-2 min-w-0">
-                        <label className="block text-xs text-gray-500">Team 1 score — <span className="text-gray-300">{facultyNameById[m.faculty1_id] || 'Unknown'}</span></label>
-                        <input value={m.faculty1_score ?? ''} onChange={(e) => { const v = e.target.value; setMatches((arr) => arr.map((x,i) => i===idx? { ...x, faculty1_score: v } : x)); }} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition" />
+                      <div className="md:col-span-3 min-w-0">
+                        <label className="block text-xs text-gray-500">Team 1 — <span className="text-gray-300">{facultyNameById[m.faculty1_id] || 'Unknown'}</span></label>
+                        <div className="flex items-center gap-2">
+                          <button type="button" className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700 hover:bg-zinc-700" onClick={() => adjustScore(idx,'faculty1',-1)}>-</button>
+                          <div className="min-w-[3rem] text-center px-2 py-1 rounded-md bg-black border border-zinc-700 text-sm">{coerceScore(m.faculty1_score)}</div>
+                          <button type="button" className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700 hover:bg-zinc-700" onClick={() => adjustScore(idx,'faculty1',+1)}>+</button>
+                        </div>
                       </div>
-                      <div className="md:col-span-2 min-w-0">
-                        <label className="block text-xs text-gray-500">Team 2 score — <span className="text-gray-300">{facultyNameById[m.faculty2_id] || 'Unknown'}</span></label>
-                        <input value={m.faculty2_score ?? ''} onChange={(e) => { const v = e.target.value; setMatches((arr) => arr.map((x,i) => i===idx? { ...x, faculty2_score: v } : x)); }} className="w-full bg-black border border-zinc-700 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 transition" />
-                      </div>
-                      <div className="md:col-span-2 min-w-0">
-                        <button
-                          className={`px-3 py-1.5 rounded-md border transition-transform active:scale-95 disabled:opacity-50 w-full ${savedMatchIds.includes(m.id) ? 'bg-green-900/40 border-green-700/60' : 'bg-zinc-800 border-zinc-700'}`}
-                          disabled={savingMatchIds.includes(m.id)}
-                          onClick={() => saveScores(idx)}
-                        >
-                          {savingMatchIds.includes(m.id) ? (
-                            <span className="inline-flex items-center gap-2 justify-center"><Loader2 className="w-4 h-4 animate-spin" /><span>Saving</span></span>
-                          ) : savedMatchIds.includes(m.id) ? (
-                            <span className="inline-flex items-center gap-2 justify-center"><Check className="w-4 h-4 text-green-400" /><span>Saved</span></span>
-                          ) : (
-                            'Save'
-                          )}
-                        </button>
+                      <div className="md:col-span-3 min-w-0">
+                        <label className="block text-xs text-gray-500">Team 2 — <span className="text-gray-300">{facultyNameById[m.faculty2_id] || 'Unknown'}</span></label>
+                        <div className="flex items-center gap-2">
+                          <button type="button" className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700 hover:bg-zinc-700" onClick={() => adjustScore(idx,'faculty2',-1)}>-</button>
+                          <div className="min-w-[3rem] text-center px-2 py-1 rounded-md bg-black border border-zinc-700 text-sm">{coerceScore(m.faculty2_score)}</div>
+                          <button type="button" className="px-3 py-1.5 rounded-md bg-zinc-800 border border-zinc-700 hover:bg-zinc-700" onClick={() => adjustScore(idx,'faculty2',+1)}>+</button>
+                        </div>
                       </div>
                       <div className="md:col-span-2 min-w-0">
                         <label className="block text-xs text-gray-500">Winner</label>
@@ -411,12 +397,12 @@ const AdminDashboardPage: React.FC = () => {
                           <option value={m.faculty1_id}>Team 1 — {facultyNameById[m.faculty1_id] || 'Unknown'}</option>
                           <option value={m.faculty2_id}>Team 2 — {facultyNameById[m.faculty2_id] || 'Unknown'}</option>
                         </select>
-                        <div className="text-[10px] text-zinc-500 mt-1">Choose and click Save to publish or reset to TBA.</div>
+                        <div className="text-[10px] text-zinc-500 mt-1">Changes auto-save instantly; choose a winner or reset to TBA.</div>
                         <button
                           type="button"
                           className="mt-2 w-full px-3 py-1.5 rounded-md border border-red-700 bg-red-900/30 text-red-300 hover:bg-red-800/40 disabled:opacity-50"
                           onClick={() => setConfirmDeleteId(m.id)}
-                          disabled={savingMatchIds.includes(m.id) || pushingCommentIds.includes(m.id)}
+                          disabled={pushingCommentIds.includes(m.id)}
                         >
                           Remove match
                         </button>
@@ -549,32 +535,7 @@ const AdminDashboardPage: React.FC = () => {
         </div>
       </AdminLayout>
       {/* Custom confirmation dialogs */}
-      <ConfirmDialog
-        open={confirmSaveIdx !== null}
-        title="Save scores?"
-        description={(() => {
-          if (confirmSaveIdx === null) return null as any;
-          const m = matches[confirmSaveIdx];
-          if (!m) return null as any;
-          const t1 = facultyNameById[m.faculty1_id] || 'Team 1';
-          const t2 = facultyNameById[m.faculty2_id] || 'Team 2';
-          return (
-            <div>
-              <div className="text-sm text-zinc-300">Match #{m.match_order} — {m.stage || 'stage'}</div>
-              <div className="mt-1 text-zinc-400">
-                {t1}: <span className="text-white">{m.faculty1_score ?? ''}</span>
-                <span className="mx-2 text-zinc-600">vs</span>
-                {t2}: <span className="text-white">{m.faculty2_score ?? ''}</span>
-              </div>
-            </div>
-          );
-        })()}
-        confirmLabel="Save"
-        cancelLabel="Cancel"
-        loading={confirmSaveLoading}
-        onConfirm={() => { if (confirmSaveIdx !== null) performSave(confirmSaveIdx); }}
-        onCancel={() => setConfirmSaveIdx(null)}
-      />
+      {/* Removed score save confirmation dialog; updates are instant */}
 
       <ConfirmDialog
         open={confirmFinalizeOpen}
