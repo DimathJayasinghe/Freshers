@@ -34,8 +34,9 @@ export function Sports() {
     return () => { mounted = false; };
   }, []);
 
-  const handleSportClick = (sportId: string) => {
-    navigate(`/sport/${sportId}`);
+  const handleSportClick = (sport: Sport) => {
+    const slug = sport.name.toLowerCase().replace(/\s+/g, '-');
+    navigate(`/sport/${slug}`);
   };
 
   const getCategoryIcon = (category: string) => {
@@ -210,7 +211,7 @@ export function Sports() {
           {filteredSports.map((sport) => (
             <Card
               key={sport.id}
-              onClick={() => handleSportClick(sport.id)}
+              onClick={() => handleSportClick(sport)}
               className="bg-black/40 backdrop-blur-xl border border-white/10 hover:border-red-500/50 transition-all duration-300 cursor-pointer group"
             >
               <CardContent className="p-6">
