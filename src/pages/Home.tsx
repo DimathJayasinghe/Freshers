@@ -135,8 +135,8 @@ export function Home() {
                 <span className="text-red-400 text-xs sm:text-sm font-semibold">University of Colombo</span>
               </div>
               
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold text-white leading-[1.15] px-2 animate-fade-in-up delay-200">
-                <span className="block text-base sm:text-lg md:text-2xl lg:text-3xl font-semibold mb-1 sm:mb-2 text-gray-300">
+              <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-6xl font-bold text-white leading-[1.15] px-2 animate-fade-in-up delay-200">
+                <span className="block text-base sm:text-lg md:text-xl lg:text-2xl font-semibold mb-1 sm:mb-2 text-gray-300">
                   Welcome to
                 </span>
                 <span className="block bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 bg-clip-text text-transparent">
@@ -144,7 +144,7 @@ export function Home() {
                 </span>
               </h1>
               
-              <p className="text-gray-300 text-sm sm:text-base md:text-lg lg:text-xl max-w-2xl mx-auto px-4 animate-fade-in-up delay-300">
+              <p className="text-gray-300 text-sm sm:text-base md:text-base lg:text-lg max-w-2xl mx-auto px-4 animate-fade-in-up delay-300">
                 Experience the spirit of competition and camaraderie. Follow live matches, 
                 check schedules, view leaderboards, and celebrate victories together.
               </p>
