@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Medal, Award, Sparkles } from "lucide-react";
+import { Trophy, Medal, Award, Sparkles, ChevronDown } from "lucide-react";
 import type { TeamData } from "../data/leaderboardData";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { fetchLeaderboard } from "../lib/api";
 
@@ -140,23 +141,46 @@ export function Leaderboard() {
                   }`}
                   style={{ animationDelay: `${index * 100 + 300}ms` }}
                 >
-                  <CardContent className="p-4 md:p-6 text-center">
-                    <div className="mb-3 flex justify-center">
-                      {getMedalIcon(team.computedRank)}
-                    </div>
-                    <h3 className="text-white font-bold text-base md:text-lg mb-1">{team.code}</h3>
-                    <p className="text-gray-400 text-[10px] md:text-xs mb-3 line-clamp-1">{team.name}</p>
-                    <Separator className="my-3 bg-white/10" />
-                    <div className="text-2xl md:text-3xl font-bold text-white mb-1">{team.totalPoints}</div>
-                    <p className="text-gray-400 text-xs">Total Points</p>
-                    <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-                      <div>
-                        <div className="text-white font-semibold text-sm md:text-base">{team.mensPoints}</div>
-                        <div className="text-gray-500 text-[10px] md:text-xs">Men's</div>
+                  <CardContent className="p-3 md:p-6">
+                    {/* Mobile compact row layout (left-aligned name + code) */}
+                    <div className="md:hidden">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {getMedalIcon(team.computedRank)}
+                          <div className="min-w-0">
+                            <div className="truncate text-white font-semibold text-sm">{team.name}</div>
+                            <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400">
+                              <span>Men's: <span className="text-blue-400 font-bold">{team.mensPoints}</span></span>
+                              <span>Women's: <span className="text-pink-400 font-bold">{team.womensPoints}</span></span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right px-2">
+                          <div className="text-2xl font-bold text-white">{team.totalPoints}</div>
+                          <div className="text-[10px] text-gray-400 -mt-0.5">Total</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-white font-semibold text-sm md:text-base">{team.womensPoints}</div>
-                        <div className="text-gray-500 text-[10px] md:text-xs">Women's</div>
+                    </div>
+
+                    {/* Desktop original layout (left-aligned) */}
+                    <div className="hidden md:block text-left">
+                      <div className="mb-3 flex justify-start">
+                        {getMedalIcon(team.computedRank)}
+                      </div>
+                      <h3 className="text-white font-bold text-lg mb-1">{team.code}</h3>
+                      <p className="text-gray-400 text-xs mb-3 line-clamp-1">{team.name}</p>
+                      <Separator className="my-3 bg-white/10" />
+                      <div className="text-3xl font-bold text-white mb-1">{team.totalPoints}</div>
+                      <p className="text-gray-400 text-xs">Total Points</p>
+                      <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                        <div>
+                          <div className="text-white font-semibold text-base">{team.mensPoints}</div>
+                          <div className="text-gray-500 text-xs">Men's</div>
+                        </div>
+                        <div>
+                          <div className="text-white font-semibold text-base">{team.womensPoints}</div>
+                          <div className="text-gray-500 text-xs">Women's</div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -168,13 +192,31 @@ export function Leaderboard() {
                 </div>
               )}
             </div>
+
+            {/* Mobile CTA to scroll to full leaderboard */}
+            <div className="md:hidden pt-2">
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById("full-leaderboard");
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 text-yellow-300 px-4 py-2 h-auto text-sm font-semibold inline-flex items-center gap-2 shadow-sm"
+                  aria-label="See full leaderboard"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  See full leaderboard
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
-        <Card className="bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl">
+        <Card id="full-leaderboard" className="bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl">
           <CardHeader className="bg-gradient-to-r from-red-950/50 to-black border-b border-white/10">
             <CardTitle className="text-white text-xl md:text-2xl flex items-center gap-3">
               <Sparkles className="w-6 h-6 text-yellow-500" />
