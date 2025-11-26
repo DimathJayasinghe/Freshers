@@ -5,7 +5,7 @@ import type { TeamData } from "../data/leaderboardData";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { fetchLiveSportsNow, fetchTodaySchedule, fetchLeaderboard } from "../lib/api";
+import { fetchLiveSportsNow, fetchTodaySchedule, fetchLeaderboard, fetchActiveSeriesBySport } from "../lib/api";
 
 export function Home() {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ export function Home() {
   const [topLoaded, setTopLoaded] = useState(false);
   const isLoading = !(liveLoaded && todayLoaded && topLoaded);
   type RankedTeam = TeamData & { computedRank: number };
+  const [liveGenders, setLiveGenders] = useState<Record<string, 'male' | 'female' | 'mixed' | null>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -48,6 +49,34 @@ export function Home() {
       mounted = false;
     };
   }, []);
+
+  // When live sports list is available, fetch active series gender for each sport
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      if (!liveSports || liveSports.length === 0) { if (alive) setLiveGenders({}); return; }
+      try {
+        const results = await Promise.all(
+          liveSports.map(async (s) => {
+            try {
+              const series = await fetchActiveSeriesBySport(s.id);
+              return [s.id, series?.gender ?? null] as const;
+            } catch {
+              return [s.id, null] as const;
+            }
+          })
+        );
+        if (!alive) return;
+        const map: Record<string, 'male' | 'female' | 'mixed' | null> = {};
+        results.forEach(([id, g]) => { map[id] = g ?? null; });
+        setLiveGenders(map);
+      } catch {
+        if (alive) setLiveGenders({});
+      }
+    };
+    load();
+    return () => { alive = false; };
+  }, [liveSports]);
 
   // Highlights ribbon is now part of the hero (non-sticky) to avoid covering CTAs
 
@@ -258,7 +287,18 @@ export function Home() {
                     <div className="flex items-center justify-between gap-3">
                       <CardTitle className="text-white text-sm md:text-lg group-hover:text-red-400 transition-colors truncate flex items-center gap-1.5 md:gap-2">
                         <div className="w-1 h-5 md:h-6 bg-red-500 rounded-full"></div>
-                        {s.name}
+                        <span className="truncate">{s.name}</span>
+                        {(() => {
+                          const g = liveGenders[s.id];
+                          if (!g) return null;
+                          const label = g === 'male' ? 'Men' : g === 'female' ? 'Women' : 'Mixed';
+                          const cls = g === 'male'
+                            ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                            : g === 'female'
+                            ? 'bg-pink-500/15 text-pink-300 border-pink-500/30'
+                            : 'bg-violet-500/15 text-violet-300 border-violet-500/30';
+                          return <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${cls}`}>{label}</span>;
+                        })()}
                       </CardTitle>
                       <span className="px-2 py-1 md:px-3 md:py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center gap-1.5 md:gap-2 animate-pulse flex-shrink-0 shadow-lg shadow-red-500/50">
                         <span className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full animate-ping"></span>

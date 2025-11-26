@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Flame, ChevronRight, MapPin, ListOrdered, RefreshCw } from 'lucide-react';
 import { supabase, hasSupabaseEnv } from '@/lib/supabaseClient';
-import { fetchLiveSportsNow, fetchLiveSeriesMatchesBySport, type LiveSeriesMatchView } from '@/lib/api';
+import { fetchLiveSportsNow, fetchLiveSeriesMatchesBySport, fetchActiveSeriesBySport, type LiveSeriesMatchView } from '@/lib/api';
 
 export function LiveResults() {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ export function LiveResults() {
   const [loadingSports, setLoadingSports] = useState<boolean>(true);
   const [loadingFixtures, setLoadingFixtures] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedGender, setSelectedGender] = useState<'male' | 'female' | 'mixed' | null>(null);
   // Track last scores/winner to animate when numbers or winner change
   const lastScoresRef = useRef<Record<string, { s1: string | null; s2: string | null }>>({});
   const lastWinnerRef = useRef<Record<string, string | null>>({});
@@ -63,6 +64,7 @@ export function LiveResults() {
   useEffect(() => {
     if (!selectedSport) {
       setFixtures([]);
+      setSelectedGender(null);
       return;
     }
     let alive = true;
@@ -120,6 +122,13 @@ export function LiveResults() {
         });
         lastScoresRef.current = newLast;
         setFixtures(rows);
+        // Also fetch active series meta to get gender for header chip
+        try {
+          const series = await fetchActiveSeriesBySport(selectedSport);
+          if (alive) setSelectedGender(series?.gender ?? null);
+        } catch {
+          if (alive) setSelectedGender(null);
+        }
       } catch (e) {
         console.error('[LiveResults] fetchLiveSeriesMatchesBySport error', e);
         if (alive) setError('Failed to load live matches');
@@ -412,7 +421,18 @@ export function LiveResults() {
             <CardHeader className="pb-2 border-b border-white/10">
               <CardTitle className="text-white flex items-center gap-2">
                 <ListOrdered className="w-5 h-5 text-red-500" />
-                {selectedSportName || 'Live Matches'}
+                <span className="truncate">{selectedSportName || 'Live Matches'}</span>
+                {selectedGender && (
+                  <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    selectedGender === 'male'
+                      ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                      : selectedGender === 'female'
+                      ? 'bg-pink-500/15 text-pink-300 border-pink-500/30'
+                      : 'bg-violet-500/15 text-violet-300 border-violet-500/30'
+                  }`}>
+                    {selectedGender === 'male' ? 'Men' : selectedGender === 'female' ? 'Women' : 'Mixed'}
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
