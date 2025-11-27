@@ -4,7 +4,7 @@ import { Trophy, Medal, ArrowLeft, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
-import { fetchResults, fetchSports, fetchFacultySportsBySportId, fetchFacultiesList } from "@/lib/api";
+import { fetchResults, fetchSports, fetchFacultySportsBySportId, fetchFacultiesList, fetchScheduleCalendar } from "@/lib/api";
 import { getShortFacultyName } from "@/data/tournamentData";
 
 export function SportDetail() {
@@ -15,12 +15,13 @@ export function SportDetail() {
   const [facNameToShort, setFacNameToShort] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [venue, setVenue] = useState<string>("");
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    Promise.all([fetchResults(), fetchSports(), fetchFacultiesList()])
-      .then(async ([rows, sports, faculties]) => {
+    Promise.all([fetchResults(), fetchSports(), fetchFacultiesList(), fetchScheduleCalendar()])
+      .then(async ([rows, sports, faculties, scheduleDays]) => {
         if (!mounted) return;
         setAllResults(rows || []);
         const shortMap = new Map<string, string>();
@@ -41,6 +42,33 @@ export function SportDetail() {
           } catch (e) {
             console.warn('[SportDetail] faculty_sports fetch failed', e);
           }
+        }
+
+        // Compute venue from schedule: prefer matching sport and latest result date; fallback to any match
+        try {
+          const sportNameCanonical = found?.name ?? (sportName || '').replace(/-/g, ' ');
+          // latestDate from results (string), try to match day.date
+          const latestResultDate = (rows || []).filter(r => r.sport && r.sport.toLowerCase().replace(/\s+/g,'-') === slug)[0]?.date;
+          let matchedVenue = "";
+          // Flatten schedule events with day context
+          const allEvents = (scheduleDays || []).flatMap(day => (day.events || []).map(ev => ({ ...ev, dayDate: day.date })));
+          // Try match by sport and date first
+          const primaryMatch = allEvents.find(ev => {
+            const evSport = (ev.sport || '').toLowerCase();
+            const targetSport = (sportNameCanonical || '').toLowerCase();
+            const dateMatches = latestResultDate ? ev.dayDate === latestResultDate : true;
+            return evSport === targetSport && dateMatches;
+          });
+          if (primaryMatch?.venue) {
+            matchedVenue = primaryMatch.venue;
+          } else {
+            // Fallback: first event matching sport
+            const fallbackMatch = allEvents.find(ev => (ev.sport || '').toLowerCase() === (sportNameCanonical || '').toLowerCase());
+            if (fallbackMatch?.venue) matchedVenue = fallbackMatch.venue;
+          }
+          if (matchedVenue) setVenue(matchedVenue);
+        } catch (e) {
+          console.warn('[SportDetail] schedule venue compute failed', e);
         }
       })
       .catch((e) => { console.error('[SportDetail] initial load error', e); if (mounted) setError('Failed to load results'); })
@@ -97,7 +125,7 @@ export function SportDetail() {
   // If gender-specific participation data becomes available, integrate it here.
   const latestEvent = sportResults[0];
   const latestDate = latestEvent?.date ?? '';
-  const latestVenue = 'Main Grounds'; // No venue in results_view; keep consistent with event cards
+  const latestVenue = venue || '—';
 
   return (
     <div className="min-h-screen">
