@@ -1,34 +1,24 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Trophy, Users, Flame, ChevronRight, MapPin, Clock } from "lucide-react";
 import type { ScheduleMatch } from "../data/homeData";
 import type { TeamData } from "../data/leaderboardData";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { fetchLiveSportsNow, fetchTodaySchedule, fetchLeaderboard } from "../lib/api";
+import { fetchTodaySchedule, fetchLeaderboard } from "../lib/api";
 
 export function Home() {
   const navigate = useNavigate();
-  const [liveSports, setLiveSports] = useState<{ id: string; name: string }[]>([]);
   const [today, setToday] = useState<ScheduleMatch[]>([]);
   const [top, setTop] = useState<TeamData[]>([]);
-  const [liveLoaded, setLiveLoaded] = useState(false);
   const [todayLoaded, setTodayLoaded] = useState(false);
   const [topLoaded, setTopLoaded] = useState(false);
-  const isLoading = !(liveLoaded && todayLoaded && topLoaded);
+  const isLoading = !(todayLoaded && topLoaded);
   type RankedTeam = TeamData & { computedRank: number };
   
 
   useEffect(() => {
     let mounted = true;
-    fetchLiveSportsNow()
-      .then((data) => {
-        if (mounted && data) setLiveSports(data);
-      })
-      .catch((err) => {
-        console.error('[Home] liveSports fetch error', err);
-      })
-      .finally(() => { if (mounted) setLiveLoaded(true); });
     fetchTodaySchedule()
       .then((data) => {
         if (mounted && data) setToday(data);
@@ -210,80 +200,7 @@ export function Home() {
 
       {/* Main Content */}
   <div id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 md:space-y-12 py-8 md:py-12">
-        {/* Live Results Section */}
-        {/*
-        <section className="animate-fade-in-up">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 md:mb-8">
-            <div className="flex items-center gap-2  px-4 py-2">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full animate-pulse"></div>
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Live Results</h2>
-            </div>
-            <div className="flex-1 h-[2px] bg-gradient-to-r from-red-500/50 to-transparent hidden sm:block"></div>
-            <Button
-              onClick={() => navigate('/live')}
-              variant="ghost"
-              size="sm"
-              className="text-red-400 hover:text-red-300 hover:bg-red-500/10 group"
-            >
-              View All
-              <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-            {isLoading && (
-              <>
-                {Array.from({ length: 3 }).map((_, idx) => (
-                  <Card key={`live-skel-${idx}`} className="bg-gradient-to-br from-red-950/30 via-gray-900 to-black border-white/10 animate-pulse">
-                    <CardContent className="p-6">
-                      <div className="h-6 w-44 bg-white/10 rounded" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </>
-            )}
-
-            {!isLoading && liveSports.map((s, index) => (
-                <Card
-                  key={`${s.id}-${index}`}
-                  onClick={() => navigate(`/live?sport=${encodeURIComponent(s.id)}`)}
-                  className="group relative overflow-hidden bg-gradient-to-br from-red-950/50 via-gray-900 to-black border-red-800/50 hover:border-red-600 hover:shadow-2xl hover:shadow-red-500/20 transition-all duration-300 cursor-pointer animate-fade-in-up"
-                  style={{ animationDelay: `${index * 80}ms` }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <CardHeader className="py-3 md:py-5 relative z-10">
-                    <div className="flex items-center justify-between gap-3">
-                      <CardTitle className="text-white text-sm md:text-lg group-hover:text-red-400 transition-colors truncate flex items-center gap-1.5 md:gap-2">
-                        <div className="w-1 h-5 md:h-6 bg-red-500 rounded-full"></div>
-                        <span className="truncate">{s.name}</span>
-                        
-                      </CardTitle>
-                      <span className="px-2 py-1 md:px-3 md:py-1.5 bg-gradient-to-r from-red-600 to-red-700 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center gap-1.5 md:gap-2 animate-pulse flex-shrink-0 shadow-lg shadow-red-500/50">
-                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full animate-ping"></span>
-                        LIVE
-                      </span>
-                    </div>
-                  </CardHeader>
-                </Card>
-            ))}
-          </div>
-
-          {liveSports.length === 0 && (
-            <Card className="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-gray-800">
-              <CardContent className="py-12 text-center">
-                <div className="relative inline-block">
-                  <Flame className="w-12 h-12 sm:w-16 sm:h-16 text-gray-600 mx-auto mb-4 opacity-50" />
-                  <div className="absolute inset-0 bg-red-500/20 blur-2xl"></div>
-                </div>
-                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2">No Live Matches</h3>
-                <p className="text-sm sm:text-base text-gray-400">
-                  Check back later for live updates during match times
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </section>
- */}
         {/* Today's Schedule Section */}
         <section className="animate-fade-in-up delay-200">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 md:mb-8">
