@@ -1,19 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Medal, Award, Sparkles } from "lucide-react";
+import { Trophy, Medal, Award, Sparkles, ChevronDown } from "lucide-react";
 import type { TeamData } from "../data/leaderboardData";
-import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
-import { fetchLeaderboard, fetchFacultiesList } from "../lib/api";
+import { fetchLeaderboard, fetchLeaderboardNotice } from "../lib/api";
+import type { LeaderboardNotice } from "../lib/api";
 
 export function Leaderboard() {
-  const navigate = useNavigate();
   const [rows, setRows] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [sortBy, setSortBy] = useState<'total' | 'mens' | 'womens'>('total');
+  const [notice, setNotice] = useState<LeaderboardNotice | null>(null);
+  const [noticeLoaded, setNoticeLoaded] = useState(false);
   type RankedTeam = TeamData & { computedRank: number };
-  const [facByName, setFacByName] = useState<Record<string, string>>({});
-  const [facByCode, setFacByCode] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -27,34 +28,28 @@ export function Leaderboard() {
         // Fallback to static data silently
       })
       .finally(() => { if (mounted) setLoading(false); });
-    // Build a name/code -> id lookup for navigation
-    fetchFacultiesList()
-      .then(list => {
-        if (!mounted || !list) return;
-        const byName: Record<string, string> = {};
-        const byCode: Record<string, string> = {};
-        list.forEach(f => {
-          if (f.name) byName[f.name.toLowerCase()] = f.id;
-          if (f.short_name) byCode[f.short_name.toLowerCase()] = f.id;
-        });
-        setFacByName(byName);
-        setFacByCode(byCode);
+    fetchLeaderboardNotice()
+      .then((data) => {
+        if (!mounted) return;
+        setNotice(data);
       })
-      .catch(err => console.warn('[Leaderboard] faculties list fetch warn', err));
+      .catch((err) => {
+        console.error('[Leaderboard] notice fetch error', err);
+      })
+      .finally(() => { if (mounted) setNoticeLoaded(true); });
     return () => {
       mounted = false;
     };
   }, []);
 
-  // Compute competition ranking (1,1,3) based on totalPoints and keep list sorted desc by total
-  const rankedRows = useMemo<RankedTeam[]>(() => {
+  // Base total-points ranking (used for podium cards only)
+  const rankedTotalRows = useMemo<RankedTeam[]>(() => {
     if (!rows || rows.length === 0) return [] as RankedTeam[];
     const sorted = [...rows].sort((a, b) => {
       const at = Number(a.totalPoints);
       const bt = Number(b.totalPoints);
-      if (bt !== at) return bt - at; // desc by total points
-      // stable tie-breaker for deterministic order
-      return (a.name || "").localeCompare(b.name || "");
+      if (bt !== at) return bt - at;
+      return (a.name || '').localeCompare(b.name || '');
     });
     let prevPoints: number | null = null;
     let prevRank = 0;
@@ -67,19 +62,44 @@ export function Leaderboard() {
     });
   }, [rows]);
 
-  // Handle faculty click using name/code -> id lookup
-  const handleFacultyClick = (facultyName: string, facultyCode?: string) => {
-    const idFromCode = facultyCode ? facByCode[facultyCode.toLowerCase()] : undefined;
-    const idFromName = facultyName ? facByName[facultyName.toLowerCase()] : undefined;
-    const facultyId = idFromCode || idFromName;
-    if (facultyId) navigate(`/faculty/${facultyId}`);
-  };
+  // Dynamic table ranking based on selected column metric
+  const tableRows = useMemo<RankedTeam[]>(() => {
+    if (!rows || rows.length === 0) return [] as RankedTeam[];
+    const metricValue = (t: TeamData) => {
+      switch (sortBy) {
+        case 'mens': return Number(t.mensPoints);
+        case 'womens': return Number(t.womensPoints);
+        default: return Number(t.totalPoints);
+      }
+    };
+    const sorted = [...rows].sort((a, b) => {
+      const av = metricValue(a);
+      const bv = metricValue(b);
+      if (bv !== av) return bv - av; // desc by metric
+      // Tie-breaker deterministic: fall back to total points then name
+      const at = Number(a.totalPoints);
+      const bt = Number(b.totalPoints);
+      if (bt !== at) return bt - at;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    let prevVal: number | null = null;
+    let prevRank = 0;
+    return sorted.map<RankedTeam>((t, idx) => {
+      const val = metricValue(t);
+      const rank = prevVal !== null && val === prevVal ? prevRank : idx + 1;
+      prevVal = val;
+      prevRank = rank;
+      return { ...t, computedRank: rank };
+    });
+  }, [rows, sortBy]);
+
+  // Faculty detail navigation removed; rows are now static
 
   const getMedalIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-7 w-7 text-yellow-500 drop-shadow-lg" />;
-    if (rank === 2) return <Medal className="h-7 w-7 text-gray-400 drop-shadow-lg" />;
-    if (rank === 3) return <Award className="h-7 w-7 text-orange-600 drop-shadow-lg" />;
-    return <span className="text-xl font-bold text-gray-500">#{rank}</span>;
+    if (rank === 1) return <Trophy className="h-6 w-6 md:h-7 md:w-7 text-yellow-500 drop-shadow-lg" />;
+    if (rank === 2) return <Medal className="h-6 w-6 md:h-7 md:w-7 text-gray-400 drop-shadow-lg" />;
+    if (rank === 3) return <Award className="h-6 w-6 md:h-7 md:w-7 text-orange-600 drop-shadow-lg" />;
+    return <span className="text-lg md:text-xl font-bold text-gray-500">#{rank}</span>;
   };
 
   return (
@@ -105,6 +125,27 @@ export function Leaderboard() {
               Real-time standings of competing faculties in UOC Freshers' Meet 2025
             </p>
 
+            {noticeLoaded && notice && (
+              <div className="max-w-3xl mx-auto w-full animate-fade-in-up delay-250">
+                <div className="mt-6 bg-black/40 border border-yellow-500/30 rounded-2xl shadow-lg shadow-yellow-500/10 px-6 py-5 text-left">
+                  <div className="flex items-start gap-3">
+                    <Award className="w-6 h-6 text-yellow-400 mt-1" />
+                    <div className="space-y-2">
+                      {notice.title && (
+                        <h2 className="text-xl font-semibold text-white">{notice.title}</h2>
+                      )}
+                      <p className="text-sm md:text-base text-gray-300 whitespace-pre-line leading-relaxed">
+                        {notice.body}
+                      </p>
+                      <div className="text-xs text-gray-500">
+                        Last updated {new Date(notice.updatedAt).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Top 3 Podium Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-8 max-w-4xl mx-auto">
               {loading && Array.from({ length: 3 }).map((_, index) => (
@@ -118,11 +159,10 @@ export function Leaderboard() {
                   </CardContent>
                 </Card>
               ))}
-              {!loading && rankedRows.slice(0, 3).map((team, index) => (
+              {!loading && rankedTotalRows.slice(0, 3).map((team, index) => (
                 <Card
                   key={`${team.code}-${index}`}
-                  onClick={() => handleFacultyClick(team.name, team.code)}
-                  className={`cursor-pointer transition-all duration-300 hover:scale-105 animate-scale-in ${
+                  className={`transition-all duration-300 animate-scale-in ${
                     // Keep the nice centered layout for the first card, but color by computed rank
                     (index === 0 ? 'md:order-2' : index === 1 ? 'md:order-1' : 'md:order-3')
                   } ${
@@ -134,23 +174,46 @@ export function Leaderboard() {
                   }`}
                   style={{ animationDelay: `${index * 100 + 300}ms` }}
                 >
-                  <CardContent className="p-6 text-center">
-                    <div className="mb-3 flex justify-center">
-                      {getMedalIcon(team.computedRank)}
-                    </div>
-                    <h3 className="text-white font-bold text-lg mb-1">{team.code}</h3>
-                    <p className="text-gray-400 text-xs mb-3 line-clamp-1">{team.name}</p>
-                    <Separator className="my-3 bg-white/10" />
-                    <div className="text-3xl font-bold text-white mb-1">{team.totalPoints}</div>
-                    <p className="text-gray-400 text-xs">Total Points</p>
-                    <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-                      <div>
-                        <div className="text-white font-semibold">{team.mensPoints}</div>
-                        <div className="text-gray-500">Men's</div>
+                  <CardContent className="p-3 md:p-6">
+                    {/* Mobile compact row layout (left-aligned name + code) */}
+                    <div className="md:hidden">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {getMedalIcon(team.computedRank)}
+                          <div className="min-w-0">
+                            <div className="truncate text-white font-semibold text-sm">{team.name}</div>
+                            <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400">
+                              <span>Men's: <span className="text-blue-400 font-bold">{team.mensPoints}</span></span>
+                              <span>Women's: <span className="text-pink-400 font-bold">{team.womensPoints}</span></span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right px-2">
+                          <div className="text-2xl font-bold text-white">{team.totalPoints}</div>
+                          <div className="text-[10px] text-gray-400 -mt-0.5">Total</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-white font-semibold">{team.womensPoints}</div>
-                        <div className="text-gray-500">Women's</div>
+                    </div>
+
+                    {/* Desktop original layout (center-aligned) */}
+                    <div className="hidden md:block text-center">
+                      <div className="mb-3 flex justify-center">
+                        {getMedalIcon(team.computedRank)}
+                      </div>
+                      <h3 className="text-white font-bold text-lg mb-1">{team.code}</h3>
+                      <p className="text-gray-400 text-xs mb-3 line-clamp-1">{team.name}</p>
+                      <Separator className="my-3 bg-white/10" />
+                      <div className="text-3xl font-bold text-white mb-1">{team.totalPoints}</div>
+                      <p className="text-gray-400 text-xs">Total Points</p>
+                      <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                        <div>
+                          <div className="text-white font-semibold text-base">{team.mensPoints}</div>
+                          <div className="text-gray-500 text-xs">Men's</div>
+                        </div>
+                        <div>
+                          <div className="text-white font-semibold text-base">{team.womensPoints}</div>
+                          <div className="text-gray-500 text-xs">Women's</div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -162,32 +225,85 @@ export function Leaderboard() {
                 </div>
               )}
             </div>
+
+            {/* Mobile CTA to scroll to full leaderboard */}
+            <div className="md:hidden pt-2">
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById("full-leaderboard");
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 text-yellow-300 px-4 py-2 h-auto text-sm font-semibold inline-flex items-center gap-2 shadow-sm"
+                  aria-label="See full leaderboard"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  See full leaderboard
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
-        <Card className="bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl">
+        <Card id="full-leaderboard" className="bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl">
           <CardHeader className="bg-gradient-to-r from-red-950/50 to-black border-b border-white/10">
             <CardTitle className="text-white text-xl md:text-2xl flex items-center gap-3">
               <Sparkles className="w-6 h-6 text-yellow-500" />
               Complete Faculty Rankings
             </CardTitle>
             <p className="text-gray-400 text-sm mt-2">
-              Click on any faculty to view their detailed profile and achievements
+              Standings update automatically as events conclude
             </p>
           </CardHeader>
           <CardContent className="p-4 md:p-6">
             {/* Header Row */}
-            <div className="hidden md:grid md:grid-cols-10 gap-4 p-4 bg-gradient-to-r from-red-900/20 to-transparent rounded-lg mb-4 font-semibold text-gray-300 text-sm border border-white/5">
+            <div className="hidden md:grid md:grid-cols-10 gap-4 p-4 bg-gradient-to-r from-red-900/20 to-transparent rounded-lg mb-4 font-semibold text-gray-300 text-sm border border-white/5 select-none">
               <div className="col-span-1 text-center">Rank</div>
               <div className="col-span-4">Faculty</div>
               <div className="col-span-5 grid grid-cols-3 gap-4 text-center">
-                <div>Men's Points</div>
-                <div>Women's Points</div>
-                <div className="text-yellow-400 font-bold">Total Points</div>
+                <button
+                  type="button"
+                  onClick={() => setSortBy('mens')}
+                  className={`transition-colors cursor-pointer focus:outline-none rounded px-2 py-1 border ${sortBy==='mens' ? 'text-blue-400 border-blue-500/40 bg-blue-500/10 shadow-sm' : 'border-transparent hover:text-blue-300'} `}
+                  aria-pressed={sortBy==='mens'}
+                >
+                  Men's Points
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortBy('womens')}
+                  className={`transition-colors cursor-pointer focus:outline-none rounded px-2 py-1 border ${sortBy==='womens' ? 'text-pink-400 border-pink-500/40 bg-pink-500/10 shadow-sm' : 'border-transparent hover:text-pink-300'} `}
+                  aria-pressed={sortBy==='womens'}
+                >
+                  Women's Points
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortBy('total')}
+                  className={`transition-colors cursor-pointer focus:outline-none rounded px-2 py-1 border ${sortBy==='total' ? 'text-yellow-400 border-yellow-500/40 bg-yellow-500/10 shadow-sm font-bold' : 'border-transparent hover:text-yellow-300'} `}
+                  aria-pressed={sortBy==='total'}
+                >
+                  Total Points
+                </button>
               </div>
+            </div>
+            {/* Mobile Sort Dropdown */}
+            <div className="md:hidden mb-4 flex items-center justify-end gap-2">
+              <label htmlFor="lb-mobile-sort" className="text-xs text-gray-400">Sort by</label>
+              <select
+                id="lb-mobile-sort"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'total' | 'mens' | 'womens')}
+                className="bg-black/40 border border-white/10 text-gray-200 text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-yellow-500"
+              >
+                <option value="total">Total Points</option>
+                <option value="mens">Men's Points</option>
+                <option value="womens">Women's Points</option>
+              </select>
             </div>
 
             {/* Team Rows */}
@@ -207,11 +323,10 @@ export function Leaderboard() {
                   </div>
                 </div>
               ))}
-              {!loading && rankedRows.map((team, index) => (
+              {!loading && tableRows.map((team, index) => (
                 <div
                   key={`${team.code}-${index}`}
-                  onClick={() => handleFacultyClick(team.name, team.code)}
-                  className={`grid grid-cols-1 md:grid-cols-10 gap-4 p-4 rounded-lg border transition-all duration-300 hover:scale-[1.02] cursor-pointer group animate-fade-in-up ${
+                  className={`grid grid-cols-1 md:grid-cols-10 gap-4 p-4 rounded-lg border transition-all duration-300 group animate-fade-in-up ${
                     team.computedRank <= 3
                       ? "bg-gradient-to-r from-yellow-500/5 via-transparent to-yellow-500/5 border-yellow-500/30 hover:border-yellow-500/60 hover:shadow-lg hover:shadow-yellow-500/10"
                       : "bg-white/5 backdrop-blur-sm border-white/10 hover:border-red-500/40 hover:shadow-md"
@@ -252,23 +367,23 @@ export function Leaderboard() {
 
                   {/* Points */}
                   <div className="md:col-span-5 grid grid-cols-3 gap-3 text-center">
-                    <div className="flex flex-col justify-center">
-                      <div className="text-white font-bold text-xl lg:text-2xl">
+                    <div className={`flex flex-col justify-center ${sortBy==='mens' ? 'ring-1 ring-blue-500/40 rounded-md bg-blue-500/5' : ''}`}>
+                      <div className={`font-bold text-xl lg:text-2xl ${sortBy==='mens' ? 'text-blue-400' : 'text-white'}`}>
                         {team.mensPoints}
                       </div>
-                      <div className="text-gray-500 text-xs mt-1">Men's</div>
+                      <div className={`text-xs mt-1 ${sortBy==='mens' ? 'text-blue-300 font-semibold' : 'text-gray-500'}`}>Men's</div>
                     </div>
-                    <div className="flex flex-col justify-center">
-                      <div className="text-white font-bold text-xl lg:text-2xl">
+                    <div className={`flex flex-col justify-center ${sortBy==='womens' ? 'ring-1 ring-pink-500/40 rounded-md bg-pink-500/5' : ''}`}>
+                      <div className={`font-bold text-xl lg:text-2xl ${sortBy==='womens' ? 'text-pink-400' : 'text-white'}`}>
                         {team.womensPoints}
                       </div>
-                      <div className="text-gray-500 text-xs mt-1">Women's</div>
+                      <div className={`text-xs mt-1 ${sortBy==='womens' ? 'text-pink-300 font-semibold' : 'text-gray-500'}`}>Women's</div>
                     </div>
-                    <div className="flex flex-col justify-center group-hover:scale-110 transition-transform">
-                      <div className="text-yellow-400 font-bold text-xl lg:text-2xl">
+                    <div className={`flex flex-col justify-center group-hover:scale-110 transition-transform ${sortBy==='total' ? 'ring-1 ring-yellow-500/40 rounded-md bg-yellow-500/5' : ''}`}>
+                      <div className={`font-bold text-xl lg:text-2xl ${sortBy==='total' ? 'text-yellow-400' : 'text-yellow-400'}`}>
                         {team.totalPoints}
                       </div>
-                      <div className="text-gray-400 text-xs mt-1 font-semibold">Total</div>
+                      <div className={`text-xs mt-1 font-semibold ${sortBy==='total' ? 'text-yellow-300' : 'text-gray-400'}`}>Total</div>
                     </div>
                   </div>
                 </div>

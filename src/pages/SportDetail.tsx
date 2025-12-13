@@ -4,7 +4,7 @@ import { Trophy, Medal, ArrowLeft, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
-import { fetchResults, fetchFacultiesList, fetchSports, fetchFacultySportsBySportId } from "@/lib/api";
+import { fetchResults, fetchSports, fetchFacultySportsBySportId, fetchFacultiesList, fetchScheduleCalendar } from "@/lib/api";
 import { getShortFacultyName } from "@/data/tournamentData";
 
 export function SportDetail() {
@@ -12,27 +12,25 @@ export function SportDetail() {
   const navigate = useNavigate();
   const [divisionTab, setDivisionTab] = useState<'men' | 'women' | 'both'>('both');
   const [allResults, setAllResults] = useState([] as Awaited<ReturnType<typeof fetchResults>>);
-  const [facNameToId, setFacNameToId] = useState<Map<string, string>>(new Map());
   const [facNameToShort, setFacNameToShort] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [venue, setVenue] = useState<string>("");
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    Promise.all([fetchResults(), fetchFacultiesList(), fetchSports()])
-      .then(async ([rows, facs, sports]) => {
+    Promise.all([fetchResults(), fetchSports(), fetchFacultiesList(), fetchScheduleCalendar()])
+      .then(async ([rows, sports, faculties, scheduleDays]) => {
         if (!mounted) return;
         setAllResults(rows || []);
-        const idMap = new Map<string, string>();
         const shortMap = new Map<string, string>();
-        (facs || []).forEach(f => {
-          if (f?.name) {
-            if (f.id) idMap.set(f.name, f.id);
-            if ((f as any).short_name) shortMap.set(f.name, (f as any).short_name);
+        // Build name -> short_name map from faculties list for accurate codes
+        (faculties || []).forEach(f => {
+          if (f?.name && f?.short_name) {
+            shortMap.set(f.name, f.short_name);
           }
         });
-        setFacNameToId(idMap);
         setFacNameToShort(shortMap);
 
         // Determine sportId from slug param using sports list (no longer stored in state)
@@ -45,20 +43,40 @@ export function SportDetail() {
             console.warn('[SportDetail] faculty_sports fetch failed', e);
           }
         }
+
+        // Compute venue from schedule: prefer matching sport and latest result date; fallback to any match
+        try {
+          const sportNameCanonical = found?.name ?? (sportName || '').replace(/-/g, ' ');
+          // latestDate from results (string), try to match day.date
+          const latestResultDate = (rows || []).filter(r => r.sport && r.sport.toLowerCase().replace(/\s+/g,'-') === slug)[0]?.date;
+          let matchedVenue = "";
+          // Flatten schedule events with day context
+          const allEvents = (scheduleDays || []).flatMap(day => (day.events || []).map(ev => ({ ...ev, dayDate: day.date })));
+          // Try match by sport and date first
+          const primaryMatch = allEvents.find(ev => {
+            const evSport = (ev.sport || '').toLowerCase();
+            const targetSport = (sportNameCanonical || '').toLowerCase();
+            const dateMatches = latestResultDate ? ev.dayDate === latestResultDate : true;
+            return evSport === targetSport && dateMatches;
+          });
+          if (primaryMatch?.venue) {
+            matchedVenue = primaryMatch.venue;
+          } else {
+            // Fallback: first event matching sport
+            const fallbackMatch = allEvents.find(ev => (ev.sport || '').toLowerCase() === (sportNameCanonical || '').toLowerCase());
+            if (fallbackMatch?.venue) matchedVenue = fallbackMatch.venue;
+          }
+          if (matchedVenue) setVenue(matchedVenue);
+        } catch (e) {
+          console.warn('[SportDetail] schedule venue compute failed', e);
+        }
       })
       .catch((e) => { console.error('[SportDetail] initial load error', e); if (mounted) setError('Failed to load results'); })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
 
-  // Handle faculty name click
-  const handleFacultyClick = (e: React.MouseEvent, facultyName: string) => {
-    e.stopPropagation();
-    const facultyId = facNameToId.get(facultyName);
-    if (facultyId) {
-      navigate(`/faculty/${facultyId}`);
-    }
-  };
+  // Faculty detail navigation removed; names now static text
 
   // Filter results for this sport
   const sportResults = allResults.filter(
@@ -107,7 +125,7 @@ export function SportDetail() {
   // If gender-specific participation data becomes available, integrate it here.
   const latestEvent = sportResults[0];
   const latestDate = latestEvent?.date ?? '';
-  const latestVenue = 'Main Grounds'; // No venue in results_view; keep consistent with event cards
+  const latestVenue = venue || '—';
 
   return (
     <div className="min-h-screen">
@@ -256,14 +274,12 @@ export function SportDetail() {
                           {/* Team Name */}
                           <div className="col-span-7">
                             <div 
-                              className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
-                              onClick={(e) => handleFacultyClick(e, position.faculty)}
+                              className="text-white font-bold text-lg"
                             >
                               {facNameToShort.get(position.faculty) ?? getShortFacultyName(position.faculty)}
                             </div>
                             <div 
-                              className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
-                              onClick={(e) => handleFacultyClick(e, position.faculty)}
+                              className="text-gray-400 text-xs"
                             >
                               {position.faculty}
                             </div>
@@ -357,14 +373,12 @@ export function SportDetail() {
                           {/* Team Name */}
                           <div className="col-span-7">
                             <div 
-                              className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
-                              onClick={(e) => handleFacultyClick(e, position.faculty)}
+                              className="text-white font-bold text-lg"
                             >
                               {facNameToShort.get(position.faculty) ?? getShortFacultyName(position.faculty)}
                             </div>
                             <div 
-                              className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
-                              onClick={(e) => handleFacultyClick(e, position.faculty)}
+                              className="text-gray-400 text-xs"
                             >
                               {position.faculty}
                             </div>
@@ -458,14 +472,12 @@ export function SportDetail() {
                           {/* Team Name */}
                           <div className="col-span-7">
                             <div 
-                              className="text-white font-bold text-lg hover:text-red-400 cursor-pointer transition-colors"
-                              onClick={(e) => handleFacultyClick(e, position.faculty)}
+                              className="text-white font-bold text-lg"
                             >
                               {facNameToShort.get(position.faculty) ?? getShortFacultyName(position.faculty)}
                             </div>
                             <div 
-                              className="text-gray-400 text-xs hover:text-gray-300 cursor-pointer transition-colors"
-                              onClick={(e) => handleFacultyClick(e, position.faculty)}
+                              className="text-gray-400 text-xs"
                             >
                               {position.faculty}
                             </div>

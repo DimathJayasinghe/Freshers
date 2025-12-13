@@ -350,6 +350,68 @@ export async function fetchLeaderboard(): Promise<TeamData[]> {
   return (data as LeaderboardRow[] | null || []).map(row => ({ rank: row.rank, name: row.name, code: row.code, mensPoints: row.mens_points ?? 0, womensPoints: row.womens_points ?? 0, totalPoints: row.total_points ?? 0 }));
 }
 
+export type LeaderboardNotice = {
+  id: number;
+  title: string | null;
+  body: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function mapNotice(row: any): LeaderboardNotice {
+  return {
+    id: row.id as number,
+    title: (row.title ?? null) as string | null,
+    body: (row.body ?? '') as string,
+    isPublished: Boolean(row.is_published ?? false),
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  } satisfies LeaderboardNotice;
+}
+
+export async function fetchLeaderboardNotice(): Promise<LeaderboardNotice | null> {
+  if (!hasSupabaseEnv || !supabase) return null;
+  const { data, error } = await supabase
+    .from('leaderboard_notices')
+    .select('id,title,body,is_published,created_at,updated_at')
+    .eq('is_published', true)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  const row = (data || [])[0];
+  return row ? mapNotice(row) : null;
+}
+
+export async function fetchLatestNoticeForAdmin(): Promise<LeaderboardNotice | null> {
+  if (!hasSupabaseEnv || !supabase) return null;
+  const { data, error } = await supabase
+    .from('leaderboard_notices')
+    .select('id,title,body,is_published,created_at,updated_at')
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  const row = (data || [])[0];
+  return row ? mapNotice(row) : null;
+}
+
+export async function saveLeaderboardNotice(payload: { id?: number; title?: string | null; body: string; isPublished?: boolean }): Promise<LeaderboardNotice> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase not configured');
+  const insert: Record<string, unknown> = {
+    title: payload.title ?? null,
+    body: payload.body,
+    is_published: payload.isPublished ?? true,
+  };
+  if (payload.id) insert.id = payload.id;
+  const { data, error } = await supabase
+    .from('leaderboard_notices')
+    .upsert(insert, { onConflict: 'id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapNotice(data);
+}
+
 // --------------------------------------------------
 // Live matches (legacy simple)
 // --------------------------------------------------
@@ -702,6 +764,18 @@ export async function fetchActiveSeriesBySport(sport_id: string): Promise<AdminL
   if (!hasSupabaseEnv || !supabase) return null;
   const { data, error } = await supabase.from('live_sport_series').select('id,sport_id,title,is_finished,gender').eq('sport_id', sport_id).eq('is_finished', false).order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (error) throw error; return (data as AdminLiveSeries) ?? null;
+}
+// New: fetch all active series for a sport (supports multiple concurrent series)
+export async function fetchActiveSeriesListBySport(sport_id: string): Promise<AdminLiveSeries[]> {
+  if (!hasSupabaseEnv || !supabase) return [];
+  const { data, error } = await supabase
+    .from('live_sport_series')
+    .select('id,sport_id,title,is_finished,gender')
+    .eq('sport_id', sport_id)
+    .eq('is_finished', false)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []) as AdminLiveSeries[];
 }
 export type AdminLiveMatch = { id: number; series_id: number; match_order: number; venue: string | null; stage: 'round_of_16' | 'quarter_final' | 'semi_final' | 'final' | null; faculty1_id: string; faculty2_id: string; faculty1_score: string | null; faculty2_score: string | null; status: string; status_text: string | null; is_finished: boolean; winner_faculty_id: string | null; commentary: string | null };
 export async function addLiveMatch(payload: Omit<AdminLiveMatch, 'id' | 'status' | 'is_finished' | 'winner_faculty_id'> & { status?: string; is_finished?: boolean; winner_faculty_id?: string | null }) {

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -10,8 +10,7 @@ import { Results } from "@/pages/Results";
 import { LiveResults } from "@/pages/LiveResults";
 import { Sports } from "@/pages/Sports";
 import { SportDetail } from "@/pages/SportDetail";
-import { Faculties } from "@/pages/Faculties";
-import { FacultyDetail } from "@/pages/FacultyDetail";
+// Removed Faculties & FacultyDetail pages per request
 import { ClosingCeremony } from "@/pages/ClosingCeremony";
 import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -20,6 +19,7 @@ import ManageSports from "@/pages/admin/ManageSports";
 import ManageResults from "@/pages/admin/ManageResults";
 import BugReports from "@/pages/admin/BugReports";
 import RequireAdmin from "@/pages/admin/RequireAdmin";
+import LeaderboardNoticeAdmin from "@/pages/admin/LeaderboardNotice";
 import './App.css';
 
 
@@ -47,14 +47,14 @@ function App() {
             <Route path="/live" element={<LiveResults />} />
             <Route path="/sports" element={<Sports />} />
             <Route path="/sport/:sportName" element={<SportDetail />} />
-            <Route path="/faculties" element={<Faculties />} />
-            <Route path="/faculty/:facultyId" element={<FacultyDetail />} />
+            {/* Faculties & FacultyDetail routes removed */}
             <Route path="/closing-ceremony" element={<ClosingCeremony />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
             <Route path="/admin/lineup" element={<RequireAdmin><ConfigLineup /></RequireAdmin>} />
             <Route path="/admin/sports" element={<RequireAdmin><ManageSports /></RequireAdmin>} />
             <Route path="/admin/results" element={<RequireAdmin><ManageResults /></RequireAdmin>} />
+            <Route path="/admin/leaderboard-notice" element={<RequireAdmin><LeaderboardNoticeAdmin /></RequireAdmin>} />
             <Route path="/admin/bugs" element={<RequireAdmin><BugReports /></RequireAdmin>} />
           </Routes>
         </main>
