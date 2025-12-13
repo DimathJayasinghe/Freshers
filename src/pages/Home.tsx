@@ -170,33 +170,26 @@ export function Home() {
               </div>
 
               {/* In-hero Highlights Ribbon (non-sticky) with glow */}
-              <div className="max-w-3xl mx-auto px-3 sm:px-4 animate-fade-in-up delay-350">
+              <div className="max-w-xl sm:max-w-2xl mx-auto px-3 sm:px-4 animate-fade-in-up delay-350">
                 <div className="mt-2 sm:mt-3 relative">
                   <div className="pointer-events-none absolute -inset-4 rounded-2xl bg-gradient-to-r from-red-600/30 via-yellow-400/20 to-red-600/30 blur-2xl opacity-50"></div>
-                  <div className="relative rounded-xl border border-white/10 bg-black/30 backdrop-blur-md px-3 py-3 sm:px-4 sm:py-4 shadow-xl shadow-red-500/10">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                      <div onClick={() => navigate('/sports')} className="text-center cursor-pointer hover:scale-105 transition-transform group">
+                  <div className="relative rounded-xl border border-white/10 bg-black/30 backdrop-blur-md px-4 py-3 sm:px-5 sm:py-4 shadow-xl shadow-red-500/10">
+                    <div className="flex justify-center gap-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:place-items-center">
+                      <div onClick={() => navigate('/sports')} className="flex-1 text-center cursor-pointer hover:scale-105 transition-transform group min-w-0">
                         <div className="flex items-center justify-center gap-2 mb-1 sm:mb-1.5">
                           <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 group-hover:scale-110 transition-transform" />
                           <div className="text-lg sm:text-xl font-bold text-white">12+</div>
                         </div>
                         <div className="text-[10px] sm:text-xs text-gray-400 group-hover:text-yellow-400 transition-colors">Sports</div>
                       </div>
-                      <div onClick={() => navigate('/leaderboard')} className="text-center cursor-pointer hover:scale-105 transition-transform">
+                      <div onClick={() => navigate('/leaderboard')} className="flex-1 text-center cursor-pointer hover:scale-105 transition-transform min-w-0">
                         <div className="flex items-center justify-center gap-2 mb-1 sm:mb-1.5">
                           <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                           <div className="text-lg sm:text-xl font-bold text-white">11</div>
                         </div>
                         <div className="text-[10px] sm:text-xs text-gray-400">Faculties</div>
                       </div>
-                      <div onClick={() => navigate('/live')} className="text-center cursor-pointer hover:scale-105 transition-transform group">
-                        <div className="flex items-center justify-center gap-2 mb-1 sm:mb-1.5">
-                          <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 group-hover:scale-110 transition-transform" />
-                          <div className="text-lg sm:text-xl font-bold text-white">{liveSports.length}</div>
-                        </div>
-                        <div className="text-[10px] sm:text-xs text-gray-400 group-hover:text-red-400 transition-colors">Live Now</div>
-                      </div>
-                      <div onClick={() => navigate('/lineup')} className="text-center cursor-pointer hover:scale-105 transition-transform group">
+                      <div onClick={() => navigate('/lineup')} className="flex-1 text-center cursor-pointer hover:scale-105 transition-transform group min-w-0">
                         <div className="flex items-center justify-center gap-2 mb-1 sm:mb-1.5">
                           <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 group-hover:scale-110 transition-transform" />
                           <div className="text-lg sm:text-xl font-bold text-white">{today.length}</div>
@@ -218,6 +211,7 @@ export function Home() {
       {/* Main Content */}
   <div id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 md:space-y-12 py-8 md:py-12">
         {/* Live Results Section */}
+        {/*
         <section className="animate-fade-in-up">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 md:mb-8">
             <div className="flex items-center gap-2  px-4 py-2">
@@ -289,7 +283,7 @@ export function Home() {
             </Card>
           )}
         </section>
-
+ */}
         {/* Today's Schedule Section */}
         <section className="animate-fade-in-up delay-200">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 md:mb-8">
