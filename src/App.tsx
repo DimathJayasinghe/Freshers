@@ -19,6 +19,7 @@ import ManageSports from "@/pages/admin/ManageSports";
 import ManageResults from "@/pages/admin/ManageResults";
 import BugReports from "@/pages/admin/BugReports";
 import RequireAdmin from "@/pages/admin/RequireAdmin";
+import LeaderboardNoticeAdmin from "@/pages/admin/LeaderboardNotice";
 import './App.css';
 
 
@@ -53,6 +54,7 @@ function App() {
             <Route path="/admin/lineup" element={<RequireAdmin><ConfigLineup /></RequireAdmin>} />
             <Route path="/admin/sports" element={<RequireAdmin><ManageSports /></RequireAdmin>} />
             <Route path="/admin/results" element={<RequireAdmin><ManageResults /></RequireAdmin>} />
+            <Route path="/admin/leaderboard-notice" element={<RequireAdmin><LeaderboardNoticeAdmin /></RequireAdmin>} />
             <Route path="/admin/bugs" element={<RequireAdmin><BugReports /></RequireAdmin>} />
           </Routes>
         </main>

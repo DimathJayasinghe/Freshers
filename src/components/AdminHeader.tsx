@@ -15,6 +15,7 @@ export function AdminHeader() {
   const isSports = p.startsWith('/admin/sports');
   const isResults = p.startsWith('/admin/results');
   const isLineup = p.startsWith('/admin/lineup');
+  const isNotice = p.startsWith('/admin/leaderboard-notice');
   const isBugs = p.startsWith('/admin/bugs');
   const [open, setOpen] = useState(false);
 
@@ -43,6 +44,9 @@ export function AdminHeader() {
           </Link>
           <Link to="/admin/results" className={`${baseLink} ${isResults ? active : idle}`}>
             <span>Edit Results</span>
+          </Link>
+          <Link to="/admin/leaderboard-notice" className={`${baseLink} ${isNotice ? active : idle}`}>
+            <span>Leaderboard Notice</span>
           </Link>
           <Link to="/admin/lineup" className={`${baseLink} ${isLineup ? active : idle}`}>
             <Calendar className="w-4 h-4" />
@@ -74,6 +78,9 @@ export function AdminHeader() {
                 </Link>
                 <Link to="/admin/results" onClick={() => setOpen(false)} className={`${baseLink} ${isResults ? active : idle}`}>
                   <span>Edit Results</span>
+                </Link>
+                <Link to="/admin/leaderboard-notice" onClick={() => setOpen(false)} className={`${baseLink} ${isNotice ? active : idle}`}>
+                  <span>Leaderboard Notice</span>
                 </Link>
                 <Link to="/admin/lineup" onClick={() => setOpen(false)} className={`${baseLink} ${isLineup ? active : idle}`}>
                   <span>Config Lineup</span>

@@ -5,12 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
-import { fetchLeaderboard } from "../lib/api";
+import { fetchLeaderboard, fetchLeaderboardNotice } from "../lib/api";
+import type { LeaderboardNotice } from "../lib/api";
 
 export function Leaderboard() {
   const [rows, setRows] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [sortBy, setSortBy] = useState<'total' | 'mens' | 'womens'>('total');
+  const [notice, setNotice] = useState<LeaderboardNotice | null>(null);
+  const [noticeLoaded, setNoticeLoaded] = useState(false);
   type RankedTeam = TeamData & { computedRank: number };
 
   useEffect(() => {
@@ -25,6 +28,15 @@ export function Leaderboard() {
         // Fallback to static data silently
       })
       .finally(() => { if (mounted) setLoading(false); });
+    fetchLeaderboardNotice()
+      .then((data) => {
+        if (!mounted) return;
+        setNotice(data);
+      })
+      .catch((err) => {
+        console.error('[Leaderboard] notice fetch error', err);
+      })
+      .finally(() => { if (mounted) setNoticeLoaded(true); });
     return () => {
       mounted = false;
     };
@@ -112,6 +124,27 @@ export function Leaderboard() {
             <p className="text-gray-300 text-lg max-w-2xl mx-auto animate-fade-in-up delay-200">
               Real-time standings of competing faculties in UOC Freshers' Meet 2025
             </p>
+
+            {noticeLoaded && notice && (
+              <div className="max-w-3xl mx-auto w-full animate-fade-in-up delay-250">
+                <div className="mt-6 bg-black/40 border border-yellow-500/30 rounded-2xl shadow-lg shadow-yellow-500/10 px-6 py-5 text-left">
+                  <div className="flex items-start gap-3">
+                    <Award className="w-6 h-6 text-yellow-400 mt-1" />
+                    <div className="space-y-2">
+                      {notice.title && (
+                        <h2 className="text-xl font-semibold text-white">{notice.title}</h2>
+                      )}
+                      <p className="text-sm md:text-base text-gray-300 whitespace-pre-line leading-relaxed">
+                        {notice.body}
+                      </p>
+                      <div className="text-xs text-gray-500">
+                        Last updated {new Date(notice.updatedAt).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Top 3 Podium Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-8 max-w-4xl mx-auto">
