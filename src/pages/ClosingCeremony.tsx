@@ -7,8 +7,8 @@ export function ClosingCeremony() {
   const navigate = useNavigate();
 
   const ceremonyDetails = {
-    date: "December 9, 2025",
-    time: "6:00 PM - 9:00 PM",
+    date: "January 12, 2026",
+    time: "3:00 PM ",
     venue: "NAT",
     duration: "3 Hours"
   };
